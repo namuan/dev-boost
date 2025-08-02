@@ -4,12 +4,18 @@ from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
+    QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QPushButton,
+    QStackedWidget,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -20,7 +26,7 @@ class DevDriverWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Dev Driver")
         self.setGeometry(100, 100, 1200, 800)
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(950, 600)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -30,12 +36,14 @@ class DevDriverWindow(QMainWindow):
         main_layout.setSpacing(0)
 
         sidebar_widget = self._create_sidebar()
-        content_widget = self._create_content_area()
+        self.content_widget = self._create_content_area()
 
         main_layout.addWidget(sidebar_widget)
-        main_layout.addWidget(content_widget)
+        main_layout.addWidget(self.content_widget)
 
         self._apply_styles()
+
+        self.tool_list.itemClicked.connect(self._on_tool_selected)
 
     def _create_sidebar(self):
         sidebar_container = QWidget()
@@ -46,7 +54,6 @@ class DevDriverWindow(QMainWindow):
         sidebar_layout.setContentsMargins(10, 10, 10, 10)
         sidebar_layout.setSpacing(10)
 
-        # Search bar
         search_container = QWidget()
         search_layout = QHBoxLayout(search_container)
         search_layout.setContentsMargins(0, 0, 0, 0)
@@ -55,18 +62,13 @@ class DevDriverWindow(QMainWindow):
         search_input.setPlaceholderText("Search...   ⌘⇧F")
         search_input.setFixedHeight(38)
 
-        # This is a bit of a hack to get placeholder text styled differently
-        # and to add the right-side icon, which Qt doesn't support easily.
-        # For a perfect replica, a custom widget would be needed.
-
         search_layout.addWidget(search_input)
 
-        # List of tools
         self.tool_list = QListWidget()
         self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        tools = [
+        self.tools = [
             ("🕒", "Unix Time Converter"),
             ("{}", "JSON Format/Validate"),
             ("64", "Base64 String Encode/Decode"),
@@ -105,10 +107,11 @@ class DevDriverWindow(QMainWindow):
             ("⇄", "PHP to JSON"),
         ]
 
-        for icon_text, tool_name in tools:
+        for icon_text, tool_name in self.tools:
             item = QListWidgetItem()
             item.setSizeHint(QSize(0, 32))
             item_widget = self._create_tool_item_widget(icon_text, tool_name)
+            item.setData(Qt.ItemDataRole.UserRole, tool_name)
             self.tool_list.addItem(item)
             self.tool_list.setItemWidget(item, item_widget)
 
@@ -146,23 +149,34 @@ class DevDriverWindow(QMainWindow):
         main_content_layout.setSpacing(0)
 
         # Top bar
-        top_bar = QWidget()
-        top_bar.setObjectName("topBar")
-        top_bar.setFixedHeight(44)
-        top_bar_layout = QHBoxLayout(top_bar)
+        self.top_bar = QWidget()
+        self.top_bar.setObjectName("topBar")
+        self.top_bar.setFixedHeight(44)
+        top_bar_layout = QHBoxLayout(self.top_bar)
         top_bar_layout.setContentsMargins(15, 0, 15, 0)
 
-        title_label = QLabel("Dev Driver")
-        title_label.setObjectName("topBarTitle")
+        self.top_bar_title = QLabel("Dev Driver")
+        self.top_bar_title.setObjectName("topBarTitle")
 
-        top_bar_layout.addWidget(title_label)
+        top_bar_layout.addWidget(self.top_bar_title)
         top_bar_layout.addStretch()
 
-        # Center content
+        # Stacked widget for different tool views
+        self.stacked_widget = QStackedWidget()
+        self.welcome_screen = self._create_welcome_screen()
+        self.unix_time_converter_screen = self._create_unix_time_converter_widget()
+
+        self.stacked_widget.addWidget(self.welcome_screen)
+        self.stacked_widget.addWidget(self.unix_time_converter_screen)
+
+        main_content_layout.addWidget(self.top_bar)
+        main_content_layout.addWidget(self.stacked_widget)
+
+        return content_container
+
+    def _create_welcome_screen(self):
         center_stage = QWidget()
         center_layout = QVBoxLayout(center_stage)
-        center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(0)
         center_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         v_box = QVBoxLayout()
@@ -203,11 +217,150 @@ class DevDriverWindow(QMainWindow):
         v_box.addSpacing(20)
 
         center_layout.addLayout(v_box)
+        return center_stage
 
-        main_content_layout.addWidget(top_bar)
-        main_content_layout.addWidget(center_stage)
+    def _create_unix_time_converter_widget(self):
+        converter_widget = QWidget()
+        main_layout = QVBoxLayout(converter_widget)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(15)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        return content_container
+        # --- Input Section ---
+        input_section_layout = QVBoxLayout()
+        input_section_layout.setSpacing(8)
+
+        top_controls_layout = QHBoxLayout()
+        top_controls_layout.setSpacing(8)
+
+        top_controls_layout.addWidget(QLabel("Input:"))
+        top_controls_layout.addWidget(QPushButton("Now"))
+        top_controls_layout.addWidget(QPushButton("Clipboard"))
+        top_controls_layout.addWidget(QPushButton("Clear"))
+        top_controls_layout.addStretch()
+
+        settings_button = QPushButton()
+        settings_button.setObjectName("iconButton")
+        # Image description: A gear icon for settings. Black, simple cogwheel shape.
+        settings_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
+        top_controls_layout.addWidget(settings_button)
+
+        input_fields_layout = QHBoxLayout()
+        input_fields_layout.setSpacing(8)
+
+        input_line_edit = QLineEdit()
+
+        time_unit_combo = QComboBox()
+        time_unit_combo.addItem("Unix time (seconds since epoch)")
+        time_unit_combo.setFixedWidth(250)
+
+        input_fields_layout.addWidget(input_line_edit)
+        input_fields_layout.addWidget(time_unit_combo)
+
+        tips_label = QLabel("Tips: Mathematical operators + - * / are supported")
+        tips_label.setObjectName("tipsLabel")
+
+        input_section_layout.addLayout(top_controls_layout)
+        input_section_layout.addLayout(input_fields_layout)
+        input_section_layout.addWidget(tips_label)
+
+        main_layout.addLayout(input_section_layout)
+
+        # --- Separator ---
+        separator1 = QFrame()
+        separator1.setFrameShape(QFrame.Shape.HLine)
+        separator1.setFrameShadow(QFrame.Shadow.Sunken)
+        main_layout.addWidget(separator1)
+
+        # --- Results Section ---
+        results_grid = QGridLayout()
+        results_grid.setSpacing(15)
+
+        # Helper to create an output field with a copy button
+        def create_output_field():
+            field_widget = QWidget()
+            field_layout = QHBoxLayout(field_widget)
+            field_layout.setContentsMargins(0, 0, 0, 0)
+            field_layout.setSpacing(4)
+            field_layout.addWidget(QLineEdit())
+            copy_button = QPushButton()
+            copy_button.setObjectName("iconButton")
+            # Image description: A copy icon. Two overlapping squares. Black outlines.
+            copy_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))  # Placeholder
+            field_layout.addWidget(copy_button)
+            return field_widget
+
+        # Grid items
+        results_grid.addWidget(QLabel("Local:"), 0, 0)
+        results_grid.addWidget(create_output_field(), 0, 1)
+        results_grid.addWidget(QLabel("Day of year"), 0, 2)
+        results_grid.addWidget(create_output_field(), 0, 3)
+        results_grid.addWidget(QLabel("Other formats (local)"), 0, 4)
+        results_grid.addWidget(create_output_field(), 0, 5)
+
+        results_grid.addWidget(QLabel("UTC (ISO 8601):"), 1, 0)
+        results_grid.addWidget(create_output_field(), 1, 1)
+        results_grid.addWidget(QLabel("Week of year"), 1, 2)
+        results_grid.addWidget(create_output_field(), 1, 3)
+        results_grid.addWidget(create_output_field(), 1, 5)
+
+        results_grid.addWidget(QLabel("Relative:"), 2, 0)
+        results_grid.addWidget(create_output_field(), 2, 1)
+        results_grid.addWidget(QLabel("Is leap year?"), 2, 2)
+        results_grid.addWidget(create_output_field(), 2, 3)
+        results_grid.addWidget(create_output_field(), 2, 5)
+
+        results_grid.addWidget(QLabel("Unix time:"), 3, 0)
+        results_grid.addWidget(create_output_field(), 3, 1)
+        results_grid.addWidget(create_output_field(), 3, 5)
+
+        results_grid.setColumnStretch(1, 1)
+        results_grid.setColumnStretch(3, 1)
+        results_grid.setColumnStretch(5, 1)
+
+        main_layout.addLayout(results_grid)
+
+        # --- Separator ---
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.Shape.HLine)
+        separator2.setFrameShadow(QFrame.Shadow.Sunken)
+        main_layout.addWidget(separator2)
+
+        # --- Timezone Section ---
+        timezone_section_layout = QVBoxLayout()
+        timezone_section_layout.setSpacing(8)
+
+        timezone_controls_layout = QHBoxLayout()
+        timezone_controls_layout.setSpacing(8)
+
+        timezone_controls_layout.addWidget(QLabel("Other timezones:"))
+        tz_combo = QComboBox()
+        tz_combo.setEditable(True)
+        tz_combo.lineEdit().setPlaceholderText("Add timezone...")
+        timezone_controls_layout.addWidget(tz_combo, 1)
+        timezone_controls_layout.addWidget(QPushButton("Add"))
+
+        timezone_section_layout.addLayout(timezone_controls_layout)
+
+        tz_info_label = QLabel("(Pick a timezone to get started...)")
+        tz_info_label.setObjectName("tipsLabel")
+        timezone_section_layout.addWidget(tz_info_label)
+
+        main_layout.addLayout(timezone_section_layout)
+
+        main_layout.addStretch()  # Push everything up
+
+        return converter_widget
+
+    def _on_tool_selected(self, item):
+        tool_name = item.data(Qt.ItemDataRole.UserRole)
+        if tool_name == "Unix Time Converter":
+            self.top_bar_title.setText("Unix Time Converter")
+            self.stacked_widget.setCurrentWidget(self.unix_time_converter_screen)
+        else:
+            # You can add logic for other tools here
+            self.top_bar_title.setText("Dev Driver")
+            self.stacked_widget.setCurrentWidget(self.welcome_screen)
 
     def _apply_styles(self):
         self.setStyleSheet("""
@@ -221,52 +374,6 @@ class DevDriverWindow(QMainWindow):
             #contentArea {
                 background-color: #F3F3F3;
             }
-            QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #D0D0D0;
-                border-radius: 6px;
-                padding-left: 10px; /* Space for a potential icon */
-                font-size: 13px;
-                color: #555;
-            }
-            QListWidget {
-                border: none;
-                background-color: transparent;
-            }
-            QListWidget::item {
-                border-radius: 5px;
-                padding: 4px;
-            }
-            QListWidget::item:hover {
-                background-color: #DCDCDC;
-            }
-            QListWidget::item:selected {
-                background-color: #C9C9C9;
-            }
-            #toolIcon {
-                font-size: 15px;
-                color: #333;
-                font-family: "Menlo", "Consolas", monospace;
-            }
-            #toolText {
-                font-size: 14px;
-                color: #212121;
-            }
-            #feedbackButton {
-                background-color: #D8D8D8;
-                border: 1px solid #C0C0C0;
-                border-radius: 6px;
-                font-size: 13px;
-                text-align: left;
-                padding-left: 10px;
-            }
-            #feedbackButton:hover {
-                background-color: #C8C8C8;
-            }
-            #footerLabel {
-                font-size: 11px;
-                color: #888888;
-            }
             #topBar {
                 background-color: #E8E8E8;
                 border-bottom: 1px solid #DCDCDC;
@@ -276,6 +383,8 @@ class DevDriverWindow(QMainWindow):
                 font-weight: bold;
                 color: #333;
             }
+
+            /* Welcome Screen Specific */
             #appName {
                 font-size: 28px;
                 font-weight: bold;
@@ -285,6 +394,80 @@ class DevDriverWindow(QMainWindow):
                 font-size: 14px;
                 color: #757575;
             }
+
+            /* General Sidebar styles */
+            #sidebar QLineEdit {
+                background-color: #FFFFFF;
+                border: 1px solid #D0D0D0;
+                border-radius: 6px;
+                padding: 0 8px;
+                font-size: 13px;
+                color: #555;
+            }
+            QListWidget {
+                border: none;
+                background-color: transparent;
+            }
+            QListWidget::item { border-radius: 5px; padding: 4px; }
+            QListWidget::item:hover { background-color: #DCDCDC; }
+            QListWidget::item:selected { background-color: #C9C9C9; color: black;}
+            #toolIcon { font-size: 15px; color: #333; }
+            #toolText { font-size: 14px; color: #212121; }
+            #feedbackButton {
+                background-color: #D8D8D8; border: 1px solid #C0C0C0; border-radius: 6px;
+                font-size: 13px; text-align: left; padding-left: 10px;
+            }
+            #feedbackButton:hover { background-color: #C8C8C8; }
+
+            /* Unix Time Converter styles */
+            QWidget {
+                color: #212121;
+                font-size: 13px;
+            }
+            #tipsLabel {
+                color: #888;
+                font-size: 12px;
+            }
+            QFrame[frameShape="4"] { /* HLine */
+                border: none;
+                border-top: 1px solid #DCDCDC;
+            }
+            QLineEdit, QComboBox {
+                background-color: #FFFFFF;
+                border: 1px solid #C6C6C6;
+                border-radius: 4px;
+                padding: 5px;
+                min-height: 24px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                /* Blue circle with up/down arrows */
+                image: url(placeholder.png); /* Placeholder for custom arrow */
+                width: 16px;
+                height: 16px;
+            }
+            QPushButton {
+                background-color: #FDFDFD;
+                border: 1px solid #C6C6C6;
+                border-radius: 4px;
+                padding: 5px 12px;
+                min-height: 24px;
+            }
+            QPushButton:hover {
+                background-color: #F0F0F0;
+            }
+            #iconButton {
+                border: none;
+                background-color: transparent;
+                padding: 4px;
+                min-height: 0px;
+            }
+            #iconButton QAbstractButton::icon {
+                color: black; /* This won't work, standard icons are pixmaps */
+            }
+
         """)
 
 
