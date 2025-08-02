@@ -1,5 +1,5 @@
 [project]
-name = "tunnel-vision"
+name = "devdriver"
 version = "0.0.1"
 description = "Hyper focused reading"
 authors = [{ name = "Namuan", email = "namuan@deskriders.dev" }]
@@ -23,9 +23,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://namuan.github.io/tunnel-vision/"
-Repository = "https://github.com/namuan/tunnel-vision"
-Documentation = "https://namuan.github.io/tunnel-vision/"
+Homepage = "https://namuan.github.io/devdriver/"
+Repository = "https://github.com/namuan/devdriver"
+Documentation = "https://namuan.github.io/devdriver/"
 
 [tool.uv]
 dev-dependencies = [
@@ -40,7 +40,7 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["tunnel_vision"]
+py-modules = ["devdriver"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -97,4 +97,4 @@ ignore = [
 preview = true
 
 [project.scripts]
-tunnel-vision = "tunnel_vision:main"
+devdriver = "devdriver:main"
