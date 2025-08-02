@@ -2,7 +2,7 @@ import logging
 import sys
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPixmap
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -216,36 +216,10 @@ class DevDriverWindow(QMainWindow):
         v_box.setSpacing(15)
         v_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Image Description: A flat-style application icon. It's a slightly rounded pentagon with a vertical orientation.
-        # The color of the pentagon is a solid green, hex code approximately #2ECC71.
-        # Inside the pentagon, there are two symbols: a less-than sign '<' and a greater-than sign '>'
-        # combined to look like code brackets '</>'. The symbols are white.
-        app_icon_label = QLabel()
-        pixmap = QPixmap(100, 100)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path = QPainterPath()
-        path.moveTo(50, 5)
-        path.lineTo(95, 35)
-        path.lineTo(80, 95)
-        path.lineTo(20, 95)
-        path.lineTo(5, 35)
-        path.closeSubpath()
-        painter.fillPath(path, QBrush(QColor("#2ECC71")))
-        font = QFont("Menlo", 28, QFont.Weight.Bold)
-        painter.setFont(font)
-        painter.setPen(QColor("white"))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "</>")
-        painter.end()
-        app_icon_label.setPixmap(pixmap)
-        app_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         app_name_label = QLabel("Dev Driver")
         app_name_label.setObjectName("appName")
         app_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        v_box.addWidget(app_icon_label)
         v_box.addWidget(app_name_label)
         v_box.addSpacing(20)
 
