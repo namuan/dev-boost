@@ -1,3 +1,5 @@
+import logging
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -12,6 +14,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def create_unix_time_converter_widget(style_func):
     """Create and return the Unix Time Converter widget.
@@ -22,11 +26,13 @@ def create_unix_time_converter_widget(style_func):
     Returns:
         QWidget: The complete Unix Time Converter widget
     """
+    logger.info("Starting Unix Time Converter widget creation")
     converter_widget = QWidget()
     main_layout = QVBoxLayout(converter_widget)
     main_layout.setContentsMargins(15, 15, 15, 15)
     main_layout.setSpacing(15)
     main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+    logger.info("Main layout configured for Unix Time Converter")
 
     # --- Input Section ---
     input_section_layout = QVBoxLayout()
@@ -152,4 +158,5 @@ def create_unix_time_converter_widget(style_func):
 
     main_layout.addStretch()  # Push everything up
 
+    logger.info("Unix Time Converter widget creation completed successfully")
     return converter_widget

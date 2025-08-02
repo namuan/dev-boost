@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from PyQt6.QtCore import QSize, Qt
@@ -15,37 +16,57 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .tools.unix_time_converter import create_unix_time_converter_widget
+from .tools import create_unix_time_converter_widget
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout), logging.FileHandler("devdriver.log")],
+)
+logger = logging.getLogger(__name__)
 
 
 class DevDriverWindow(QMainWindow):
     def __init__(self):
+        logger.info("Initializing DevDriverWindow")
         super().__init__()
         self.setWindowTitle("Dev Driver")
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(950, 600)
+        logger.info("Window properties set: title='Dev Driver', geometry=(100,100,1200,800), min_size=(950,600)")
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
+        logger.info("Central widget created and set")
 
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        logger.info("Main layout configured")
 
+        logger.info("Creating sidebar widget")
         sidebar_widget = self._create_sidebar()
+        logger.info("Creating content area widget")
         self.content_widget = self._create_content_area()
 
         main_layout.addWidget(sidebar_widget)
         main_layout.addWidget(self.content_widget)
+        logger.info("Sidebar and content area added to main layout")
 
+        logger.info("Applying styles")
         self._apply_styles()
 
         self.tool_list.itemClicked.connect(self._on_tool_selected)
+        logger.info("Tool selection event handler connected")
+        logger.info("DevDriverWindow initialization completed successfully")
 
     def _create_sidebar(self):
+        logger.info("Starting sidebar creation")
         sidebar_container = QWidget()
         sidebar_container.setObjectName("sidebar")
         sidebar_container.setFixedWidth(300)
+        logger.info("Sidebar container created with width=300")
 
         sidebar_layout = QVBoxLayout(sidebar_container)
         sidebar_layout.setContentsMargins(10, 10, 10, 10)
@@ -58,12 +79,14 @@ class DevDriverWindow(QMainWindow):
         search_input = QLineEdit()
         search_input.setPlaceholderText("Search...   ⌘⇧F")
         search_input.setFixedHeight(38)
+        logger.info("Search input field created")
 
         search_layout.addWidget(search_input)
 
         self.tool_list = QListWidget()
         self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        logger.info("Tool list widget created")
 
         self.tools = [
             ("🕒", "Unix Time Converter"),
@@ -103,6 +126,7 @@ class DevDriverWindow(QMainWindow):
             ("🎨", "Color Converter"),
             ("⇄", "PHP to JSON"),
         ]
+        logger.info(f"Defined {len(self.tools)} tools for the sidebar")
 
         for icon_text, tool_name in self.tools:
             item = QListWidgetItem()
@@ -111,9 +135,11 @@ class DevDriverWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, tool_name)
             self.tool_list.addItem(item)
             self.tool_list.setItemWidget(item, item_widget)
+        logger.info(f"Populated tool list with {len(self.tools)} items")
 
         sidebar_layout.addWidget(search_container)
         sidebar_layout.addWidget(self.tool_list)
+        logger.info("Sidebar creation completed successfully")
 
         return sidebar_container
 
@@ -138,8 +164,10 @@ class DevDriverWindow(QMainWindow):
         return widget
 
     def _create_content_area(self):
+        logger.info("Starting content area creation")
         content_container = QWidget()
         content_container.setObjectName("contentArea")
+        logger.info("Content container created")
 
         main_content_layout = QVBoxLayout(content_container)
         main_content_layout.setContentsMargins(0, 0, 0, 0)
@@ -150,6 +178,7 @@ class DevDriverWindow(QMainWindow):
         self.top_bar.setObjectName("topBar")
         self.top_bar.setFixedHeight(44)
         top_bar_layout = QHBoxLayout(self.top_bar)
+        logger.info("Top bar created")
         top_bar_layout.setContentsMargins(15, 0, 15, 0)
 
         self.top_bar_title = QLabel("Dev Driver")
@@ -160,18 +189,25 @@ class DevDriverWindow(QMainWindow):
 
         # Stacked widget for different tool views
         self.stacked_widget = QStackedWidget()
+        logger.info("Stacked widget created for tool views")
+
+        logger.info("Creating welcome screen")
         self.welcome_screen = self._create_welcome_screen()
+        logger.info("Creating Unix Time Converter screen")
         self.unix_time_converter_screen = create_unix_time_converter_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
+        logger.info("Added welcome screen and Unix Time Converter to stacked widget")
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
+        logger.info("Content area creation completed successfully")
 
         return content_container
 
     def _create_welcome_screen(self):
+        logger.info("Creating welcome screen widget")
         center_stage = QWidget()
         center_layout = QVBoxLayout(center_stage)
         center_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -214,19 +250,24 @@ class DevDriverWindow(QMainWindow):
         v_box.addSpacing(20)
 
         center_layout.addLayout(v_box)
+        logger.info("Welcome screen creation completed")
         return center_stage
 
     def _on_tool_selected(self, item):
         tool_name = item.data(Qt.ItemDataRole.UserRole)
+        logger.info(f"Tool selected: {tool_name}")
         if tool_name == "Unix Time Converter":
             self.top_bar_title.setText("Unix Time Converter")
             self.stacked_widget.setCurrentWidget(self.unix_time_converter_screen)
+            logger.info("Switched to Unix Time Converter view")
         else:
             # You can add logic for other tools here
             self.top_bar_title.setText("Dev Driver")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
+            logger.info("Switched to welcome screen (tool not implemented yet)")
 
     def _apply_styles(self):
+        logger.info("Applying application styles")
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #E8E8E8;
@@ -333,14 +374,24 @@ class DevDriverWindow(QMainWindow):
             }
 
         """)
+        logger.info("Application styles applied successfully")
 
 
 def main():
+    logger.info("Starting DevDriver application")
     app = QApplication(sys.argv)
+    logger.info("QApplication created")
+
     font = QFont("Inter")  # A nice modern system font, falls back to default
     app.setFont(font)
+    logger.info("Application font set to Inter")
+
+    logger.info("Creating main window")
     window = DevDriverWindow()
+    logger.info("Showing main window")
     window.show()
+
+    logger.info("Starting application event loop")
     sys.exit(app.exec())
 
 
