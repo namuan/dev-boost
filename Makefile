@@ -15,7 +15,7 @@ check: ## Run code quality tools.
 
 .PHONY: run
 run: ## Run the application
-	@echo "🚀 Testing code: Running"
+	@echo "🚀 Testing code: Running $(PROJECTNAME)"
 	@uv run $(PROJECTNAME)
 
 .PHONY: build
