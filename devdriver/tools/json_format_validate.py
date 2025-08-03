@@ -22,9 +22,9 @@ from PyQt6.QtWidgets import (
 logger = logging.getLogger(__name__)
 
 
-def create_json_yaml_converter_widget(style_func):
+def create_json_formatter_widget(style_func):
     """
-    Creates the main widget for the JSON/YAML converter tool.
+    Creates the main widget for the JSON formatter tool.
 
     Args:
         style_func: A function that returns a QStyle object to fetch standard icons.
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     main_window.setWindowTitle("JSON-YAML Converter")
     main_window.setGeometry(100, 100, 800, 600)
 
-    central_widget = create_json_yaml_converter_widget(app.style)
+    central_widget = create_json_formatter_widget(app.style)
     main_window.setCentralWidget(central_widget)
 
     main_window.show()

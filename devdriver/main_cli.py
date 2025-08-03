@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .tools import create_json_yaml_converter_widget, create_unix_time_converter_widget
+from .tools import create_json_formatter_widget, create_unix_time_converter_widget
 
 # Configure logging
 logging.basicConfig(
@@ -196,7 +196,7 @@ class DevDriverWindow(QMainWindow):
         logger.info("Creating Unix Time Converter screen")
         self.unix_time_converter_screen = create_unix_time_converter_widget(self.style)
         logger.info("Creating JSON Format/Validate screen")
-        self.json_format_validate_screen = create_json_yaml_converter_widget(self.style)
+        self.json_format_validate_screen = create_json_formatter_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
