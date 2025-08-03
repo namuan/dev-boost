@@ -13,6 +13,11 @@ check: ## Run code quality tools.
 	@echo "🚀 Linting code: Running pre-commit"
 	@uv run pre-commit run -a
 
+.PHONY: test
+test: ## Run all unit tests
+	@echo "🚀 Running unit tests"
+	@uv run pytest -v
+
 .PHONY: run
 run: ## Run the application
 	@echo "🚀 Testing code: Running $(PROJECTNAME)"
