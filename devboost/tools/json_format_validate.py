@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style, get_status_style
+from ..styles import get_tool_style, get_status_style, COLORS
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
@@ -287,7 +287,7 @@ def create_json_formatter_widget(style_func):
     bottom_bar = QFrame()
     bottom_bar.setFrameShape(QFrame.Shape.NoFrame)
     bottom_bar.setFixedHeight(35)
-    bottom_bar.setStyleSheet("background-color: #F8F9FA; border-top: 1px solid #DEE2E6;")
+    bottom_bar.setStyleSheet(f"background-color: {COLORS['bg_secondary']}; border-top: 1px solid {COLORS['border_secondary']};")
 
     bottom_layout = QHBoxLayout(bottom_bar)
     bottom_layout.setContentsMargins(10, 0, 10, 0)
