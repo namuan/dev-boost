@@ -130,11 +130,11 @@ def create_base64_string_encodec_widget(style_func):
     input_text_edit = QTextEdit()
     input_text_edit.setMinimumHeight(180)
     placeholder_text_input = (
-        "– Enter Your Text\n"
-        "– Drag/Drop Files\n"
-        "– Right Click → Load from File...\n"
-        "– ⌘ + F to Search\n"
-        "– ⌘ + ⇧ + F to Replace"
+        "- Enter Your Text\n"
+        "- Drag/Drop Files\n"
+        "- Right Click → Load from File...\n"
+        "- ⌘ + F to Search\n"
+        "- ⌘ + ⇧ + F to Replace"
     )
     # Using a QLabel for placeholder as QTextEdit placeholder is limited
     input_text_edit.setPlaceholderText(placeholder_text_input)
@@ -168,7 +168,7 @@ def create_base64_string_encodec_widget(style_func):
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
     output_text_edit.setMinimumHeight(180)
-    placeholder_text_output = "– Right click > Save to file..."
+    placeholder_text_output = "- Right click > Save to file..."
     output_text_edit.setPlaceholderText(placeholder_text_output)
     output_section_layout.addWidget(output_text_edit, 1)
 
