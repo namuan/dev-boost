@@ -20,6 +20,6 @@ Mark the whole task as completed once every checklist item is completed within t
 
 Yes, keep working through the tasks and check list items. Don't stop until all the whole task is complete
 
-The UI implementation is in `unix_time_converter.py`.
+Create the test file in the #tests folder
 
-Create the test file alongside the UI file.
+The UI implementation is in 

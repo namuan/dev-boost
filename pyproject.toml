@@ -16,6 +16,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
+    "jsonpath-ng>=1.7.0",
     "pyqt6>=6.7.1",
 ]
 
