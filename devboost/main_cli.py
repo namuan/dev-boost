@@ -243,6 +243,7 @@ class DevDriverWindow(QMainWindow):
         logger.info("Welcome screen creation completed")
         return center_stage
 
+    # ruff: noqa: C901
     def _on_tool_selected(self, item):
         tool_name = item.data(Qt.ItemDataRole.UserRole)
         logger.info(f"Tool selected: {tool_name}")

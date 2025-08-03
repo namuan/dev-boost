@@ -12,7 +12,7 @@ Add a task at the end of this check list to Open this UI when the tool option is
 
 Add a task at the end of this check list to commit any remaining changes with --no-verify
 
-Add a task to run the application using uv run python -m devboost.main_cli 
+Add a task to run the application using uv run python -m devboost.main_cli
 
 Add a task at the end of this check list to update task description with a summary
 
