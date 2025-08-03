@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -267,7 +266,7 @@ def create_url_codec_widget(style_func):
     main_layout = QVBoxLayout(widget)
     main_layout.setContentsMargins(15, 15, 15, 15)
     main_layout.setSpacing(0)
-    
+
     main_splitter = QSplitter(Qt.Orientation.Vertical)
     main_layout.addWidget(main_splitter)
 
@@ -318,8 +317,6 @@ def create_url_codec_widget(style_func):
     output_bar_layout = QHBoxLayout()
     output_bar_layout.setSpacing(8)
 
-    output_label = QLabel("Output:")
-
     copy_button = QPushButton("Copy")
     # Image description: A copy icon. Two overlapping squares or pages, one slightly offset.
     copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))  # Placeholder
@@ -328,7 +325,6 @@ def create_url_codec_widget(style_func):
     # Image description: An upward-pointing arrow icon, simple and bold.
     use_as_input_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))  # Placeholder
 
-    output_bar_layout.addWidget(output_label)
     output_bar_layout.addStretch()
     output_bar_layout.addWidget(copy_button)
     output_bar_layout.addWidget(use_as_input_button)

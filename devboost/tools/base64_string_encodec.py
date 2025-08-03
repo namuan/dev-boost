@@ -7,9 +7,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QFileDialog,
-    QFrame,
     QHBoxLayout,
-    QLabel,
     QMainWindow,
     QMenu,
     QPushButton,
@@ -44,7 +42,7 @@ def create_base64_string_encodec_widget(style_func):
     main_layout = QVBoxLayout(widget)
     main_layout.setContentsMargins(15, 15, 15, 15)
     main_layout.setSpacing(0)
-    
+
     main_splitter = QSplitter(Qt.Orientation.Vertical)
     main_layout.addWidget(main_splitter)
 
@@ -108,8 +106,6 @@ def create_base64_string_encodec_widget(style_func):
     output_bar_layout.addWidget(copy_button)
     output_bar_layout.addWidget(use_as_input_button)
 
-    output_label = QLabel("Output:")
-    output_section_layout.addWidget(output_label)
     output_section_layout.addLayout(output_bar_layout)
 
     # Output Text Edit
