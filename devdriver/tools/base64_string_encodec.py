@@ -2,13 +2,16 @@ import base64
 import logging
 import sys
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMenu,
     QPushButton,
     QRadioButton,
     QStyle,
@@ -20,6 +23,7 @@ from PyQt6.QtWidgets import (
 logger = logging.getLogger(__name__)
 
 
+# ruff: noqa: C901
 def create_base64_string_encodec_widget(style_func):
     """
     Creates and returns the Base64 String Encode/Decode widget.
@@ -139,6 +143,7 @@ def create_base64_string_encodec_widget(style_func):
     )
     # Using a QLabel for placeholder as QTextEdit placeholder is limited
     input_text_edit.setPlaceholderText(placeholder_text_input)
+    input_text_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     input_section_layout.addWidget(input_text_edit, 1)
 
     # --- BOTTOM OUTPUT SECTION ---
@@ -189,55 +194,108 @@ def create_base64_string_encodec_widget(style_func):
         if not input_text.strip():
             output_text_edit.clear()
             return
-            
+
         try:
             if encode_radio.isChecked():
                 # Encode to base64
-                encoded_bytes = base64.b64encode(input_text.encode('utf-8'))
-                result = encoded_bytes.decode('ascii')
+                encoded_bytes = base64.b64encode(input_text.encode("utf-8"))
+                result = encoded_bytes.decode("ascii")
             else:
                 # Decode from base64
-                decoded_bytes = base64.b64decode(input_text.encode('ascii'))
-                result = decoded_bytes.decode('utf-8')
-            
+                decoded_bytes = base64.b64decode(input_text.encode("ascii"))
+                result = decoded_bytes.decode("utf-8")
+
             output_text_edit.setPlainText(result)
         except Exception as e:
-            output_text_edit.setPlainText(f"Error: {str(e)}")
-            logger.error(f"Base64 operation failed: {e}")
-    
+            output_text_edit.setPlainText(f"Error: {e!s}")
+            logger.exception("Base64 operation failed")
+
     def copy_to_clipboard():
         """Copy output text to clipboard."""
         output_text = output_text_edit.toPlainText()
         if output_text:
             QApplication.clipboard().setText(output_text)
             logger.info("Output copied to clipboard")
-    
+
     def use_output_as_input():
         """Move output text to input field."""
         output_text = output_text_edit.toPlainText()
         if output_text:
             input_text_edit.setPlainText(output_text)
             logger.info("Output moved to input")
-    
+
     def clear_input():
         """Clear the input text field."""
         input_text_edit.clear()
         output_text_edit.clear()
-    
+
     def load_sample():
         """Load sample text for testing."""
         sample_text = "Hello, World! This is a sample text for Base64 encoding/decoding."
         input_text_edit.setPlainText(sample_text)
-    
+
     def paste_from_clipboard():
         """Paste text from clipboard to input."""
         clipboard_text = QApplication.clipboard().text()
         if clipboard_text:
             input_text_edit.setPlainText(clipboard_text)
             logger.info("Text pasted from clipboard")
-    
+
+    def load_from_file():
+        """Load text from a file."""
+        file_path, _ = QFileDialog.getOpenFileName(widget, "Load from File", "", "Text Files (*.txt);;All Files (*)")
+        if file_path:
+            try:
+                with open(file_path, encoding="utf-8") as file:
+                    content = file.read()
+                    input_text_edit.setPlainText(content)
+                    logger.info(f"File loaded: {file_path}")
+            except Exception as e:
+                logger.exception(f"Failed to load file {file_path}")
+                input_text_edit.setPlainText(f"Error loading file: {e!s}")
+
+    def show_input_context_menu(position):
+        """Show context menu for input text area."""
+        context_menu = QMenu(input_text_edit)
+
+        # Add standard actions
+        undo_action = context_menu.addAction("Undo")
+        undo_action.triggered.connect(input_text_edit.undo)
+        undo_action.setEnabled(input_text_edit.document().isUndoAvailable())
+
+        redo_action = context_menu.addAction("Redo")
+        redo_action.triggered.connect(input_text_edit.redo)
+        redo_action.setEnabled(input_text_edit.document().isRedoAvailable())
+
+        context_menu.addSeparator()
+
+        cut_action = context_menu.addAction("Cut")
+        cut_action.triggered.connect(input_text_edit.cut)
+        cut_action.setEnabled(input_text_edit.textCursor().hasSelection())
+
+        copy_action = context_menu.addAction("Copy")
+        copy_action.triggered.connect(input_text_edit.copy)
+        copy_action.setEnabled(input_text_edit.textCursor().hasSelection())
+
+        paste_action = context_menu.addAction("Paste")
+        paste_action.triggered.connect(input_text_edit.paste)
+
+        context_menu.addSeparator()
+
+        select_all_action = context_menu.addAction("Select All")
+        select_all_action.triggered.connect(input_text_edit.selectAll)
+
+        context_menu.addSeparator()
+
+        # Add custom action
+        load_file_action = context_menu.addAction("Load from File...")
+        load_file_action.triggered.connect(load_from_file)
+
+        context_menu.exec(input_text_edit.mapToGlobal(position))
+
     # Connect signals
     input_text_edit.textChanged.connect(perform_encoding_decoding)
+    input_text_edit.customContextMenuRequested.connect(show_input_context_menu)
     encode_radio.toggled.connect(perform_encoding_decoding)
     decode_radio.toggled.connect(perform_encoding_decoding)
     copy_button.clicked.connect(copy_to_clipboard)

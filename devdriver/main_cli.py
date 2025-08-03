@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .tools import create_json_formatter_widget, create_unix_time_converter_widget
+from .tools.base64_string_encodec import create_base64_string_encodec_widget
 
 # Configure logging
 logging.basicConfig(
@@ -197,11 +198,16 @@ class DevDriverWindow(QMainWindow):
         self.unix_time_converter_screen = create_unix_time_converter_widget(self.style)
         logger.info("Creating JSON Format/Validate screen")
         self.json_format_validate_screen = create_json_formatter_widget(self.style)
+        logger.info("Creating Base64 String Encode/Decode screen")
+        self.base64_string_encodec_screen = create_base64_string_encodec_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
         self.stacked_widget.addWidget(self.json_format_validate_screen)
-        logger.info("Added welcome screen and Unix Time Converter to stacked widget")
+        self.stacked_widget.addWidget(self.base64_string_encodec_screen)
+        logger.info(
+            "Added welcome screen, Unix Time Converter, JSON Format/Validate, and Base64 String Encode/Decode to stacked widget"
+        )
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -241,6 +247,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("JSON Format/Validate")
             self.stacked_widget.setCurrentWidget(self.json_format_validate_screen)
             logger.info("Switched to JSON Format/Validate view")
+        elif tool_name == "Base64 String Encode/Decode":
+            self.top_bar_title.setText("Base64 String Encode/Decode")
+            self.stacked_widget.setCurrentWidget(self.base64_string_encodec_screen)
+            logger.info("Switched to Base64 String Encode/Decode view")
         else:
             # You can add logic for other tools here
             self.top_bar_title.setText("Dev Driver")
