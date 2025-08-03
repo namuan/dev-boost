@@ -1,5 +1,9 @@
+import json
 import sys
 
+import yaml
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QAction, QClipboard, QFont
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -13,6 +17,114 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+class YAMLToJSONConverter:
+    """Backend class for converting YAML to JSON with proper validation."""
+
+    def __init__(self):
+        self.last_error = None
+
+    def convert_yaml_to_json(self, yaml_text: str, indent: int = 2) -> str:
+        """
+        Convert YAML text to JSON format.
+
+        Args:
+            yaml_text: The YAML string to convert
+            indent: Number of spaces for JSON indentation (default: 2)
+
+        Returns:
+            JSON string representation of the YAML data
+
+        Raises:
+            ValueError: If YAML parsing fails
+        """
+        try:
+            self.last_error = None
+            
+            # Handle empty input
+            if not yaml_text.strip():
+                return ""
+            
+            # Parse YAML
+            yaml_data = yaml.safe_load(yaml_text)
+            
+            # Convert to JSON with specified indentation
+            json_output = json.dumps(yaml_data, indent=indent, ensure_ascii=False)
+            
+            return json_output
+            
+        except yaml.YAMLError as e:
+            error_msg = f"YAML parsing error: {str(e)}"
+            self.last_error = error_msg
+            raise ValueError(error_msg)
+        except json.JSONEncodeError as e:
+            error_msg = f"JSON encoding error: {str(e)}"
+            self.last_error = error_msg
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = f"Conversion error: {str(e)}"
+            self.last_error = error_msg
+            raise ValueError(error_msg)
+
+    def validate_yaml(self, yaml_text: str) -> bool:
+        """
+        Validate if the given text is valid YAML.
+
+        Args:
+            yaml_text: The YAML string to validate
+
+        Returns:
+            True if valid YAML, False otherwise
+        """
+        try:
+            self.last_error = None
+            
+            if not yaml_text.strip():
+                return True  # Empty string is valid
+            
+            yaml.safe_load(yaml_text)
+            return True
+            
+        except yaml.YAMLError as e:
+            self.last_error = f"YAML validation error: {str(e)}"
+            return False
+        except Exception as e:
+            self.last_error = f"Validation error: {str(e)}"
+            return False
+
+    def get_last_error(self) -> str:
+        """
+        Get the last error message.
+
+        Returns:
+            The last error message or None if no error occurred
+        """
+        return self.last_error
+
+    def get_sample_yaml(self) -> str:
+        """
+        Get a sample YAML string for demonstration.
+
+        Returns:
+            A sample YAML string
+        """
+        return """# Sample YAML data
+name: John Doe
+age: 30
+email: john.doe@example.com
+address:
+  street: 123 Main St
+  city: Anytown
+  state: CA
+  zip: 12345
+skills:
+  - Python
+  - JavaScript
+  - Docker
+  - Kubernetes
+active: true
+salary: 75000.50"""
 
 
 def create_yaml_to_json_widget(style_func):
@@ -172,12 +284,174 @@ def create_yaml_to_json_widget(style_func):
         "- Right Click → Line Wrapping"
     )
     output_text_edit.setPlaceholderText(placeholder_text_output)
+    
+    # Enable custom context menu for output text edit
+    output_text_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+    
+    # State variables for context menu options
+    show_line_numbers = False
+    line_wrapping_enabled = True
+    
+    def create_output_context_menu(position):
+        """Create and show context menu for output text edit."""
+        nonlocal show_line_numbers, line_wrapping_enabled
+        
+        menu = output_text_edit.createStandardContextMenu()
+        menu.addSeparator()
+        
+        # Line numbers toggle
+        line_numbers_action = QAction("Hide Line Numbers" if show_line_numbers else "Show Line Numbers", menu)
+        line_numbers_action.triggered.connect(toggle_line_numbers)
+        menu.addAction(line_numbers_action)
+        
+        # Line wrapping toggle
+        line_wrap_action = QAction("Disable Line Wrapping" if line_wrapping_enabled else "Enable Line Wrapping", menu)
+        line_wrap_action.triggered.connect(toggle_line_wrapping)
+        menu.addAction(line_wrap_action)
+        
+        menu.exec(output_text_edit.mapToGlobal(position))
+    
+    def toggle_line_numbers():
+        """Toggle line numbers display in output."""
+        nonlocal show_line_numbers
+        show_line_numbers = not show_line_numbers
+        
+        if show_line_numbers:
+            # Add line numbers to current content
+            current_text = output_text_edit.toPlainText()
+            if current_text:
+                lines = current_text.split('\n')
+                numbered_lines = [f"{i+1:3d}: {line}" for i, line in enumerate(lines)]
+                output_text_edit.setPlainText('\n'.join(numbered_lines))
+        else:
+            # Remove line numbers from current content
+            current_text = output_text_edit.toPlainText()
+            if current_text and current_text.strip():
+                lines = current_text.split('\n')
+                # Remove line numbers (format: "  1: content")
+                clean_lines = []
+                for line in lines:
+                    if len(line) > 4 and line[3:5] == ': ':
+                        clean_lines.append(line[5:])
+                    else:
+                        clean_lines.append(line)
+                output_text_edit.setPlainText('\n'.join(clean_lines))
+    
+    def toggle_line_wrapping():
+        """Toggle line wrapping in output."""
+        nonlocal line_wrapping_enabled
+        line_wrapping_enabled = not line_wrapping_enabled
+        
+        if line_wrapping_enabled:
+            output_text_edit.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        else:
+            output_text_edit.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+    
+    # Connect context menu
+    output_text_edit.customContextMenuRequested.connect(create_output_context_menu)
+    
     output_layout.addWidget(output_text_edit, 1)
 
     # --- Assemble Main Layout ---
     main_layout.addWidget(input_pane, 1)
     main_layout.addWidget(separator)
     main_layout.addWidget(output_pane, 1)
+
+    # --- Backend Integration ---
+    converter = YAMLToJSONConverter()
+    
+    # Timer for debounced real-time processing
+    conversion_timer = QTimer()
+    conversion_timer.setSingleShot(True)
+    conversion_timer.timeout.connect(lambda: process_yaml_input())
+    
+    def get_indent_from_combo():
+        """Get indentation value from combo box."""
+        text = spaces_combo.currentText()
+        return 4 if "4" in text else 2
+    
+    def process_yaml_input():
+        """Process YAML input and update output with debouncing."""
+        yaml_text = input_text_edit.toPlainText()
+        
+        if not yaml_text.strip():
+            output_text_edit.clear()
+            return
+        
+        try:
+            indent = get_indent_from_combo()
+            json_output = converter.convert_yaml_to_json(yaml_text, indent)
+            output_text_edit.setPlainText(json_output)
+            
+            # Reset input styling on successful conversion
+            input_text_edit.setStyleSheet(input_text_edit.styleSheet().replace(
+                "border: 2px solid #dc3545;", "border: 1px solid #e0e0e0;"
+            ))
+            
+        except ValueError as e:
+            # Show error in output and highlight input with red border
+            error_msg = f"Error: {str(e)}"
+            output_text_edit.setPlainText(error_msg)
+            
+            # Add red border to input to indicate error
+            current_style = input_text_edit.styleSheet()
+            if "border: 2px solid #dc3545;" not in current_style:
+                new_style = current_style.replace(
+                    "border: 1px solid #e0e0e0;", "border: 2px solid #dc3545;"
+                )
+                input_text_edit.setStyleSheet(new_style)
+    
+    def on_input_changed():
+        """Handle input text changes with debouncing."""
+        conversion_timer.stop()
+        conversion_timer.start(300)  # 300ms debounce
+    
+    def on_spaces_changed():
+        """Handle spaces combo box changes."""
+        if input_text_edit.toPlainText().strip():
+            process_yaml_input()
+    
+    def on_clipboard_clicked():
+        """Handle clipboard button click to paste YAML content."""
+        from PyQt6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard_text = clipboard.text()
+        
+        if clipboard_text:
+            input_text_edit.setPlainText(clipboard_text)
+            # The textChanged signal will automatically trigger conversion
+    
+    def on_sample_clicked():
+        """Handle sample button click to load sample YAML data."""
+        sample_yaml = converter.get_sample_yaml()
+        input_text_edit.setPlainText(sample_yaml)
+        # The textChanged signal will automatically trigger conversion
+    
+    def on_clear_clicked():
+        """Handle clear button click to clear input text area."""
+        input_text_edit.clear()
+        output_text_edit.clear()
+        # Reset input styling to normal
+        input_text_edit.setStyleSheet(input_text_edit.styleSheet().replace(
+            "border: 2px solid #dc3545;", "border: 1px solid #e0e0e0;"
+        ))
+    
+    def on_copy_clicked():
+        """Handle copy button click to copy JSON output to clipboard."""
+        from PyQt6.QtWidgets import QApplication
+        output_text = output_text_edit.toPlainText()
+        
+        if output_text:
+            clipboard = QApplication.clipboard()
+            clipboard.setText(output_text)
+    
+    # Connect signals
+    input_text_edit.textChanged.connect(on_input_changed)
+    spaces_combo.currentTextChanged.connect(on_spaces_changed)
+    clipboard_button.clicked.connect(on_clipboard_clicked)
+    sample_button.clicked.connect(on_sample_clicked)
+    clear_button.clicked.connect(on_clear_clicked)
+    copy_button.clicked.connect(on_copy_clicked)
 
     return widget
 

@@ -45,6 +45,7 @@ source = { editable = "." }
 dependencies = [
     { name = "jsonpath-ng" },
     { name = "pyqt6" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -59,6 +60,7 @@ dev = [
 requires-dist = [
     { name = "jsonpath-ng", specifier = ">=1.7.0" },
     { name = "pyqt6", specifier = ">=6.7.1" },
+    { name = "pyyaml", specifier = ">=6.0" },
 ]
 
 [package.metadata.requires-dev]
