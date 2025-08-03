@@ -234,77 +234,7 @@ def create_jwt_debugger_widget(style_func):
 
     main_widget = QWidget()
     main_widget.setObjectName("jwtDebugger")
-    main_widget.setStyleSheet("""
-        QWidget#jwtDebugger {
-            background-color: #fdfdfd;
-            font-family: "Segoe UI", Arial, sans-serif;
-            font-size: 14px;
-        }
-        QTextEdit {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 14px;
-            padding: 8px;
-            color: #333333;
-        }
-        QTextEdit:read-only {
-            background-color: #f8f8f8;
-        }
-        QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #dcdcdc;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        QPushButton:hover {
-            background-color: #e0e0e0;
-        }
-        QPushButton#iconButton {
-            background-color: transparent;
-            border: none;
-            padding: 2px;
-        }
-        QLabel {
-            font-size: 14px;
-            color: #333333;
-        }
-        QFrame#rightPane {
-            background-color: #f7f7f7;
-            border-left: 1px solid #e0e0e0;
-        }
-        QTextEdit#signatureFormulaEdit {
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
-            border-bottom: none;
-            background-color: #ffffff;
-        }
-        QTextEdit#secretInput {
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
-            background-color: #ffffff;
-            font-style: italic;
-        }
-        QFrame#verificationFrame {
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-        }
-        QComboBox {
-            padding: 4px 8px;
-            border: 1px solid #dcdcdc;
-            border-radius: 4px;
-        }
-        QWidget#statusBar {
-            border-top: 1px solid #e0e0e0;
-            background-color: #f7f7f7;
-        }
-        QLabel#statusLabel {
-            font-size: 13px;
-            color: #555555;
-        }
-    """)
+    main_widget.setStyleSheet(get_tool_style())
 
     # --- Main Layout ---
     top_level_layout = QVBoxLayout(main_widget)

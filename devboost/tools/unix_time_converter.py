@@ -261,12 +261,6 @@ def create_unix_time_converter_widget(style_func):
     top_controls_layout.addWidget(clear_button)
     top_controls_layout.addStretch()
 
-    settings_button = QPushButton()
-    settings_button.setObjectName("iconButton")
-    # Image description: A gear icon for settings. Black, simple cogwheel shape.
-    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-    top_controls_layout.addWidget(settings_button)
-
     input_fields_layout = QHBoxLayout()
     input_fields_layout.setSpacing(8)
 

@@ -198,7 +198,7 @@ class DevDriverWindow(QMainWindow):
         logger.info("Creating String Case Converter screen")
         self.string_case_converter_screen = create_string_case_converter_widget(self.style)
         logger.info("Creating Color Converter screen")
-        self.color_converter_screen = create_color_converter_widget()
+        self.color_converter_screen = create_color_converter_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)

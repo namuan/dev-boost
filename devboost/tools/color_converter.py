@@ -1325,7 +1325,7 @@ class ColorConverter:
 
 
 # ruff: noqa: C901
-def create_color_converter_widget():
+def create_color_converter_widget(style_func):
     """
     Creates the Color Converter widget.
 
@@ -1334,6 +1334,7 @@ def create_color_converter_widget():
     """
     widget = QWidget()
     widget.setObjectName("mainWidget")
+    widget.setStyleSheet(get_tool_style())
 
     # Initialize the color converter backend
     converter = ColorConverter()
@@ -1821,7 +1822,7 @@ if __name__ == "__main__":
     main_window.setGeometry(100, 100, 950, 650)
 
     # Create the color converter widget
-    color_converter_widget = create_color_converter_widget()
+    color_converter_widget = create_color_converter_widget(app.style)
 
     # Set the created widget as the central widget of the main window.
     main_window.setCentralWidget(color_converter_widget)
