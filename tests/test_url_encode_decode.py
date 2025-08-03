@@ -1,4 +1,3 @@
-import pytest
 from devdriver.tools.url_encode_decode import URLCodec
 
 
@@ -191,10 +190,10 @@ class TestURLCodec:
         """Test the difference between URL and component encoding for spaces."""
         codec = URLCodec()
         text = "hello world"
-        
+
         url_encoded = codec.encode_url(text)
         component_encoded = codec.encode_url_component(text)
-        
+
         assert url_encoded == "hello+world"
         assert component_encoded == "hello%20world"
 
@@ -211,11 +210,11 @@ class TestURLCodec:
         codec = URLCodec()
         edge_cases = [
             "\n\r\t",  # Newlines and tabs
-            "<>\"'",    # HTML special chars
-            "{}[]|\\^`", # Other special chars
+            "<>\"'",  # HTML special chars
+            "{}[]|\\^`",  # Other special chars
         ]
-        
+
         for text in edge_cases:
             encoded = codec.encode_url(text)
             decoded = codec.decode_url(encoded)
-            assert decoded == text, f"Failed roundtrip for: {repr(text)}"
+            assert decoded == text, f"Failed roundtrip for: {text!r}"
