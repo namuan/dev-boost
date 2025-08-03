@@ -87,6 +87,7 @@ ignore = [
     # DoNotAssignLambda
     "E731",
     "TRY300",
+    "TRY003",
 ]
 
 [tool.ruff.lint.per-file-ignores]
