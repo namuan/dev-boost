@@ -25,6 +25,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_dialog_style
+
 logger = logging.getLogger(__name__)
 
 
@@ -151,6 +153,8 @@ class URLCodecSettingsDialog(QDialog):
 
     def setup_ui(self):
         """Setup the settings dialog UI."""
+        self.setStyleSheet(get_dialog_style())
+        
         layout = QVBoxLayout(self)
 
         # Encoding Type Group
@@ -257,54 +261,7 @@ def create_url_codec_widget(style_func):
     """
     logger.info("Creating URL Encode/Decode widget")
     widget = QWidget()
-    widget.setStyleSheet("""
-        QWidget {
-            background-color: #ffffff;
-            color: #333333;
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
-        QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #dcdcdc;
-            padding: 5px 12px;
-            border-radius: 3px;
-            font-size: 13px;
-        }
-        QPushButton:hover {
-            background-color: #e9e9e9;
-        }
-        QPushButton#iconButton {
-            background-color: transparent;
-            border: none;
-            padding: 2px;
-        }
-        QTextEdit {
-            background-color: #ffffff;
-            border: 1px solid #cccccc;
-            border-radius: 2px;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 14px;
-            padding: 8px;
-        }
-        QFrame {
-            border: none;
-            border-top: 1px solid #e5e5e5;
-        }
-        QRadioButton {
-            font-size: 13px;
-            spacing: 5px;
-        }
-        QRadioButton::indicator {
-            width: 14px;
-            height: 14px;
-        }
-        QLabel {
-            font-size: 13px;
-            font-weight: bold;
-            color: #555555;
-            padding-bottom: 2px;
-        }
-    """)
+    widget.setStyleSheet(get_tool_style())
 
     main_layout = QVBoxLayout(widget)
     main_layout.setContentsMargins(15, 15, 15, 15)

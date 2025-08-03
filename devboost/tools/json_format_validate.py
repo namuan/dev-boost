@@ -21,6 +21,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_status_style
+
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
 
@@ -171,73 +173,7 @@ def create_json_formatter_widget(style_func):
 
     # Create JSON validator instance
     json_validator = JSONValidator()
-    widget.setStyleSheet("""
-        QWidget {
-            background-color: #F8F9FA;
-            color: #212529;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-        QTextEdit, QLineEdit {
-            background-color: #FFFFFF;
-            border: 1px solid #DEE2E6;
-            border-radius: 4px;
-            padding: 8px;
-            font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
-            font-size: 13px;
-        }
-        QTextEdit {
-            color: #6c757d;
-        }
-        QPushButton {
-            background-color: #F8F9FA;
-            border: 1px solid #CED4DA;
-            border-radius: 4px;
-            padding: 5px 10px;
-            font-size: 13px;
-        }
-        QPushButton:hover {
-            background-color: #E9ECEF;
-        }
-        QPushButton#iconButton {
-            border: none;
-            padding: 5px;
-        }
-        QPushButton#iconButton:hover {
-            background-color: #E9ECEF;
-        }
-        QPushButton#jsonToggleButton {
-             border: none;
-             padding: 0px;
-        }
-        QSplitter::handle {
-            background-color: #DEE2E6;
-        }
-        QSplitter::handle:horizontal {
-            width: 1px;
-        }
-        QLabel {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        QComboBox {
-            background-color: #FFFFFF;
-            border: 1px solid #CED4DA;
-            border-radius: 4px;
-            padding: 4px;
-            min-width: 6em;
-        }
-        QComboBox::drop-down {
-            border: none;
-        }
-        QComboBox::down-arrow {
-            /* Using a standard icon for the dropdown arrow */
-        }
-        QLineEdit#jsonPathInput {
-            border: none;
-            background-color: #F8F9FA;
-            padding: 6px;
-        }
-    """)
+    widget.setStyleSheet(get_tool_style())
 
     # Main layout
     main_layout = QVBoxLayout(widget)
@@ -388,10 +324,10 @@ def create_json_formatter_widget(style_func):
 
         if is_valid:
             output_text_edit.setPlainText(formatted_json)
-            output_text_edit.setStyleSheet("QTextEdit { color: #212529; }")
+            output_text_edit.setStyleSheet(get_status_style('success'))
         else:
             output_text_edit.setPlainText(f"Error: {error_message}")
-            output_text_edit.setStyleSheet("QTextEdit { color: #dc3545; }")
+            output_text_edit.setStyleSheet(get_status_style('error'))
 
     def load_sample():
         """Load sample JSON into input area."""
@@ -402,7 +338,7 @@ def create_json_formatter_widget(style_func):
         """Clear input text area."""
         input_text_edit.clear()
         output_text_edit.clear()
-        output_text_edit.setStyleSheet("QTextEdit { color: #6c757d; }")
+        output_text_edit.setStyleSheet(get_status_style('info'))
 
     def copy_output():
         """Copy output to clipboard."""
@@ -436,12 +372,12 @@ def create_json_formatter_widget(style_func):
 
         if is_valid:
             output_text_edit.setPlainText(result_json)
-            output_text_edit.setStyleSheet("QTextEdit { color: #212529; }")
+            output_text_edit.setStyleSheet(get_status_style('success'))
             if error_message:  # "No matches found" case
                 output_text_edit.setPlainText(f"Result: {result_json}\n\nNote: {error_message}")
         else:
             output_text_edit.setPlainText(f"Error: {error_message}")
-            output_text_edit.setStyleSheet("QTextEdit { color: #dc3545; }")
+            output_text_edit.setStyleSheet(get_status_style('error'))
 
     # Connect buttons to functions
     def on_run_button_clicked():

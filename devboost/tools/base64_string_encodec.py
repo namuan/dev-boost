@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,51 +38,7 @@ def create_base64_string_encodec_widget(style_func):
     """
     logger.info("Creating Base64 String Encode/Decode widget")
     widget = QWidget()
-    widget.setStyleSheet("""
-        QWidget {
-            background-color: #ffffff;
-            color: #333333;
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
-        QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #dcdcdc;
-            padding: 5px 12px;
-            border-radius: 3px;
-            font-size: 13px;
-        }
-        QPushButton:hover {
-            background-color: #e0e0e0;
-        }
-        QPushButton#iconButton {
-            background-color: transparent;
-            border: none;
-            padding: 2px;
-        }
-        QTextEdit {
-            background-color: #ffffff;
-            border: 1px solid #dcdcdc;
-            border-radius: 2px;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 14px;
-            padding: 8px;
-        }
-        QFrame[frameShape="HLine"] {
-            border: none;
-            border-top: 1px solid #e5e5e5;
-        }
-        QRadioButton {
-            font-size: 13px;
-            spacing: 5px;
-        }
-        QRadioButton::indicator {
-            width: 14px;
-            height: 14px;
-        }
-        QTextEdit::placeholder {
-            color: #a9a9a9;
-        }
-    """)
+    widget.setStyleSheet(get_tool_style())
 
     main_layout = QVBoxLayout(widget)
     main_layout.setContentsMargins(15, 15, 15, 15)

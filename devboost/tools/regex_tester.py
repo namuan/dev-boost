@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_error_input_style, clear_input_style, get_dialog_style
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,8 @@ class RegexCheatSheetDialog(QDialog):
 
     def setup_ui(self):
         """Setup the cheat sheet dialog UI."""
+        self.setStyleSheet(get_dialog_style())
+        
         layout = QVBoxLayout(self)
 
         # Create text area for cheat sheet content
@@ -129,6 +133,8 @@ class RegexSettingsDialog(QDialog):
 
     def setup_ui(self):
         """Setup the settings dialog UI."""
+        self.setStyleSheet(get_dialog_style())
+        
         layout = QVBoxLayout(self)
 
         # Case insensitive option
@@ -301,69 +307,7 @@ def create_regexp_tester_widget(style_func):
 
     # Create backend instance
     regex_tester = RegexTester()
-    widget.setStyleSheet("""
-        QWidget {
-            background-color: #f0f2f5;
-            color: #333333;
-            font-family: "Segoe UI", Arial, sans-serif;
-            font-size: 13px;
-        }
-        QFrame#mainContainer {
-            background-color: #ffffff;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-        }
-        QLabel {
-            font-weight: 500;
-        }
-        QPushButton {
-            background-color: #f9fafb;
-            border: 1px solid #d1d5db;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        QPushButton:hover {
-            background-color: #f3f4f6;
-        }
-        QPushButton#iconButton {
-            background-color: transparent;
-            border: none;
-            padding: 4px;
-        }
-        QPushButton#cheatSheetButton {
-            background-color: #ffffff;
-            border: 1px solid #d1d5db;
-            padding: 5px 10px;
-        }
-        QLineEdit, QTextEdit {
-            background-color: #ffffff;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 6px;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 14px;
-            color: #111827;
-        }
-        QLineEdit#barInput {
-             border: none;
-             padding: 4px;
-             background-color: #f3f4f6;
-        }
-        QLineEdit {
-            padding-left: 10px;
-        }
-        QLineEdit[has-leading-action=true] {
-            padding-left: 30px;
-        }
-        QTextEdit {
-            padding: 8px;
-        }
-        QLineEdit::placeholder, QTextEdit::placeholder {
-            color: #9ca3af;
-        }
-    """)
+    widget.setStyleSheet(get_tool_style())
 
     # --- MAIN LAYOUT ---
     main_layout = QVBoxLayout(widget)
@@ -522,14 +466,14 @@ def create_regexp_tester_widget(style_func):
 
         if not is_valid and pattern:
             # Invalid pattern - show error styling
-            regexp_input.setStyleSheet("border: 2px solid #ef4444;")
+            regexp_input.setStyleSheet(get_error_input_style())
             matches_label.setText("Invalid pattern")
             output_text_edit.clear()
             matches_text_edit.clear()
             return
         else:
             # Valid pattern - reset styling
-            regexp_input.setStyleSheet("")
+            regexp_input.setStyleSheet(clear_input_style())
 
         # Update match count
         match_count = regex_tester.get_match_count()

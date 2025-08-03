@@ -18,6 +18,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_error_input_style, clear_input_style
+
 
 class YAMLToJSONConverter:
     """Backend class for converting YAML to JSON with proper validation."""
@@ -139,64 +141,7 @@ def create_yaml_to_json_widget(style_func):
         QWidget: The complete YAML to JSON converter widget.
     """
     widget = QWidget()
-    widget.setStyleSheet("""
-        QWidget {
-            background-color: #f7f7f9;
-            color: #333333;
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
-        QWidget#pane {
-            background-color: transparent;
-        }
-        QLabel {
-            font-size: 14px;
-            font-weight: 500;
-            color: #212529;
-        }
-        QTextEdit {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 14px;
-            padding: 8px;
-            color: #212529;
-        }
-        QTextEdit::placeholder {
-            color: #a9a9a9;
-        }
-        QPushButton, QComboBox {
-            background-color: #ffffff;
-            border: 1px solid #dcdcdc;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #212529;
-        }
-        QPushButton:hover, QComboBox:hover {
-            background-color: #f0f0f0;
-        }
-        QPushButton#iconButton {
-            background-color: transparent;
-            border: none;
-            padding: 4px;
-        }
-        QPushButton#iconButton:hover {
-            background-color: #e9ecef;
-            border-radius: 4px;
-        }
-        QComboBox {
-            padding-top: 4px;
-            padding-bottom: 4px;
-        }
-        QComboBox::drop-down {
-            border: none;
-        }
-        QFrame#separator {
-            background-color: #e0e0e0;
-            max-width: 1px;
-        }
-    """)
+    widget.setStyleSheet(get_tool_style())
 
     # Main horizontal layout
     main_layout = QHBoxLayout(widget)
@@ -385,9 +330,7 @@ def create_yaml_to_json_widget(style_func):
             output_text_edit.setPlainText(json_output)
 
             # Reset input styling on successful conversion
-            input_text_edit.setStyleSheet(
-                input_text_edit.styleSheet().replace("border: 2px solid #dc3545;", "border: 1px solid #e0e0e0;")
-            )
+            input_text_edit.setStyleSheet(clear_input_style())
 
         except ValueError as e:
             # Show error in output and highlight input with red border
@@ -395,10 +338,7 @@ def create_yaml_to_json_widget(style_func):
             output_text_edit.setPlainText(error_msg)
 
             # Add red border to input to indicate error
-            current_style = input_text_edit.styleSheet()
-            if "border: 2px solid #dc3545;" not in current_style:
-                new_style = current_style.replace("border: 1px solid #e0e0e0;", "border: 2px solid #dc3545;")
-                input_text_edit.setStyleSheet(new_style)
+            input_text_edit.setStyleSheet(get_error_input_style())
 
     def on_input_changed():
         """Handle input text changes with debouncing."""
@@ -432,9 +372,7 @@ def create_yaml_to_json_widget(style_func):
         input_text_edit.clear()
         output_text_edit.clear()
         # Reset input styling to normal
-        input_text_edit.setStyleSheet(
-            input_text_edit.styleSheet().replace("border: 2px solid #dc3545;", "border: 1px solid #e0e0e0;")
-        )
+        input_text_edit.setStyleSheet(clear_input_style())
 
     def on_copy_clicked():
         """Handle copy button click to copy JSON output to clipboard."""

@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style
+
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
 
@@ -173,68 +175,7 @@ def create_case_converter_widget(style_func):
     update_timer = QTimer()
     update_timer.setSingleShot(True)
     update_timer.timeout.connect(lambda: update_output())
-    widget.setStyleSheet("""
-        QWidget {
-            background-color: #ffffff;
-            color: #333333;
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
-        QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #dcdcdc;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        QPushButton:hover {
-            background-color: #e6e6e6;
-        }
-        QPushButton#iconButton {
-            background-color: transparent;
-            border: none;
-            padding: 4px;
-        }
-        QTextEdit {
-            background-color: #ffffff;
-            border: none;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 14px;
-            padding: 8px;
-            color: #212121;
-        }
-        QTextEdit::placeholder {
-            color: #a9a9a9;
-        }
-        QLabel#outputLabel {
-            font-size: 13px;
-            font-weight: 500;
-            padding: 8px 8px 0 8px;
-        }
-        QFrame#separator {
-            background-color: #e0e0e0;
-        }
-        QComboBox {
-            background-color: #f0f0f0;
-            border: 1px solid #dcdcdc;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 13px;
-            min-width: 80px;
-        }
-        QComboBox::drop-down {
-            border: none;
-            subcontrol-origin: padding;
-            subcontrol-position: top right;
-            width: 15px;
-        }
-        QComboBox::down-arrow {
-            image: url(down_arrow.png); /* Placeholder for a custom arrow if needed */
-        }
-        QWidget#topBar {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e0e0e0;
-        }
-    """)
+    widget.setStyleSheet(get_tool_style())
 
     # Main layout is vertical
     main_layout = QVBoxLayout(widget)

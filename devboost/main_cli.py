@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from .styles import get_main_app_style
 from .tools import (
     create_base64_string_encodec_widget,
     create_color_converter_widget,
@@ -289,112 +290,7 @@ class DevDriverWindow(QMainWindow):
 
     def _apply_styles(self):
         logger.info("Applying application styles")
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #E8E8E8;
-            }
-            #sidebar {
-                background-color: #E8E8E8;
-                border-right: 1px solid #DCDCDC;
-            }
-            #contentArea {
-                background-color: #F3F3F3;
-            }
-            #topBar {
-                background-color: #E8E8E8;
-                border-bottom: 1px solid #DCDCDC;
-            }
-            #topBarTitle {
-                font-size: 14px;
-                font-weight: bold;
-                color: #333;
-            }
-
-            /* Welcome Screen Specific */
-            #appName {
-                font-size: 28px;
-                font-weight: bold;
-                color: #333;
-            }
-            #infoLabel {
-                font-size: 14px;
-                color: #757575;
-            }
-
-            /* General Sidebar styles */
-            #sidebar QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #D0D0D0;
-                border-radius: 6px;
-                padding: 0 8px;
-                font-size: 13px;
-                color: #555;
-            }
-            QListWidget {
-                border: none;
-                background-color: transparent;
-            }
-            QListWidget::item { border-radius: 5px; padding: 4px; }
-            QListWidget::item:hover { background-color: #DCDCDC; }
-            QListWidget::item:selected { background-color: #C9C9C9; color: black;}
-            #toolIcon { font-size: 15px; color: #333; }
-            #toolText { font-size: 14px; color: #212121; }
-            #feedbackButton {
-                background-color: #D8D8D8; border: 1px solid #C0C0C0; border-radius: 6px;
-                font-size: 13px; text-align: left; padding-left: 10px;
-            }
-            #feedbackButton:hover { background-color: #C8C8C8; }
-
-            /* Unix Time Converter styles */
-            QWidget {
-                color: #212121;
-                font-size: 13px;
-            }
-            #tipsLabel {
-                color: #888;
-                font-size: 12px;
-            }
-            QFrame[frameShape="4"] { /* HLine */
-                border: none;
-                border-top: 1px solid #DCDCDC;
-            }
-            QLineEdit, QComboBox {
-                background-color: #FFFFFF;
-                border: 1px solid #C6C6C6;
-                border-radius: 4px;
-                padding: 5px;
-                min-height: 24px;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-            QComboBox::down-arrow {
-                /* Blue circle with up/down arrows */
-                image: url(placeholder.png); /* Placeholder for custom arrow */
-                width: 16px;
-                height: 16px;
-            }
-            QPushButton {
-                background-color: #FDFDFD;
-                border: 1px solid #C6C6C6;
-                border-radius: 4px;
-                padding: 5px 12px;
-                min-height: 24px;
-            }
-            QPushButton:hover {
-                background-color: #F0F0F0;
-            }
-            #iconButton {
-                border: none;
-                background-color: transparent;
-                padding: 4px;
-                min-height: 0px;
-            }
-            #iconButton QAbstractButton::icon {
-                color: black; /* This won't work, standard icons are pixmaps */
-            }
-
-        """)
+        self.setStyleSheet(get_main_app_style())
         logger.info("Application styles applied successfully")
 
 

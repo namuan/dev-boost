@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_error_input_style, get_warning_input_style, clear_input_style
+
 logger = logging.getLogger(__name__)
 
 
@@ -243,56 +245,7 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     """
     logger.info("Creating UUID/ULID Generate/Decode widget")
     main_widget = QWidget()
-    main_widget.setStyleSheet("""
-        QWidget {
-            background-color: #ffffff;
-            color: #333333;
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
-        QLabel {
-            font-size: 13px;
-        }
-        QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #cccccc;
-            padding: 5px 12px;
-            border-radius: 3px;
-            font-size: 13px;
-        }
-        QPushButton:hover {
-            background-color: #e8e8e8;
-        }
-        QPushButton#iconButton {
-            background-color: #ffffff;
-            border: 1px solid #cccccc;
-            padding: 2px;
-        }
-        QPushButton#iconButton:hover {
-            background-color: #f0f0f0;
-        }
-        QLineEdit, QComboBox, QTextEdit {
-            background-color: #ffffff;
-            border: 1px solid #cccccc;
-            border-radius: 3px;
-            padding: 5px;
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 13px;
-        }
-        QComboBox {
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
-        QTextEdit {
-            color: #888888;
-        }
-        QCheckBox {
-            font-size: 13px;
-            spacing: 5px;
-        }
-        QCheckBox::indicator {
-            width: 14px;
-            height: 14px;
-        }
-    """)
+    main_widget.setStyleSheet(get_tool_style())
 
     main_layout = QHBoxLayout(main_widget)
     main_layout.setContentsMargins(10, 10, 10, 10)
@@ -389,23 +342,13 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
         is_valid = validate_input(input_text)
         if not input_text:
             # Empty input - neutral styling
-            uuid_input.setStyleSheet("")
+            uuid_input.setStyleSheet(clear_input_style())
         elif is_valid:
             # Valid input - green border
-            uuid_input.setStyleSheet("""
-                QLineEdit {
-                    border: 2px solid #4CAF50;
-                    background-color: #f8fff8;
-                }
-            """)
+            uuid_input.setStyleSheet("border: 2px solid #4CAF50; background-color: #f8fff8;")
         else:
             # Invalid input - red border
-            uuid_input.setStyleSheet("""
-                QLineEdit {
-                    border: 2px solid #f44336;
-                    background-color: #fff8f8;
-                }
-            """)
+            uuid_input.setStyleSheet(get_error_input_style() + " background-color: #fff8f8;")
 
         if not input_text:
             # Clear all fields
@@ -591,13 +534,13 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
             if text:
                 count = int(text)
                 if 1 <= count <= 10000:
-                    count_input.setStyleSheet("")
+                    count_input.setStyleSheet(clear_input_style())
                 else:
-                    count_input.setStyleSheet("border: 1px solid #ff9800;")
+                    count_input.setStyleSheet(get_warning_input_style())
             else:
-                count_input.setStyleSheet("")
+                count_input.setStyleSheet(clear_input_style())
         except ValueError:
-            count_input.setStyleSheet("border: 1px solid #f44336;")
+            count_input.setStyleSheet(get_error_input_style())
 
     count_input.textChanged.connect(validate_count_input)
 

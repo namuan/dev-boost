@@ -21,6 +21,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_status_style, get_error_input_style, clear_input_style
+
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
 
@@ -1452,9 +1454,9 @@ def create_color_converter_widget():
             logger.warning(f"Invalid color format: '{color_input}'")
             for line_edit in format_line_edits.values():
                 line_edit.setText("Invalid color format")
-                line_edit.setStyleSheet("QLineEdit { color: #dc3545; }")
+                line_edit.setStyleSheet(get_status_style('error'))
             color_preview.setStyleSheet(
-                "QLabel#colorPreview { background-color: #ffffff; border: 2px solid #dc3545; border-radius: 4px; }"
+                f"QLabel#colorPreview {{ background-color: #ffffff; {get_error_input_style()} border-radius: 4px; }}"
             )
             return
 
@@ -1492,7 +1494,7 @@ def create_color_converter_widget():
             # Handle any conversion errors
             for line_edit in format_line_edits.values():
                 line_edit.setText("Conversion error")
-                line_edit.setStyleSheet("QLineEdit { color: #dc3545; }")
+                line_edit.setStyleSheet(get_status_style('error'))
 
     def copy_to_clipboard(text: str):
         """Copy text to clipboard."""

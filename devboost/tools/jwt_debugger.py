@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..styles import get_tool_style, get_status_style
+
 
 class JWTDebugger:
     """
@@ -517,7 +519,7 @@ def create_jwt_debugger_widget(style_func):
                         status_label.setStyleSheet("color: #28a745;")
                 else:
                     status_label.setText(f"Verification Status: ✗ {status_msg}")
-                    status_label.setStyleSheet("color: #dc3545;")
+                    status_label.setStyleSheet(get_status_style('error'))
             else:
                 if is_expired:
                     status_label.setText(f"Verification Status: ⚠️ Parsed successfully but {exp_msg}")
@@ -531,7 +533,7 @@ def create_jwt_debugger_widget(style_func):
             header_text_edit.setText("{\n}")
             payload_text_edit.setText("{\n}")
             status_label.setText(f"Verification Status: ✗ {error_msg}")
-            status_label.setStyleSheet("color: #dc3545;")
+            status_label.setStyleSheet(get_status_style('error'))
 
     def on_algorithm_changed():
         """Handle algorithm selection change."""
