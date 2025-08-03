@@ -1,4 +1,4 @@
-Generate subtasks / checklist to implement "JWT Debugger" using Trello Task Manager under "Agent Tasks"
+Generate subtasks / checklist to implement "Use common styles and themes across all the tools" using Trello Task Manager under "Agent Tasks"
 
 There is an existing task which you can look up by getting all the tasks so don't create a new task.
 

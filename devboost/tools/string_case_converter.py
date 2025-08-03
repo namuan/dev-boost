@@ -177,29 +177,50 @@ def create_case_converter_widget(style_func):
     update_timer.timeout.connect(lambda: update_output())
     widget.setStyleSheet(get_tool_style())
 
-    # Main layout is vertical
-    main_layout = QVBoxLayout(widget)
+    # Main horizontal layout with splitter
+    main_layout = QHBoxLayout(widget)
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(0)
+    
+    main_splitter = QSplitter(Qt.Orientation.Horizontal)
+    main_layout.addWidget(main_splitter)
 
-    # --- Top Controls Bar ---
-    top_bar = QWidget()
-    top_bar.setObjectName("topBar")
-    top_bar_layout = QHBoxLayout(top_bar)
-    top_bar_layout.setContentsMargins(10, 8, 10, 8)
-    top_bar_layout.setSpacing(8)
+    # --- Left Pane (Input) ---
+    input_pane = QWidget()
+    input_pane.setObjectName("pane")
+    input_layout = QVBoxLayout(input_pane)
+    input_layout.setContentsMargins(10, 10, 5, 10)
+    input_layout.setSpacing(8)
 
-    # Left side of top bar
+    input_buttons_layout = QHBoxLayout()
+    input_buttons_layout.setSpacing(8)
+    input_buttons_layout.setContentsMargins(0, 0, 0, 0)
+
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
 
-    top_bar_layout.addWidget(clipboard_button)
-    top_bar_layout.addWidget(sample_button)
-    top_bar_layout.addWidget(clear_button)
-    top_bar_layout.addStretch()
+    input_buttons_layout.addWidget(clipboard_button)
+    input_buttons_layout.addWidget(sample_button)
+    input_buttons_layout.addWidget(clear_button)
+    input_buttons_layout.addStretch()
 
-    # Right side of top bar
+    input_layout.addLayout(input_buttons_layout)
+
+    input_text_edit = QTextEdit()
+    input_layout.addWidget(input_text_edit, 1)
+
+    # --- Right Pane (Output) ---
+    output_pane = QWidget()
+    output_pane.setObjectName("pane")
+    output_layout = QVBoxLayout(output_pane)
+    output_layout.setContentsMargins(5, 10, 10, 10)
+    output_layout.setSpacing(8)
+
+    output_header_layout = QHBoxLayout()
+    output_header_layout.setSpacing(8)
+    output_header_layout.setContentsMargins(0, 0, 0, 0)
+
     case_combo = QComboBox()
     case_combo.addItems([
         "camelCase",
@@ -211,35 +232,25 @@ def create_case_converter_widget(style_func):
         "lowercase",
         "Title Case",
     ])
+    case_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+
     copy_button = QPushButton("Copy")
     # Image description: A standard copy icon, depicting two overlapping pages.
     copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
 
-    top_bar_layout.addWidget(case_combo)
-    top_bar_layout.addWidget(copy_button)
-    main_layout.addWidget(top_bar)
-
-    # --- Content Area (Input/Output Panes) ---
-    content_splitter = QSplitter(Qt.Orientation.Horizontal)
-
-    # Input Pane (Left)
-    input_text_edit = QTextEdit()
-    content_splitter.addWidget(input_text_edit)
-
-    # Output Pane (Right)
-    output_pane_widget = QWidget()
-    output_layout = QVBoxLayout(output_pane_widget)
-    output_layout.setContentsMargins(0, 0, 0, 0)
-    output_layout.setSpacing(0)
+    output_header_layout.addStretch()
+    output_header_layout.addWidget(case_combo)
+    output_header_layout.addWidget(copy_button)
+    output_layout.addLayout(output_header_layout)
 
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
-    output_layout.addWidget(output_text_edit)
+    output_layout.addWidget(output_text_edit, 1)
 
-    content_splitter.addWidget(output_pane_widget)
-    content_splitter.setSizes([400, 400])  # Equal split
-
-    main_layout.addWidget(content_splitter, 1)
+    # --- Assemble Main Layout ---
+    main_splitter.addWidget(input_pane)
+    main_splitter.addWidget(output_pane)
+    main_splitter.setSizes([400, 400])  # Equal split
 
     # --- Backend Integration Functions ---
     def update_output():
