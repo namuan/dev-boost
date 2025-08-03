@@ -1,15 +1,8 @@
 import json
 import logging
-from typing import Dict, Any, Tuple, Optional
 
-try:
-    import jsonpath_ng
-    from jsonpath_ng import parse
-    JSONPATH_AVAILABLE = True
-except ImportError:
-    JSONPATH_AVAILABLE = False
-
-from PyQt6.QtCore import QSize, Qt, pyqtSignal, QObject
+from jsonpath_ng import parse
+from PyQt6.QtCore import QObject, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -36,74 +29,74 @@ class JSONValidator(QObject):
     """
     Backend JSON validation logic with proper error handling.
     """
-    
+
     validation_completed = pyqtSignal(str, bool, str)  # formatted_json, is_valid, error_message
-    
+
     def __init__(self):
         super().__init__()
-    
-    def validate_and_format_json(self, input_text: str, indent_spaces: int = 2) -> Tuple[bool, str, str]:
+
+    def validate_and_format_json(self, input_text: str, indent_spaces: int = 2) -> tuple[bool, str, str]:
         """
         Validates and formats JSON string with proper error handling.
-        
+
         Args:
             input_text: The input JSON string to validate
             indent_spaces: Number of spaces for indentation (2, 4, or 0 for tabs)
-            
+
         Returns:
             Tuple of (is_valid, formatted_json, error_message)
         """
         if not input_text.strip():
             return False, "", "Input is empty"
-        
+
         try:
             # Parse JSON to validate
             parsed_json = json.loads(input_text)
-            
+
             # Format JSON with specified indentation
             if indent_spaces == 0:  # Use tabs
                 formatted_json = json.dumps(parsed_json, indent="\t", ensure_ascii=False, sort_keys=True)
             else:
                 formatted_json = json.dumps(parsed_json, indent=indent_spaces, ensure_ascii=False, sort_keys=True)
-            
+
             return True, formatted_json, ""
-            
+
         except json.JSONDecodeError as e:
             error_msg = f"JSON Decode Error at line {e.lineno}, column {e.colno}: {e.msg}"
-            logger.error(f"JSON validation failed: {error_msg}")
+            logger.exception(f"JSON validation failed: {error_msg}")
             return False, "", error_msg
-            
+
         except Exception as e:
-            error_msg = f"Unexpected error: {str(e)}"
-            logger.error(f"JSON validation failed: {error_msg}")
+            error_msg = f"Unexpected error: {e!s}"
+            logger.exception(f"JSON validation failed: {error_msg}")
             return False, "", error_msg
-    
-    def minify_json(self, input_text: str) -> Tuple[bool, str, str]:
+
+    def minify_json(self, input_text: str) -> tuple[bool, str, str]:
         """
         Minifies JSON by removing whitespace.
-        
+
         Args:
             input_text: The input JSON string to minify
-            
+
         Returns:
             Tuple of (is_valid, minified_json, error_message)
         """
         if not input_text.strip():
             return False, "", "Input is empty"
-        
+
         try:
             parsed_json = json.loads(input_text)
-            minified_json = json.dumps(parsed_json, separators=(',', ':'), ensure_ascii=False)
+            minified_json = json.dumps(parsed_json, separators=(",", ":"), ensure_ascii=False)
             return True, minified_json, ""
-            
+
         except json.JSONDecodeError as e:
             error_msg = f"JSON Decode Error at line {e.lineno}, column {e.colno}: {e.msg}"
             return False, "", error_msg
-            
+
         except Exception as e:
-            error_msg = f"Unexpected error: {str(e)}"
+            error_msg = f"Unexpected error: {e!s}"
             return False, "", error_msg
-    
+
     def get_sample_json(self) -> str:
         """
         Returns a sample JSON for testing purposes.
@@ -113,65 +106,57 @@ class JSONValidator(QObject):
             "age": 30,
             "city": "New York",
             "hobbies": ["reading", "swimming", "coding"],
-            "address": {
-                "street": "123 Main St",
-                "zipcode": "10001"
-            },
-            "active": True
+            "address": {"street": "123 Main St", "zipcode": "10001"},
+            "active": True,
         }
         return json.dumps(sample, indent=2)
-    
-    def query_json_path(self, input_text: str, json_path: str) -> Tuple[bool, str, str]:
+
+    def query_json_path(self, input_text: str, json_path: str) -> tuple[bool, str, str]:
         """
         Query JSON using JSONPath expression.
-        
+
         Args:
             input_text: The input JSON string
             json_path: JSONPath expression (e.g., $.store.book[*].author)
-            
+
         Returns:
             Tuple of (is_valid, result_json, error_message)
         """
         if not input_text.strip():
             return False, "", "Input is empty"
-        
+
         if not json_path.strip():
             return False, "", "JSON Path is empty"
-        
-        if not JSONPATH_AVAILABLE:
-            return False, "", "JSONPath library not available. Install jsonpath-ng package."
-        
+
         try:
             # Parse JSON
             parsed_json = json.loads(input_text)
-            
+
             # Parse JSONPath expression
             jsonpath_expr = parse(json_path)
-            
+
             # Execute query
             matches = [match.value for match in jsonpath_expr.find(parsed_json)]
-            
+
             if not matches:
                 return True, "[]", "No matches found"
-            
+
             # Format result
-            if len(matches) == 1:
-                result = matches[0]
-            else:
-                result = matches
-            
+            result = matches[0] if len(matches) == 1 else matches
+
             result_json = json.dumps(result, indent=2, ensure_ascii=False)
             return True, result_json, ""
-            
+
         except json.JSONDecodeError as e:
             error_msg = f"JSON Decode Error at line {e.lineno}, column {e.colno}: {e.msg}"
             return False, "", error_msg
-            
+
         except Exception as e:
-            error_msg = f"JSONPath Error: {str(e)}"
+            error_msg = f"JSONPath Error: {e!s}"
             return False, "", error_msg
 
 
+# ruff: noqa: C901
 def create_json_formatter_widget(style_func):
     """
     Creates the main widget for the JSON formatter tool.
@@ -183,7 +168,7 @@ def create_json_formatter_widget(style_func):
         QWidget: The main widget for the tool.
     """
     widget = QWidget()
-    
+
     # Create JSON validator instance
     json_validator = JSONValidator()
     widget.setStyleSheet("""
@@ -384,12 +369,12 @@ def create_json_formatter_widget(style_func):
     bottom_layout.addWidget(help_button)
 
     main_layout.addWidget(bottom_bar)
-    
+
     # Connect button functionality
     def format_json():
         """Format and validate JSON from input text."""
         input_text = input_text_edit.toPlainText()
-        
+
         # Get indentation preference
         spaces_text = spaces_combo.currentText()
         if "2 spaces" in spaces_text:
@@ -398,27 +383,27 @@ def create_json_formatter_widget(style_func):
             indent = 4
         else:  # Tabs
             indent = 0
-        
+
         is_valid, formatted_json, error_message = json_validator.validate_and_format_json(input_text, indent)
-        
+
         if is_valid:
             output_text_edit.setPlainText(formatted_json)
             output_text_edit.setStyleSheet("QTextEdit { color: #212529; }")
         else:
             output_text_edit.setPlainText(f"Error: {error_message}")
             output_text_edit.setStyleSheet("QTextEdit { color: #dc3545; }")
-    
+
     def load_sample():
         """Load sample JSON into input area."""
         sample_json = json_validator.get_sample_json()
         input_text_edit.setPlainText(sample_json)
-    
+
     def clear_input():
         """Clear input text area."""
         input_text_edit.clear()
         output_text_edit.clear()
         output_text_edit.setStyleSheet("QTextEdit { color: #6c757d; }")
-    
+
     def copy_output():
         """Copy output to clipboard."""
         output_text = output_text_edit.toPlainText()
@@ -428,7 +413,7 @@ def create_json_formatter_widget(style_func):
                 app.clipboard().setText(output_text)
                 # Show brief confirmation
                 QMessageBox.information(widget, "Copied", "Output copied to clipboard!")
-    
+
     def load_from_clipboard():
         """Load JSON from clipboard."""
         app = QApplication.instance()
@@ -436,19 +421,19 @@ def create_json_formatter_widget(style_func):
             clipboard_text = app.clipboard().text()
             if clipboard_text:
                 input_text_edit.setPlainText(clipboard_text)
-    
+
     def execute_json_path():
         """Execute JSON Path query on input JSON."""
         input_text = input_text_edit.toPlainText()
         json_path = json_path_input.text()
-        
+
         if not json_path.strip():
             # If no JSON Path, just format the JSON normally
             format_json()
             return
-        
+
         is_valid, result_json, error_message = json_validator.query_json_path(input_text, json_path)
-        
+
         if is_valid:
             output_text_edit.setPlainText(result_json)
             output_text_edit.setStyleSheet("QTextEdit { color: #212529; }")
@@ -457,7 +442,7 @@ def create_json_formatter_widget(style_func):
         else:
             output_text_edit.setPlainText(f"Error: {error_message}")
             output_text_edit.setStyleSheet("QTextEdit { color: #dc3545; }")
-    
+
     # Connect buttons to functions
     def on_run_button_clicked():
         """Handle run button click - check if JSON Path is present."""
@@ -465,13 +450,13 @@ def create_json_formatter_widget(style_func):
             execute_json_path()
         else:
             format_json()
-    
+
     run_button.clicked.connect(on_run_button_clicked)
     json_path_input.returnPressed.connect(execute_json_path)
     sample_button = None
     clipboard_button = None
     clear_button = None
-    
+
     # Find buttons by iterating through toolbar
     for i in range(input_toolbar_layout.count()):
         item = input_toolbar_layout.itemAt(i)
@@ -484,14 +469,14 @@ def create_json_formatter_widget(style_func):
                     clipboard_button = widget_item
                 elif widget_item.text() == "Clear":
                     clear_button = widget_item
-    
+
     if sample_button:
         sample_button.clicked.connect(load_sample)
     if clipboard_button:
         clipboard_button.clicked.connect(load_from_clipboard)
     if clear_button:
         clear_button.clicked.connect(clear_input)
-    
+
     copy_button.clicked.connect(copy_output)
 
     return widget
