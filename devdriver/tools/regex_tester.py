@@ -1,10 +1,14 @@
 import logging
+import re
 import sys
+from typing import List, Optional, Tuple
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -20,6 +24,268 @@ from PyQt6.QtWidgets import (
 logger = logging.getLogger(__name__)
 
 
+class RegexCheatSheetDialog(QDialog):
+    """Cheat sheet dialog for regex syntax help."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Regex Cheat Sheet")
+        self.setModal(True)
+        self.setFixedSize(600, 500)
+        
+        self.setup_ui()
+    
+    def setup_ui(self):
+        """Setup the cheat sheet dialog UI."""
+        layout = QVBoxLayout(self)
+        
+        # Create text area for cheat sheet content
+        cheat_sheet_text = QTextEdit()
+        cheat_sheet_text.setReadOnly(True)
+        cheat_sheet_text.setPlainText(self.get_cheat_sheet_content())
+        layout.addWidget(cheat_sheet_text)
+        
+        # Close button
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button)
+    
+    def get_cheat_sheet_content(self):
+        """Get the cheat sheet content."""
+        return """REGEX CHEAT SHEET
+
+=== CHARACTER CLASSES ===
+.          Any character except newline
+\d         Digit (0-9)
+\D         Non-digit
+\w         Word character (a-z, A-Z, 0-9, _)
+\W         Non-word character
+\s         Whitespace (space, tab, newline)
+\S         Non-whitespace
+
+=== ANCHORS ===
+^          Start of string/line
+$          End of string/line
+\b         Word boundary
+\B         Non-word boundary
+
+=== QUANTIFIERS ===
+*          0 or more
++          1 or more
+?          0 or 1
+{n}        Exactly n times
+{n,}       n or more times
+{n,m}      Between n and m times
+
+=== GROUPS ===
+(...)      Capturing group
+(?:...)    Non-capturing group
+(?P<name>...) Named group
+
+=== CHARACTER SETS ===
+[abc]      Any of a, b, or c
+[a-z]      Any lowercase letter
+[A-Z]      Any uppercase letter
+[0-9]      Any digit
+[^abc]     Not a, b, or c
+
+=== SPECIAL CHARACTERS ===
+\          Escape character
+|          OR operator
+
+=== FLAGS ===
+i          Case insensitive
+m          Multiline mode
+s          Dot matches all (including newline)
+
+=== EXAMPLES ===
+\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b
+           Email address
+
+\(?\d{3}\)?[-. ]?\d{3}[-.]?\d{4}
+           Phone number
+
+\d{4}-\d{2}-\d{2}
+           Date (YYYY-MM-DD)
+
+^https?://[^\s]+
+           URL starting with http/https"""
+
+
+class RegexSettingsDialog(QDialog):
+    """Settings dialog for regex options."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Regex Settings")
+        self.setModal(True)
+        self.setFixedSize(300, 200)
+        
+        # Initialize flags
+        self.case_insensitive = False
+        self.multiline = False
+        self.dotall = False
+        
+        self.setup_ui()
+    
+    def setup_ui(self):
+        """Setup the settings dialog UI."""
+        layout = QVBoxLayout(self)
+        
+        # Case insensitive option
+        self.case_checkbox = QCheckBox("Case insensitive (re.IGNORECASE)")
+        self.case_checkbox.setChecked(self.case_insensitive)
+        layout.addWidget(self.case_checkbox)
+        
+        # Multiline option
+        self.multiline_checkbox = QCheckBox("Multiline mode (re.MULTILINE)")
+        self.multiline_checkbox.setChecked(self.multiline)
+        layout.addWidget(self.multiline_checkbox)
+        
+        # Dotall option
+        self.dotall_checkbox = QCheckBox("Dot matches all (re.DOTALL)")
+        self.dotall_checkbox.setChecked(self.dotall)
+        layout.addWidget(self.dotall_checkbox)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton("OK")
+        cancel_button = QPushButton("Cancel")
+        
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+        
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+    
+    def get_flags(self):
+        """Get the regex flags based on current settings."""
+        flags = 0
+        if self.case_checkbox.isChecked():
+            flags |= re.IGNORECASE
+        if self.multiline_checkbox.isChecked():
+            flags |= re.MULTILINE
+        if self.dotall_checkbox.isChecked():
+            flags |= re.DOTALL
+        return flags
+
+
+class RegexTester:
+    """Backend logic for regex testing functionality."""
+
+    def __init__(self):
+        """Initialize the RegexTester."""
+        self.pattern = ""
+        self.text = ""
+        self.flags = 0
+
+    def set_pattern(self, pattern: str) -> bool:
+        """
+        Set the regex pattern and validate it.
+        
+        Args:
+            pattern: The regex pattern string
+            
+        Returns:
+            bool: True if pattern is valid, False otherwise
+        """
+        try:
+            re.compile(pattern)
+            self.pattern = pattern
+            return True
+        except re.error:
+            return False
+
+    def set_text(self, text: str) -> None:
+        """
+        Set the text to test against.
+        
+        Args:
+            text: The text to test
+        """
+        self.text = text
+
+    def find_matches(self) -> List[Tuple[str, int, int]]:
+        """
+        Find all matches in the text.
+        
+        Returns:
+            List of tuples containing (match_text, start_pos, end_pos)
+        """
+        if not self.pattern or not self.text:
+            return []
+        
+        try:
+            pattern = re.compile(self.pattern, self.flags)
+            matches = []
+            for match in pattern.finditer(self.text):
+                matches.append((match.group(), match.start(), match.end()))
+            return matches
+        except re.error:
+            return []
+
+    def get_match_count(self) -> int:
+        """
+        Get the number of matches.
+        
+        Returns:
+            int: Number of matches found
+        """
+        return len(self.find_matches())
+
+    def replace_matches(self, replacement: str) -> str:
+        """
+        Replace all matches with the replacement string.
+        
+        Args:
+            replacement: The replacement string
+            
+        Returns:
+            str: Text with replacements made
+        """
+        if not self.pattern or not self.text:
+            return self.text
+        
+        try:
+            pattern = re.compile(self.pattern, self.flags)
+            return pattern.sub(replacement, self.text)
+        except re.error:
+            return self.text
+
+    def format_output(self, output_format: str) -> str:
+        """
+        Format matches according to the output format string.
+        
+        Args:
+            output_format: Format string (e.g., "$&\\n" for match + newline)
+            
+        Returns:
+            str: Formatted output
+        """
+        matches = self.find_matches()
+        if not matches:
+            return ""
+        
+        result = []
+        for match_text, start, end in matches:
+            formatted = output_format.replace("$&", match_text)
+            formatted = formatted.replace("\\n", "\n")
+            formatted = formatted.replace("\\t", "\t")
+            result.append(formatted)
+        
+        return "".join(result)
+
+    def get_sample_pattern(self) -> str:
+        """
+        Get a sample regex pattern for demonstration.
+        
+        Returns:
+            str: Sample regex pattern
+        """
+        return r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+
+
 def create_regexp_tester_widget(style_func):
     """
     Creates and returns the RegExp Tester widget.
@@ -32,6 +298,9 @@ def create_regexp_tester_widget(style_func):
     """
     logger.info("Creating RegExp Tester widget")
     widget = QWidget()
+    
+    # Create backend instance
+    regex_tester = RegexTester()
     widget.setStyleSheet("""
         QWidget {
             background-color: #f0f2f5;
@@ -239,6 +508,126 @@ def create_regexp_tester_widget(style_func):
     main_layout.addWidget(regexp_section_frame)
     main_layout.addWidget(text_section_frame, 4)
     main_layout.addLayout(bottom_layout, 3)
+
+    # --- FUNCTIONALITY CONNECTIONS ---
+    def update_results():
+        """Update the results based on current pattern and text."""
+        pattern = regexp_input.text()
+        text = text_input_edit.toPlainText()
+        output_format = output_input.text()
+        
+        # Set pattern and text in backend
+        regex_tester.set_text(text)
+        is_valid = regex_tester.set_pattern(pattern)
+        
+        if not is_valid and pattern:
+            # Invalid pattern - show error styling
+            regexp_input.setStyleSheet("border: 2px solid #ef4444;")
+            matches_label.setText("Invalid pattern")
+            output_text_edit.clear()
+            matches_text_edit.clear()
+            return
+        else:
+            # Valid pattern - reset styling
+            regexp_input.setStyleSheet("")
+        
+        # Update match count
+        match_count = regex_tester.get_match_count()
+        matches_label.setText(f"{match_count} matches")
+        
+        # Update output
+        if pattern and text:
+            formatted_output = regex_tester.format_output(output_format)
+            output_text_edit.setPlainText(formatted_output)
+            
+            # Update matches display
+            matches = regex_tester.find_matches()
+            matches_display = []
+            for i, (match_text, start, end) in enumerate(matches, 1):
+                matches_display.append(f"{i}. {match_text} (pos {start}-{end})")
+            matches_text_edit.setPlainText("\n".join(matches_display))
+        else:
+            output_text_edit.clear()
+            matches_text_edit.clear()
+    
+    def on_sample_clicked():
+        """Load a sample pattern and text."""
+        sample_pattern = regex_tester.get_sample_pattern()
+        sample_text = "Contact us at: john.doe@example.com or support@company.org\nInvalid emails: notanemail, @invalid.com, test@"
+        
+        regexp_input.setText(sample_pattern)
+        text_input_edit.setPlainText(sample_text)
+        update_results()
+    
+    def on_clear_clicked():
+        """Clear the pattern input."""
+        regexp_input.clear()
+        update_results()
+    
+    def on_clipboard_pattern_clicked():
+        """Copy pattern to clipboard."""
+        from PyQt6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(regexp_input.text())
+    
+    def on_clipboard_text_clicked():
+        """Copy text to clipboard."""
+        from PyQt6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text_input_edit.toPlainText())
+    
+    def on_copy_matches_clicked():
+        """Copy matches to clipboard."""
+        from PyQt6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(matches_text_edit.toPlainText())
+    
+    def on_settings_clicked():
+        """Open settings dialog."""
+        dialog = RegexSettingsDialog(widget)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Update regex tester flags
+            regex_tester.flags = dialog.get_flags()
+            # Refresh results with new flags
+            update_results()
+    
+    def on_cheat_sheet_clicked():
+        """Open cheat sheet dialog."""
+        dialog = RegexCheatSheetDialog(widget)
+        dialog.exec()
+    
+    def filter_matches():
+        """Filter matches based on search input."""
+        search_term = search_matches_input.text().lower()
+        if not search_term:
+            # Show all matches if no search term
+            matches = regex_tester.find_matches()
+            matches_display = []
+            for i, (match_text, start, end) in enumerate(matches, 1):
+                matches_display.append(f"{i}. {match_text} (pos {start}-{end})")
+            matches_text_edit.setPlainText("\n".join(matches_display))
+        else:
+            # Filter matches containing the search term
+            matches = regex_tester.find_matches()
+            filtered_matches = []
+            for i, (match_text, start, end) in enumerate(matches, 1):
+                if search_term in match_text.lower():
+                    filtered_matches.append(f"{i}. {match_text} (pos {start}-{end})")
+            matches_text_edit.setPlainText("\n".join(filtered_matches))
+    
+    # Connect signals
+    regexp_input.textChanged.connect(update_results)
+    text_input_edit.textChanged.connect(update_results)
+    output_input.textChanged.connect(update_results)
+    
+    sample_button.clicked.connect(on_sample_clicked)
+    clear_button.clicked.connect(on_clear_clicked)
+    clipboard_button_1.clicked.connect(on_clipboard_pattern_clicked)
+    clipboard_button_2.clicked.connect(on_clipboard_text_clicked)
+    copy_button.clicked.connect(on_copy_matches_clicked)
+    settings_button.clicked.connect(on_settings_clicked)
+    cheat_sheet_button.clicked.connect(on_cheat_sheet_clicked)
+    search_matches_input.textChanged.connect(filter_matches)
 
     logger.info("RegExp Tester widget creation completed")
     return widget
