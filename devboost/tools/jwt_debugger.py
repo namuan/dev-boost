@@ -5,6 +5,7 @@ import json
 import sys
 import time
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSizePolicy,
+    QSplitter,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -240,9 +242,9 @@ def create_jwt_debugger_widget(style_func):
     top_level_layout.setContentsMargins(0, 0, 0, 0)
     top_level_layout.setSpacing(0)
 
-    content_layout = QHBoxLayout()
-    content_layout.setContentsMargins(0, 10, 0, 10)
-    content_layout.setSpacing(0)
+    # Create horizontal splitter for main content
+    main_splitter = QSplitter(Qt.Orientation.Horizontal)
+    main_splitter.setContentsMargins(0, 10, 0, 10)
 
     # --- Left Pane (Encoded Input) ---
     left_pane = QWidget()
@@ -355,8 +357,9 @@ def create_jwt_debugger_widget(style_func):
     right_layout.addLayout(signature_layout)
     right_layout.addStretch()
 
-    content_layout.addWidget(left_pane, 1)
-    content_layout.addWidget(right_pane, 1)
+    main_splitter.addWidget(left_pane)
+    main_splitter.addWidget(right_pane)
+    main_splitter.setSizes([400, 600])  # Give more space to right pane for decoded content
 
     # --- Status Bar ---
     status_bar = QWidget()
@@ -368,7 +371,7 @@ def create_jwt_debugger_widget(style_func):
     status_label.setObjectName("statusLabel")
     status_layout.addWidget(status_label)
 
-    top_level_layout.addLayout(content_layout, 1)
+    top_level_layout.addWidget(main_splitter, 1)
     top_level_layout.addWidget(status_bar)
 
     # --- Backend Integration ---
