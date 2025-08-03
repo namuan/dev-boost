@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_unix_time_converter_widget(style_func):
-"""Create and return the Unix Time Converter widget.
+    """Create and return the Unix Time Converter widget.
 
     Args:
         style_func: Function to get QStyle for standard icons
