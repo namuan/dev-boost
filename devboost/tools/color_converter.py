@@ -1,5 +1,6 @@
 import colorsys
 import logging
+import random
 import re
 import sys
 
@@ -609,7 +610,7 @@ class ColorConverter:
             if not self._is_valid_percentage_component(parts[1]):
                 return False
             return self._is_valid_percentage_component(parts[2])
-        except:
+        except:  # noqa: E722
             return False
 
     def _parse_hwb(self, hwb_values: str) -> tuple[float, float, float, float] | None:
@@ -686,7 +687,7 @@ class ColorConverter:
                     return False
 
             return True
-        except:
+        except:  # noqa: E722
             return False
 
     def _parse_cmyk(self, cmyk_values: str) -> tuple[float, float, float, float] | None:
@@ -1498,9 +1499,8 @@ def create_color_converter_widget():
             "hwb(300, 20%, 30%)",
             "cmyk(50%, 25%, 0%, 10%)",
         ]
-        import random
 
-        sample = random.choice(sample_colors)
+        sample = random.choice(sample_colors)  # noqa: S311
         input_field.setText(sample)
 
     def load_from_clipboard():
@@ -1559,9 +1559,6 @@ def create_color_converter_widget():
         blue_b = round(b * 255)
         alpha_b = round(a * 255)
         round(a * 100)
-
-        # HSL values
-        import colorsys
 
         h, l, s = colorsys.rgb_to_hls(r, g, b)
         hue_d = round(h * 360)
