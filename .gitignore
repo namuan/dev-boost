@@ -6,6 +6,7 @@ __pycache__/
 !devdriver/
 !assets/
 !prompts/
+!tests/
 
 # unignore files
 !.gitignore
