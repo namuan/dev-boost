@@ -1432,8 +1432,11 @@ def create_color_converter_widget():
 
     def update_color_formats(color_input: str):
         """Update all color format fields based on input."""
+        logger.info(f"update_color_formats called with input: '{color_input}'")
+
         if not color_input.strip():
             # Clear all fields if input is empty
+            logger.info("Input is empty, clearing all format fields")
             for line_edit in format_line_edits.values():
                 line_edit.clear()
             color_preview.setStyleSheet(
@@ -1442,9 +1445,11 @@ def create_color_converter_widget():
             return
 
         # Parse the color
+        logger.info(f"Parsing color input: '{color_input}'")
         rgba = converter.parse_color(color_input)
         if rgba is None:
             # Invalid color - show error state
+            logger.warning(f"Invalid color format: '{color_input}'")
             for line_edit in format_line_edits.values():
                 line_edit.setText("Invalid color format")
                 line_edit.setStyleSheet("QLineEdit { color: #dc3545; }")
@@ -1455,9 +1460,11 @@ def create_color_converter_widget():
 
         # Valid color - update all formats
         r, g, b, a = rgba
+        logger.info(f"Valid color parsed: RGBA({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
 
         try:
             # Convert to all formats
+            logger.info("Converting to all color formats")
             formats = converter.convert_all_formats(color_input)
 
             # Update format fields
@@ -1520,23 +1527,36 @@ def create_color_converter_widget():
 
     def open_color_picker():
         """Open color picker dialog and update input field with selected color."""
+        logger.info("Opening color picker dialog")
+
         # Get current color from input field if valid
         current_color = QColor(255, 255, 255)  # Default to white
         current_input = input_field.text().strip()
+        logger.info(f"Current input field value: '{current_input}'")
+
         if current_input:
             rgba = converter.parse_color(current_input)
             if rgba is not None:
                 r, g, b, a = rgba
                 current_color = QColor(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
+                logger.info(f"Parsed current color: RGBA({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
+            else:
+                logger.warning(f"Failed to parse current color: '{current_input}'")
 
         # Open color dialog
+        logger.info("Showing color dialog")
         color = QColorDialog.getColor(current_color, widget, "Select Color")
 
         # If user selected a color (didn't cancel)
         if color.isValid():
             # Convert to hex format and update input field
             hex_color = color.name()  # Returns #RRGGBB format
+            logger.info(f"User selected color: {hex_color}")
+            logger.info(f"Setting input field to: {hex_color}")
             input_field.setText(hex_color)
+            logger.info("Input field updated with selected color")
+        else:
+            logger.info("User cancelled color selection")
 
     # Store methods on widget for external access
     widget.copy_to_clipboard = copy_to_clipboard
@@ -1548,8 +1568,7 @@ def create_color_converter_widget():
 
     color_preview.mousePressEvent = on_color_preview_click
 
-    # Connect signals
-    input_field.textChanged.connect(update_color_formats)
+    # Connect signals (except textChanged which will be connected later)
     clipboard_btn.clicked.connect(load_from_clipboard)
     sample_btn.clicked.connect(load_sample_color)
     clear_btn.clicked.connect(clear_input)
@@ -1578,11 +1597,15 @@ def create_color_converter_widget():
 
     def update_code_presets(rgba_values=None):
         """Update code presets with current color values."""
+        logger.info(f"update_code_presets called with rgba_values: {rgba_values}")
+
         if rgba_values is None:
             # Default values
             r, g, b, a = 0.361, 0.8, 0.498, 1.0
+            logger.info("Using default RGBA values for code presets")
         else:
             r, g, b, a = rgba_values
+            logger.info(f"Using provided RGBA values: ({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
 
         # Convert to different representations
         red_b = round(r * 255)
@@ -1659,6 +1682,7 @@ new Color({r:.3f}f, {g:.3f}f, {b:.3f}f, {a:.2f}f)
 new Color32({red_b}, {green_b}, {blue_b}, {alpha_b})"""
 
         code_presets_edit.setPlainText(code_content)
+        logger.info("Code presets content updated in UI")
 
     # Initialize with default values
     update_code_presets()
@@ -1670,22 +1694,36 @@ new Color32({red_b}, {green_b}, {blue_b}, {alpha_b})"""
     original_update_color_formats = update_color_formats
 
     def enhanced_update_color_formats(color_input: str):
+        logger.info(f"enhanced_update_color_formats called with input: '{color_input}'")
         original_update_color_formats(color_input)
+        logger.info("Finished calling original_update_color_formats")
 
         # Update code presets if color is valid
         if color_input.strip():
+            logger.info("Input is not empty, updating code presets")
             rgba = converter.parse_color(color_input)
             if rgba is not None:
                 try:
                     r, g, b, a = rgba
+                    logger.info(f"Updating code presets with RGBA({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
                     update_code_presets((r, g, b, a))
+                    logger.info("Code presets updated successfully")
                 except Exception:
+                    logger.exception("Error updating code presets")
                     update_code_presets()
             else:
+                logger.warning("Failed to parse color for code presets, using default")
                 update_code_presets()
+        else:
+            logger.info("Input is empty, using default code presets")
+            update_code_presets()
 
     # Replace the function reference
     update_color_formats = enhanced_update_color_formats
+
+    # Now connect the textChanged signal to the enhanced function
+    input_field.textChanged.connect(update_color_formats)
+    logger.info("Connected input field textChanged signal to enhanced_update_color_formats")
 
     right_layout.addWidget(tabs)
 
