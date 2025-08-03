@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 
 from devdriver.tools.regex_tester import RegexTester
 
@@ -33,7 +32,7 @@ class TestRegexTester(unittest.TestCase):
         """Test finding simple matches."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello 123 World 456")
-        
+
         matches = self.tester.find_matches()
         self.assertEqual(len(matches), 2)
         self.assertEqual(matches[0], ("123", 6, 9))
@@ -55,7 +54,7 @@ class TestRegexTester(unittest.TestCase):
         """Test finding matches when pattern doesn't match text."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello World")
-        
+
         matches = self.tester.find_matches()
         self.assertEqual(matches, [])
 
@@ -63,7 +62,7 @@ class TestRegexTester(unittest.TestCase):
         """Test getting match count."""
         self.tester.set_pattern(r"\w+")
         self.tester.set_text("Hello World Test")
-        
+
         count = self.tester.get_match_count()
         self.assertEqual(count, 3)
 
@@ -71,7 +70,7 @@ class TestRegexTester(unittest.TestCase):
         """Test getting match count when no matches."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello World")
-        
+
         count = self.tester.get_match_count()
         self.assertEqual(count, 0)
 
@@ -79,14 +78,14 @@ class TestRegexTester(unittest.TestCase):
         """Test replacing matches."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello 123 World 456")
-        
+
         result = self.tester.replace_matches("XXX")
         self.assertEqual(result, "Hello XXX World XXX")
 
     def test_replace_matches_no_pattern(self):
         """Test replacing matches with no pattern."""
         self.tester.set_text("Hello 123 World 456")
-        
+
         result = self.tester.replace_matches("XXX")
         self.assertEqual(result, "Hello 123 World 456")
 
@@ -94,7 +93,7 @@ class TestRegexTester(unittest.TestCase):
         """Test replacing matches with invalid pattern."""
         self.tester.pattern = "[invalid"  # Set invalid pattern directly
         self.tester.set_text("Hello 123 World 456")
-        
+
         result = self.tester.replace_matches("XXX")
         self.assertEqual(result, "Hello 123 World 456")
 
@@ -102,7 +101,7 @@ class TestRegexTester(unittest.TestCase):
         """Test formatting output with simple format."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello 123 World 456")
-        
+
         result = self.tester.format_output("$&\\n")
         self.assertEqual(result, "123\n456\n")
 
@@ -110,7 +109,7 @@ class TestRegexTester(unittest.TestCase):
         """Test formatting output when no matches."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello World")
-        
+
         result = self.tester.format_output("$&\\n")
         self.assertEqual(result, "")
 
@@ -118,7 +117,7 @@ class TestRegexTester(unittest.TestCase):
         """Test formatting output with tab characters."""
         self.tester.set_pattern(r"\w+")
         self.tester.set_text("Hello World")
-        
+
         result = self.tester.format_output("$&\\t")
         self.assertEqual(result, "Hello\tWorld\t")
 
@@ -126,7 +125,7 @@ class TestRegexTester(unittest.TestCase):
         """Test formatting output with custom format."""
         self.tester.set_pattern(r"\d+")
         self.tester.set_text("Hello 123 World 456")
-        
+
         result = self.tester.format_output("Found: $&, ")
         self.assertEqual(result, "Found: 123, Found: 456, ")
 
@@ -135,7 +134,7 @@ class TestRegexTester(unittest.TestCase):
         sample = self.tester.get_sample_pattern()
         self.assertIsInstance(sample, str)
         self.assertTrue(len(sample) > 0)
-        
+
         # Test that sample pattern is valid
         result = self.tester.set_pattern(sample)
         self.assertTrue(result)
@@ -144,10 +143,10 @@ class TestRegexTester(unittest.TestCase):
         """Test email pattern matching with sample."""
         email_pattern = self.tester.get_sample_pattern()
         self.tester.set_pattern(email_pattern)
-        
+
         test_text = "Contact: john.doe@example.com and support@company.org"
         self.tester.set_text(test_text)
-        
+
         matches = self.tester.find_matches()
         self.assertEqual(len(matches), 2)
         self.assertEqual(matches[0][0], "john.doe@example.com")
@@ -158,10 +157,10 @@ class TestRegexTester(unittest.TestCase):
         # Pattern for phone numbers - improved to handle spaces
         phone_pattern = r"\(?\d{3}\)?[-. ]?\d{3}[-.]?\d{4}"
         self.tester.set_pattern(phone_pattern)
-        
+
         test_text = "Call us at (555) 123-4567 or 555.987.6543"
         self.tester.set_text(test_text)
-        
+
         matches = self.tester.find_matches()
         self.assertEqual(len(matches), 2)
         self.assertEqual(matches[0][0], "(555) 123-4567")
@@ -171,7 +170,7 @@ class TestRegexTester(unittest.TestCase):
         """Test case sensitive pattern matching."""
         self.tester.set_pattern(r"Hello")
         self.tester.set_text("Hello world, hello again")
-        
+
         matches = self.tester.find_matches()
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0][0], "Hello")
@@ -180,7 +179,7 @@ class TestRegexTester(unittest.TestCase):
         """Test word boundary pattern."""
         self.tester.set_pattern(r"\btest\b")
         self.tester.set_text("This is a test, testing, and contest")
-        
+
         matches = self.tester.find_matches()
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0][0], "test")

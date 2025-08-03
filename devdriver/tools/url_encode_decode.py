@@ -1,0 +1,207 @@
+import logging
+import sys
+
+from PyQt6.QtWidgets import (
+    QApplication,
+    QButtonGroup,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QRadioButton,
+    QStyle,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def create_url_codec_widget(style_func):
+    """
+    Creates and returns the URL Encode/Decode widget.
+
+    Args:
+        style_func: Function to get QStyle for standard icons.
+
+    Returns:
+        QWidget: The complete URL encoder/decoder widget.
+    """
+    logger.info("Creating URL Encode/Decode widget")
+    widget = QWidget()
+    widget.setStyleSheet("""
+        QWidget {
+            background-color: #ffffff;
+            color: #333333;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        QPushButton {
+            background-color: #f0f0f0;
+            border: 1px solid #dcdcdc;
+            padding: 5px 12px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        QPushButton:hover {
+            background-color: #e9e9e9;
+        }
+        QPushButton#iconButton {
+            background-color: transparent;
+            border: none;
+            padding: 2px;
+        }
+        QTextEdit {
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 2px;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 14px;
+            padding: 8px;
+        }
+        QFrame {
+            border: none;
+            border-top: 1px solid #e5e5e5;
+        }
+        QRadioButton {
+            font-size: 13px;
+            spacing: 5px;
+        }
+        QRadioButton::indicator {
+            width: 14px;
+            height: 14px;
+        }
+        QLabel {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555555;
+            padding-bottom: 2px;
+        }
+    """)
+
+    main_layout = QVBoxLayout(widget)
+    main_layout.setContentsMargins(15, 15, 15, 15)
+    main_layout.setSpacing(0)
+
+    # --- TOP INPUT SECTION ---
+    input_section_layout = QVBoxLayout()
+    input_section_layout.setSpacing(8)
+    input_section_layout.setContentsMargins(0, 0, 0, 12)
+
+    # Top Bar: Controls and Mode Selection
+    top_bar_layout = QHBoxLayout()
+    top_bar_layout.setSpacing(8)
+
+    input_label = QLabel("Input:")
+
+    input_icon_button = QPushButton()
+    input_icon_button.setObjectName("iconButton")
+    # Image description: A simple yellow lightning bolt icon, indicating an action or processing.
+    input_icon_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))  # Placeholder
+    input_icon_button.setToolTip("Encode/Decode")
+
+    clipboard_button = QPushButton("Clipboard")
+    sample_button = QPushButton("Sample")
+    clear_button = QPushButton("Clear")
+
+    settings_button = QPushButton()
+    settings_button.setObjectName("iconButton")
+    # Image description: A flat, gray gear icon for settings.
+    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))  # Placeholder
+    settings_button.setToolTip("Settings")
+
+    top_bar_layout.addWidget(input_label)
+    top_bar_layout.addSpacing(4)
+    top_bar_layout.addWidget(input_icon_button)
+    top_bar_layout.addWidget(clipboard_button)
+    top_bar_layout.addWidget(sample_button)
+    top_bar_layout.addWidget(clear_button)
+    top_bar_layout.addSpacing(4)
+    top_bar_layout.addWidget(settings_button)
+    top_bar_layout.addStretch()
+
+    encode_radio = QRadioButton("Encode")
+    decode_radio = QRadioButton("Decode")
+    encode_radio.setChecked(True)
+
+    radio_group = QButtonGroup(widget)
+    radio_group.addButton(encode_radio)
+    radio_group.addButton(decode_radio)
+
+    top_bar_layout.addWidget(encode_radio)
+    top_bar_layout.addWidget(decode_radio)
+    input_section_layout.addLayout(top_bar_layout)
+
+    # Input Text Edit
+    input_text_edit = QTextEdit()
+    input_text_edit.setMinimumHeight(180)
+    placeholder_text_input = (
+        "- Enter Your Text\n"
+        "- Drag/Drop Files\n"
+        "- Right Click → Load from File...\n"
+        "- ⌘ + F to Search\n"
+        "- ⌘ + ⇧ + F to Replace"
+    )
+    input_text_edit.setPlaceholderText(placeholder_text_input)
+    input_section_layout.addWidget(input_text_edit, 1)
+
+    # --- BOTTOM OUTPUT SECTION ---
+    output_section_layout = QVBoxLayout()
+    output_section_layout.setSpacing(8)
+    output_section_layout.setContentsMargins(0, 12, 0, 0)
+
+    # Output Controls Bar
+    output_bar_layout = QHBoxLayout()
+    output_bar_layout.setSpacing(8)
+
+    output_label = QLabel("Output:")
+
+    copy_button = QPushButton("Copy")
+    # Image description: A copy icon. Two overlapping squares or pages, one slightly offset.
+    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))  # Placeholder
+
+    use_as_input_button = QPushButton("Use as input")
+    # Image description: An upward-pointing arrow icon, simple and bold.
+    use_as_input_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))  # Placeholder
+
+    output_bar_layout.addWidget(output_label)
+    output_bar_layout.addStretch()
+    output_bar_layout.addWidget(copy_button)
+    output_bar_layout.addWidget(use_as_input_button)
+    output_section_layout.addLayout(output_bar_layout)
+
+    # Output Text Edit
+    output_text_edit = QTextEdit()
+    output_text_edit.setReadOnly(True)
+    output_text_edit.setMinimumHeight(180)
+    placeholder_text_output = "- Right click > Save to file..."
+    output_text_edit.setPlaceholderText(placeholder_text_output)
+    output_section_layout.addWidget(output_text_edit, 1)
+
+    main_layout.addLayout(input_section_layout, 1)
+
+    separator = QFrame()
+    separator.setFrameShape(QFrame.Shape.HLine)
+    main_layout.addWidget(separator)
+
+    main_layout.addLayout(output_section_layout, 1)
+
+    logger.info("URL Codec widget creation completed")
+    return widget
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    app = QApplication(sys.argv)
+
+    main_window = QMainWindow()
+    main_window.setWindowTitle("URL Encoder/Decoder Tool")
+    main_window.setGeometry(100, 100, 800, 600)
+
+    url_tool_widget = create_url_codec_widget(app.style)
+
+    main_window.setCentralWidget(url_tool_widget)
+
+    main_window.show()
+    sys.exit(app.exec())

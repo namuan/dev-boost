@@ -22,6 +22,7 @@ from .tools import (
     create_jwt_debugger_widget,
     create_regexp_tester_widget,
     create_unix_time_converter_widget,
+    create_url_codec_widget,
 )
 
 # Configure logging
@@ -195,6 +196,8 @@ class DevDriverWindow(QMainWindow):
         self.jwt_debugger_screen = create_jwt_debugger_widget(self.style)
         logger.info("Creating RegExp Tester screen")
         self.regexp_tester_screen = create_regexp_tester_widget(self.style)
+        logger.info("Creating URL Encode Decode screen")
+        self.url_codec_screen = create_url_codec_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -202,9 +205,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.base64_string_encodec_screen)
         self.stacked_widget.addWidget(self.jwt_debugger_screen)
         self.stacked_widget.addWidget(self.regexp_tester_screen)
-        logger.info(
-            "Added welcome screen, Unix Time Converter, JSON Format/Validate, Base64 String Encode/Decode, JWT Debugger, and RegExp Tester to stacked widget"
-        )
+        self.stacked_widget.addWidget(self.url_codec_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -256,6 +257,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("RegExp Tester")
             self.stacked_widget.setCurrentWidget(self.regexp_tester_screen)
             logger.info("Switched to RegExp Tester view")
+        elif tool_name == "URL Encode/Decode":
+            self.top_bar_title.setText("URL Encode/Decode")
+            self.stacked_widget.setCurrentWidget(self.url_codec_screen)
+            logger.info("Switched to URL Encode/Decode view")
         else:
             # You can add logic for other tools here
             self.top_bar_title.setText("Dev Driver")
