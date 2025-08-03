@@ -14,4 +14,6 @@ Add a task at the end of this check list to update task description with a summa
 
 Add a task at the end of this check list to Open this UI when the tool option is selected from main_cli.py
 
+Add a task at the end of this check list to commit any remaining changes with --no-verify
+
 The UI code is attached:
