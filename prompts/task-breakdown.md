@@ -8,12 +8,12 @@ Add a task at the end of this check list to test the code using automated test.
 
 Add a task at the end of this check list to commit all modified code using an appropriate commit message using --no-verify
 
-Add a task at the end of this check list to as the user to do due diligence
-
-Add a task at the end of this check list to update task description with a summary
-
 Add a task at the end of this check list to Open this UI when the tool option is selected from main_cli.py
 
 Add a task at the end of this check list to commit any remaining changes with --no-verify
+
+Add a task to run the application using uv run python -m devboost.main_cli 
+
+Add a task at the end of this check list to update task description with a summary
 
 The UI code is attached:

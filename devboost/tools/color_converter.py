@@ -1474,17 +1474,11 @@ def create_color_converter_widget():
             hex_color = formats.get('hex', '#ffffff')
             color_preview.setStyleSheet(f"QLabel#colorPreview {{ background-color: {hex_color}; border: 1px solid #ced4da; border-radius: 4px; }}")
             
-            # Update code presets with current color
-            update_code_presets((r, g, b, a))
-            
         except Exception as e:
             # Handle any conversion errors
             for line_edit in format_line_edits.values():
                 line_edit.setText("Conversion error")
                 line_edit.setStyleSheet("QLineEdit { color: #dc3545; }")
-            
-            # Reset code presets to default on error
-            update_code_presets()
     
     def copy_to_clipboard(text: str):
         """Copy text to clipboard."""
@@ -1578,89 +1572,96 @@ def create_color_converter_widget():
         hsl_saturation_p = int(round(s * 100))
         lightness_p = int(round(l * 100))
         
-        # HSB values
+        # HSB values (same as HSV)
         h_hsb, s_hsb, v_hsb = colorsys.rgb_to_hsv(r, g, b)
-        hue_hsb = round(h_hsb, 3)
-        hsb_saturation = round(s_hsb, 3)
-        brightness = round(v_hsb, 3)
+        hue_hsb_d = int(round(h_hsb * 360))
+        saturation_hsb_p = int(round(s_hsb * 100))
+        brightness_p = int(round(v_hsb * 100))
         
         # Hex values
-        hex_color = f"#{red_b:02X}{green_b:02X}{blue_b:02X}"
-        hex_alpha = f"#{red_b:02X}{green_b:02X}{blue_b:02X}{alpha_b:02X}"
+        hex_color = f"#{red_b:02x}{green_b:02x}{blue_b:02x}"
+        hex_alpha = f"#{red_b:02x}{green_b:02x}{blue_b:02x}{alpha_b:02x}"
         
-        code_content = f"""# CSS Level 4 Color Module:
+        code_content = f"""CSS
+.color {{
+    color: {hex_color};
+    color: rgb({red_b}, {green_b}, {blue_b});
+    color: rgba({red_b}, {green_b}, {blue_b}, {a:.2f});
+    color: hsl({hue_d}, {hsl_saturation_p}%, {lightness_p}%);
+    color: hsla({hue_d}, {hsl_saturation_p}%, {lightness_p}%, {a:.2f});
+}}
 
-rgb({red_b} {green_b} {blue_b})
-rgb({red_b} {green_b} {blue_b} / {alpha_p}%)
-hsl({hue_d}deg {hsl_saturation_p}% {lightness_p}%)
-hsl({hue_d}deg {hsl_saturation_p}% {lightness_p}% / {alpha_p}%)
+Swift
+let color = UIColor(red: {r:.3f}, green: {g:.3f}, blue: {b:.3f}, alpha: {a:.2f})
+let color = UIColor(displayP3Red: {r:.3f}, green: {g:.3f}, blue: {b:.3f}, alpha: {a:.2f})
 
-# Swift:
-
-NSColor(
-    calibratedRed: {r:.3f},
-    green: {g:.3f},
-    blue: {b:.3f},
-    alpha: {a:.3f}
-)
-
-NSColor(
-    calibratedHue: {hue_hsb:.3f},
-    saturation: {hsb_saturation:.3f},
-    brightness: {brightness:.3f},
-    alpha: {a:.3f}
-)
-
-# .NET
-
-Color.FromArgb({red_b}, {green_b}, {blue_b})
+.NET
 Color.FromArgb({alpha_b}, {red_b}, {green_b}, {blue_b})
+Color.FromArgb({red_b}, {green_b}, {blue_b})
 
-# Java
-
+Java
 new Color({red_b}, {green_b}, {blue_b})
 new Color({red_b}, {green_b}, {blue_b}, {alpha_b})
 
-# Android
-
+Android
 Color.rgb({red_b}, {green_b}, {blue_b})
 Color.argb({alpha_b}, {red_b}, {green_b}, {blue_b})
 
-<color name="color_name">{hex_color}</color>
-<color name="color_name">{hex_alpha}</color>
-
-# OpenGL
-
+OpenGL
 glColor3f({r:.3f}f, {g:.3f}f, {b:.3f}f)
-glColor4f({r:.3f}f, {g:.3f}f, {b:.3f}f, {a:.3f}f)
+glColor4f({r:.3f}f, {g:.3f}f, {b:.3f}f, {a:.2f}f)
 
-# Objective-C
+Objective-C
+[UIColor colorWithRed:{r:.3f} green:{g:.3f} blue:{b:.3f} alpha:{a:.2f}]
+[NSColor colorWithRed:{r:.3f} green:{g:.3f} blue:{b:.3f} alpha:{a:.2f}]
 
-[UIColor colorWithRed:{r:.3f} green:{g:.3f} blue:{b:.3f} alpha:{a:.3f}]
-[UIColor colorWithHue:{hue_hsb:.3f} saturation:{hsb_saturation:.3f} brightness:{brightness:.3f} alpha:{a:.3f}]
+Python
+# RGB tuple
+color = ({red_b}, {green_b}, {blue_b})
+# RGBA tuple
+color = ({red_b}, {green_b}, {blue_b}, {alpha_b})
+# Hex string
+color = \"{hex_color}\"
 
-# Python (RGB tuple)
+JavaScript
+// RGB
+const color = `rgb({red_b}, {green_b}, {blue_b})`;
+// RGBA
+const color = `rgba({red_b}, {green_b}, {blue_b}, {a:.2f})`;
+// Hex
+const color = \"{hex_color}\";
 
-({red_b}, {green_b}, {blue_b})
-({red_b}, {green_b}, {blue_b}, {alpha_b})
-
-# JavaScript
-
-`rgb({red_b}, {green_b}, {blue_b})`
-`rgba({red_b}, {green_b}, {blue_b}, {a:.3f})`
-
-# Unity C#
-
-new Color({r:.3f}f, {g:.3f}f, {b:.3f}f)
-new Color({r:.3f}f, {g:.3f}f, {b:.3f}f, {a:.3f}f)"""
+Unity C#
+new Color({r:.3f}f, {g:.3f}f, {b:.3f}f, {a:.2f}f)
+new Color32({red_b}, {green_b}, {blue_b}, {alpha_b})"""
         
-        code_presets_edit.setText(code_content)
-    
+        code_presets_edit.setPlainText(code_content)
+
     # Initialize with default values
     update_code_presets()
     code_presets_layout.addWidget(code_presets_edit)
 
     tabs.addTab(code_presets_tab, "Code Presets")
+    
+    # Update the update_color_formats function to include code presets updates
+    original_update_color_formats = update_color_formats
+    def enhanced_update_color_formats(color_input: str):
+        original_update_color_formats(color_input)
+        
+        # Update code presets if color is valid
+        if color_input.strip():
+            rgba = converter.parse_color(color_input)
+            if rgba is not None:
+                try:
+                    r, g, b, a = rgba
+                    update_code_presets((r, g, b, a))
+                except Exception:
+                    update_code_presets()
+            else:
+                update_code_presets()
+    
+    # Replace the function reference
+    update_color_formats = enhanced_update_color_formats
 
     right_layout.addWidget(tabs)
 

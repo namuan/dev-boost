@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 
 from .tools import (
     create_base64_string_encodec_widget,
+    create_color_converter_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
     create_regexp_tester_widget,
@@ -200,6 +201,8 @@ class DevDriverWindow(QMainWindow):
         self.yaml_to_json_screen = create_yaml_to_json_widget(self.style)
         logger.info("Creating String Case Converter screen")
         self.string_case_converter_screen = create_string_case_converter_widget(self.style)
+        logger.info("Creating Color Converter screen")
+        self.color_converter_screen = create_color_converter_widget()
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -211,6 +214,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.uuid_ulid_generator_screen)
         self.stacked_widget.addWidget(self.yaml_to_json_screen)
         self.stacked_widget.addWidget(self.string_case_converter_screen)
+        self.stacked_widget.addWidget(self.color_converter_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -278,6 +282,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("String Case Converter")
             self.stacked_widget.setCurrentWidget(self.string_case_converter_screen)
             logger.info("Switched to String Case Converter view")
+        elif tool_name == "Color Converter":
+            self.top_bar_title.setText("Color Converter")
+            self.stacked_widget.setCurrentWidget(self.color_converter_screen)
+            logger.info("Switched to Color Converter view")
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
