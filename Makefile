@@ -14,7 +14,7 @@ check: ## Run code quality tools.
 	@uv run pre-commit run -a
 
 .PHONY: test
-test: ## Run all unit tests
+test: check ## Run all unit tests
 	@echo "🚀 Running unit tests"
 	@uv run pytest -v
 

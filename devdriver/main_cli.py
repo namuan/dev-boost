@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .tools import create_unix_time_converter_widget
+from .tools import create_json_yaml_converter_widget, create_unix_time_converter_widget
 
 # Configure logging
 logging.basicConfig(
@@ -195,9 +195,12 @@ class DevDriverWindow(QMainWindow):
         self.welcome_screen = self._create_welcome_screen()
         logger.info("Creating Unix Time Converter screen")
         self.unix_time_converter_screen = create_unix_time_converter_widget(self.style)
+        logger.info("Creating JSON Format/Validate screen")
+        self.json_format_validate_screen = create_json_yaml_converter_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
+        self.stacked_widget.addWidget(self.json_format_validate_screen)
         logger.info("Added welcome screen and Unix Time Converter to stacked widget")
 
         main_content_layout.addWidget(self.top_bar)
@@ -234,6 +237,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("Unix Time Converter")
             self.stacked_widget.setCurrentWidget(self.unix_time_converter_screen)
             logger.info("Switched to Unix Time Converter view")
+        elif tool_name == "JSON Format/Validate":
+            self.top_bar_title.setText("JSON Format/Validate")
+            self.stacked_widget.setCurrentWidget(self.json_format_validate_screen)
+            logger.info("Switched to JSON Format/Validate view")
         else:
             # You can add logic for other tools here
             self.top_bar_title.setText("Dev Driver")
