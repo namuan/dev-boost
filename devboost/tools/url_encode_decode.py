@@ -337,7 +337,6 @@ def create_url_codec_widget(style_func):
     main_layout.addLayout(input_section_layout, 1)
 
     separator = QFrame()
-    separator.setFrameShape(QFrame.Shape.HLine)
     main_layout.addWidget(separator)
 
     main_layout.addLayout(output_section_layout, 1)

@@ -110,15 +110,11 @@ def create_base64_string_encodec_widget(style_func):
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
     output_text_edit.setMinimumHeight(180)
-    placeholder_text_output = "- Right click > Save to file..."
-    output_text_edit.setPlaceholderText(placeholder_text_output)
     output_section_layout.addWidget(output_text_edit, 1)
 
     main_layout.addLayout(input_section_layout, 1)
 
     separator = QFrame()
-    separator.setFrameShape(QFrame.Shape.HLine)
-    separator.setFrameShadow(QFrame.Shadow.Sunken)
     main_layout.addWidget(separator)
 
     main_layout.addLayout(output_section_layout, 1)

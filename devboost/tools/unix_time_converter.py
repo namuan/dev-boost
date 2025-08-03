@@ -249,8 +249,6 @@ def create_unix_time_converter_widget(style_func):
     top_controls_layout = QHBoxLayout()
     top_controls_layout.setSpacing(8)
 
-    top_controls_layout.addWidget(QLabel("Input:"))
-
     # Create buttons with functionality
     now_button = QPushButton("Now")
     clipboard_button = QPushButton("Clipboard")

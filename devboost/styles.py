@@ -330,36 +330,6 @@ QMainWindow {{
     background-color: {COLORS["bg_sidebar"]};
 }}
 
-#sidebar {{
-    background-color: {COLORS["bg_sidebar"]};
-    border-right: 1px solid {COLORS["border_primary"]};
-}}
-
-#contentArea {{
-    background-color: {COLORS["bg_content"]};
-}}
-
-#topBar {{
-    background-color: {COLORS["bg_sidebar"]};
-    border-bottom: 1px solid {COLORS["border_primary"]};
-}}
-
-#topBarTitle {{
-    font-size: 14px;
-    font-weight: bold;
-    color: {COLORS["text_primary"]};
-}}
-
-#appName {{
-    font-size: 28px;
-    font-weight: bold;
-    color: {COLORS["text_primary"]};
-}}
-
-#infoLabel {{
-    font-size: 14px;
-    color: {COLORS["text_muted"]};
-}}
 """
 
 

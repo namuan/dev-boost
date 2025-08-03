@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QMainWindow,
     QPushButton,
     QStyle,
@@ -175,7 +174,6 @@ def create_yaml_to_json_widget(style_func):
 
     # --- Separator ---
     separator = QFrame()
-    separator.setFrameShape(QFrame.Shape.VLine)
     separator.setObjectName("separator")
 
     # --- Right Pane (Output) ---
@@ -188,7 +186,6 @@ def create_yaml_to_json_widget(style_func):
     output_header_layout = QHBoxLayout()
     output_header_layout.setSpacing(8)
     output_header_layout.setContentsMargins(0, 0, 0, 0)
-    output_label = QLabel("Output:")
 
     spaces_combo = QComboBox()
     spaces_combo.addItem("2 spaces")
@@ -199,7 +196,6 @@ def create_yaml_to_json_widget(style_func):
     # Image description: A copy icon. Two overlapping squares or pages.
     copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
 
-    output_header_layout.addWidget(output_label)
     output_header_layout.addStretch()
     output_header_layout.addWidget(spaces_combo)
     output_header_layout.addWidget(copy_button)

@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QMainWindow,
     QPushButton,
     QStyle,
@@ -231,8 +230,6 @@ def create_case_converter_widget(style_func):
     # Separator
     separator = QFrame()
     separator.setObjectName("separator")
-    separator.setFrameShape(QFrame.Shape.VLine)
-    separator.setFrameShadow(QFrame.Shadow.Sunken)
     content_layout.addWidget(separator)
 
     # Output Pane (Right)
@@ -240,10 +237,6 @@ def create_case_converter_widget(style_func):
     output_layout = QVBoxLayout(output_pane_widget)
     output_layout.setContentsMargins(0, 0, 0, 0)
     output_layout.setSpacing(0)
-
-    output_label = QLabel("Output:")
-    output_label.setObjectName("outputLabel")
-    output_layout.addWidget(output_label)
 
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
