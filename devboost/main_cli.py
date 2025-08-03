@@ -108,11 +108,6 @@ class DevDriverWindow(QMainWindow):
             ("%", "URL Encode/Decode"),
             ("🆔", "UUID/ULID Generate/Decode"),
             ("⇄", "YAML to JSON"),
-            ("⇄", "JSON to YAML"),
-            ("¹⁰₁", "Number Base Converter"),
-            ("✨", "XML Beautify/Minify"),
-            ("IP", "Lorem Ipsum Generator"),
-            ("M↓", "Markdown Preview"),
             ("✏️", "String Case Converter"),
             ("🎨", "Color Converter"),
         ]
