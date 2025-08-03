@@ -1,6 +1,6 @@
 import unittest
 
-from devdriver.tools.regex_tester import RegexTester
+from devboost.tools.regex_tester import RegexTester
 
 
 class TestRegexTester(unittest.TestCase):

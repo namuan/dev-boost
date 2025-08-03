@@ -3,7 +3,7 @@ import unittest
 
 from PyQt6.QtWidgets import QApplication
 
-from devdriver.tools.base64_string_encodec import create_base64_string_encodec_widget
+from devboost.tools.base64_string_encodec import create_base64_string_encodec_widget
 
 
 class TestBase64StringEncodec(unittest.TestCase):

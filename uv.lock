@@ -39,7 +39,7 @@ wheels = [
 ]
 
 [[package]]
-name = "devdriver"
+name = "devboost"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

@@ -3,7 +3,7 @@
 __pycache__/
 
 # unignore folders
-!devdriver/
+!devboost/
 !assets/
 !prompts/
 !tests/

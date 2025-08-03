@@ -1,4 +1,4 @@
-from devdriver.tools.url_encode_decode import URLCodec
+from devboost.tools.url_encode_decode import URLCodec
 
 
 class TestURLCodec:

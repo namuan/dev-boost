@@ -1,14 +1,10 @@
-import os
-import sys
 import time
 import unittest
 import uuid
 
 from PyQt6.QtWidgets import QApplication
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "devdriver", "tools"))
-
-from uuid_ulid_generator import UUIDULIDProcessor, create_uuid_ulid_tool_widget
+from devboost.tools.uuid_ulid_generator import UUIDULIDProcessor, create_uuid_ulid_tool_widget
 
 
 class TestUUIDULIDProcessor(unittest.TestCase):

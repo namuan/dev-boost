@@ -5,7 +5,7 @@ import json
 import time
 import unittest
 
-from devdriver.tools.jwt_debugger import JWTDebugger
+from devboost.tools.jwt_debugger import JWTDebugger
 
 
 class TestJWTDebugger(unittest.TestCase):

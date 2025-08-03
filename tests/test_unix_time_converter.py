@@ -2,7 +2,7 @@ import datetime
 import unittest
 from unittest.mock import patch
 
-from devdriver.tools.unix_time_converter import UnixTimeConverter
+from devboost.tools.unix_time_converter import UnixTimeConverter
 
 
 class TestUnixTimeConverter(unittest.TestCase):

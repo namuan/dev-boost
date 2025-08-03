@@ -21,7 +21,7 @@ test: check ## Run all unit tests
 .PHONY: run
 run: ## Run the application
 	@echo "🚀 Testing code: Running $(PROJECTNAME)"
-	@uv run $(PROJECTNAME)
+	@uv run devboost
 
 .PHONY: build
 build: clean-build ## Build wheel file

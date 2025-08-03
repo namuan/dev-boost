@@ -1,14 +1,10 @@
 import json
-import sys
 from unittest.mock import patch
 
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-# Add the parent directory to the path to import the module
-sys.path.insert(0, "/Users/nnn/workspace/devdriver")
-
-from devdriver.tools.json_format_validate import JSONValidator, create_json_formatter_widget
+from devboost.tools.json_format_validate import JSONValidator, create_json_formatter_widget
 
 
 class TestJSONValidator:
@@ -255,7 +251,7 @@ class TestJSONFormatterWidget:
         assert widget is not None
         assert widget.isVisible() is False  # Widget is created but not shown
 
-    @patch("devdriver.tools.json_format_validate.QMessageBox")
+    @patch("devboost.tools.json_format_validate.QMessageBox")
     def test_widget_functionality_integration(self, mock_messagebox, qapp):
         """Test basic widget functionality integration."""
         widget = create_json_formatter_widget(qapp.style)
