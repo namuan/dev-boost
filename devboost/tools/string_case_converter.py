@@ -152,6 +152,7 @@ class StringCaseConverter:
             return text
 
 
+# ruff: noqa: C901
 def create_case_converter_widget(style_func):
     """
     Creates and returns the String Case Converter widget.
@@ -351,7 +352,7 @@ def create_case_converter_widget(style_func):
             else:
                 output_text_edit.clear()
         except Exception as e:
-            logger.error(f"Error during case conversion: {e}")
+            logger.exception("Error during case conversion")
             output_text_edit.setPlainText(f"Error: {e!s}")
 
     def on_input_changed():
@@ -371,8 +372,8 @@ def create_case_converter_widget(style_func):
             if text:
                 input_text_edit.setPlainText(text)
                 update_output()
-        except Exception as e:
-            logger.error(f"Error loading from clipboard: {e}")
+        except Exception:
+            logger.exception("Error loading from clipboard")
 
     def on_sample_clicked():
         """Load sample text."""
@@ -393,21 +394,21 @@ def create_case_converter_widget(style_func):
                 clipboard = QApplication.clipboard()
                 clipboard.setText(output_text)
                 logger.info("Output copied to clipboard")
-        except Exception as e:
-            logger.error(f"Error copying to clipboard: {e}")
-    
+        except Exception:
+            logger.exception("Error copying to clipboard")
+
     def on_lightning_clicked():
         """Quick convert - automatically detect best case and convert."""
         try:
             input_text = input_text_edit.toPlainText().strip()
             if not input_text:
                 return
-            
+
             # Auto-detect current case and suggest next logical conversion
-            if '_' in input_text:
+            if "_" in input_text:
                 # snake_case -> camelCase
                 case_combo.setCurrentText("camelCase")
-            elif '-' in input_text:
+            elif "-" in input_text:
                 # kebab-case -> camelCase
                 case_combo.setCurrentText("camelCase")
             elif input_text.islower():
@@ -422,10 +423,10 @@ def create_case_converter_widget(style_func):
             else:
                 # Default to camelCase
                 case_combo.setCurrentText("camelCase")
-            
+
             update_output()
-        except Exception as e:
-            logger.error(f"Error in lightning conversion: {e}")
+        except Exception:
+            logger.exception("Error in lightning conversion")
 
     # --- Connect UI Events ---
     input_text_edit.textChanged.connect(on_input_changed)
