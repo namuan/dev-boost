@@ -1,3 +1,4 @@
+import base64
 import logging
 import sys
 
@@ -180,6 +181,70 @@ def create_base64_string_encodec_widget(style_func):
     main_layout.addWidget(separator)
 
     main_layout.addLayout(output_section_layout, 1)
+
+    # Connect functionality
+    def perform_encoding_decoding():
+        """Perform base64 encoding or decoding based on selected mode."""
+        input_text = input_text_edit.toPlainText()
+        if not input_text.strip():
+            output_text_edit.clear()
+            return
+            
+        try:
+            if encode_radio.isChecked():
+                # Encode to base64
+                encoded_bytes = base64.b64encode(input_text.encode('utf-8'))
+                result = encoded_bytes.decode('ascii')
+            else:
+                # Decode from base64
+                decoded_bytes = base64.b64decode(input_text.encode('ascii'))
+                result = decoded_bytes.decode('utf-8')
+            
+            output_text_edit.setPlainText(result)
+        except Exception as e:
+            output_text_edit.setPlainText(f"Error: {str(e)}")
+            logger.error(f"Base64 operation failed: {e}")
+    
+    def copy_to_clipboard():
+        """Copy output text to clipboard."""
+        output_text = output_text_edit.toPlainText()
+        if output_text:
+            QApplication.clipboard().setText(output_text)
+            logger.info("Output copied to clipboard")
+    
+    def use_output_as_input():
+        """Move output text to input field."""
+        output_text = output_text_edit.toPlainText()
+        if output_text:
+            input_text_edit.setPlainText(output_text)
+            logger.info("Output moved to input")
+    
+    def clear_input():
+        """Clear the input text field."""
+        input_text_edit.clear()
+        output_text_edit.clear()
+    
+    def load_sample():
+        """Load sample text for testing."""
+        sample_text = "Hello, World! This is a sample text for Base64 encoding/decoding."
+        input_text_edit.setPlainText(sample_text)
+    
+    def paste_from_clipboard():
+        """Paste text from clipboard to input."""
+        clipboard_text = QApplication.clipboard().text()
+        if clipboard_text:
+            input_text_edit.setPlainText(clipboard_text)
+            logger.info("Text pasted from clipboard")
+    
+    # Connect signals
+    input_text_edit.textChanged.connect(perform_encoding_decoding)
+    encode_radio.toggled.connect(perform_encoding_decoding)
+    decode_radio.toggled.connect(perform_encoding_decoding)
+    copy_button.clicked.connect(copy_to_clipboard)
+    use_as_input_button.clicked.connect(use_output_as_input)
+    clear_button.clicked.connect(clear_input)
+    sample_button.clicked.connect(load_sample)
+    clipboard_button.clicked.connect(paste_from_clipboard)
 
     logger.info("Base64 widget creation completed")
     return widget

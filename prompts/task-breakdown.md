@@ -1,4 +1,4 @@
-Generate subtasks / checklist to implement "JSON Format/Validate" using Trello Task Manager under "Agent Tasks"
+Generate subtasks / checklist to implement "Base64 String Encode/Decode" using Trello Task Manager under "Agent Tasks"
 
 There is an existing task which you can look up by getting all the tasks so don't create a new task.
 
