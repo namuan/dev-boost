@@ -4,8 +4,11 @@ import random
 import re
 import sys
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QApplication,
+    QColorDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -1375,6 +1378,7 @@ def create_color_converter_widget():
     color_preview = QLabel()
     color_preview.setObjectName("colorPreview")
     color_preview.setFixedSize(34, 34)
+    color_preview.setCursor(Qt.CursorShape.PointingHandCursor)  # Show pointer cursor on hover
     input_field_layout.addWidget(color_preview)
 
     input_section_layout.addLayout(input_field_layout)
@@ -1514,8 +1518,35 @@ def create_color_converter_widget():
         """Clear the input field."""
         input_field.clear()
 
+    def open_color_picker():
+        """Open color picker dialog and update input field with selected color."""
+        # Get current color from input field if valid
+        current_color = QColor(255, 255, 255)  # Default to white
+        current_input = input_field.text().strip()
+        if current_input:
+            rgba = converter.parse_color(current_input)
+            if rgba is not None:
+                r, g, b, a = rgba
+                current_color = QColor(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
+
+        # Open color dialog
+        color = QColorDialog.getColor(current_color, widget, "Select Color")
+
+        # If user selected a color (didn't cancel)
+        if color.isValid():
+            # Convert to hex format and update input field
+            hex_color = color.name()  # Returns #RRGGBB format
+            input_field.setText(hex_color)
+
     # Store methods on widget for external access
     widget.copy_to_clipboard = copy_to_clipboard
+
+    # Make color preview clickable
+    def on_color_preview_click(event):
+        """Handle color preview click event."""
+        open_color_picker()
+
+    color_preview.mousePressEvent = on_color_preview_click
 
     # Connect signals
     input_field.textChanged.connect(update_color_formats)
