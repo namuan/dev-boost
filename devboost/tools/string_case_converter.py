@@ -190,25 +190,13 @@ def create_case_converter_widget(style_func):
     top_bar_layout.setSpacing(8)
 
     # Left side of top bar
-    lightning_button = QPushButton()
-    lightning_button.setObjectName("iconButton")
-    # Image description: A simple yellow lightning bolt icon.
-    lightning_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
 
-    settings_button = QPushButton()
-    settings_button.setObjectName("iconButton")
-    # Image description: A flat, gray gear icon for settings.
-    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-
-    top_bar_layout.addWidget(lightning_button)
     top_bar_layout.addWidget(clipboard_button)
     top_bar_layout.addWidget(sample_button)
     top_bar_layout.addWidget(clear_button)
-    top_bar_layout.addSpacing(4)
-    top_bar_layout.addWidget(settings_button)
     top_bar_layout.addStretch()
 
     # Right side of top bar
@@ -238,14 +226,6 @@ def create_case_converter_widget(style_func):
 
     # Input Pane (Left)
     input_text_edit = QTextEdit()
-    input_placeholder = (
-        "- Enter Your Text\n"
-        "- Drag/Drop Files\n"
-        "- Right Click \u2192 Load from File...\n"
-        "- \u2318 + F to Search\n"
-        "- \u2318 + \u21e7 + F to Replace"
-    )
-    input_text_edit.setPlaceholderText(input_placeholder)
     content_layout.addWidget(input_text_edit, 1)
 
     # Separator
@@ -266,13 +246,6 @@ def create_case_converter_widget(style_func):
     output_layout.addWidget(output_label)
 
     output_text_edit = QTextEdit()
-    output_placeholder = (
-        "Tips:\n"
-        "\u2014 Right Click \u2192 Save to File...\n"
-        "\u2014 Right Click \u2192 Show Line Numbers\n"
-        "\u2014 Right Click \u2192 Line Wrapping"
-    )
-    output_text_edit.setPlaceholderText(output_placeholder)
     output_text_edit.setReadOnly(True)
     output_layout.addWidget(output_text_edit)
 
@@ -372,7 +345,6 @@ def create_case_converter_widget(style_func):
     # --- Connect UI Events ---
     input_text_edit.textChanged.connect(on_input_changed)
     case_combo.currentTextChanged.connect(on_case_changed)
-    lightning_button.clicked.connect(on_lightning_clicked)
     clipboard_button.clicked.connect(on_clipboard_clicked)
     sample_button.clicked.connect(on_sample_clicked)
     clear_button.clicked.connect(on_clear_clicked)

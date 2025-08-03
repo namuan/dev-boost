@@ -14,13 +14,12 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSizePolicy,
-    QStyle,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
-from ..styles import get_tool_style, get_status_style
+from ..styles import get_status_style, get_tool_style
 
 
 class JWTDebugger:
@@ -260,29 +259,16 @@ def create_jwt_debugger_widget(style_func):
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
-    settings_button = QPushButton()
-    settings_button.setObjectName("iconButton")
-    # Image description: A flat, gray gear icon for settings.
-    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
 
     left_controls_layout.addWidget(input_label)
     left_controls_layout.addWidget(clipboard_button)
     left_controls_layout.addWidget(sample_button)
     left_controls_layout.addWidget(clear_button)
     left_controls_layout.addStretch()
-    left_controls_layout.addWidget(settings_button)
 
     # Input text area
     encoded_text_edit = QTextEdit()
     encoded_text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-    placeholder_text = (
-        "- Enter Your Text\n"
-        "- Drag/Drop Files\n"
-        "- Right Click → Load From File...\n"
-        "- ⌘ + F to Search\n"
-        "- ⌘ + ⇧ + F to Replace"
-    )
-    encoded_text_edit.setPlaceholderText(placeholder_text)
 
     left_layout.addLayout(left_controls_layout)
     left_layout.addWidget(encoded_text_edit)
@@ -299,25 +285,9 @@ def create_jwt_debugger_widget(style_func):
     algo_combo = QComboBox()
     algo_combo.addItems([
         "HS256",
-        "HS384",
-        "HS512",
-        "RS256",
-        "RS384",
-        "RS512",
-        "ES256",
-        "ES384",
-        "ES512",
-        "PS256",
-        "PS384",
-        "PS512",
     ])
-    algo_copy_button = QPushButton()
-    algo_copy_button.setObjectName("iconButton")
-    # Image description: A copy icon. Two overlapping pages.
-    algo_copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
     algo_layout.addWidget(algo_combo)
     algo_layout.addStretch()
-    algo_layout.addWidget(algo_copy_button)
 
     # Header section
     header_layout = QVBoxLayout()
@@ -449,7 +419,7 @@ def create_jwt_debugger_widget(style_func):
                         status_label.setStyleSheet("color: #28a745;")
                 else:
                     status_label.setText(f"Verification Status: ✗ {status_msg}")
-                    status_label.setStyleSheet(get_status_style('error'))
+                    status_label.setStyleSheet(get_status_style("error"))
             else:
                 if is_expired:
                     status_label.setText(f"Verification Status: ⚠️ Parsed successfully but {exp_msg}")
@@ -463,7 +433,7 @@ def create_jwt_debugger_widget(style_func):
             header_text_edit.setText("{\n}")
             payload_text_edit.setText("{\n}")
             status_label.setText(f"Verification Status: ✗ {error_msg}")
-            status_label.setStyleSheet(get_status_style('error'))
+            status_label.setStyleSheet(get_status_style("error"))
 
     def on_algorithm_changed():
         """Handle algorithm selection change."""
@@ -512,7 +482,6 @@ def create_jwt_debugger_widget(style_func):
     # Copy buttons
     header_copy_button.clicked.connect(lambda: copy_to_clipboard(header_text_edit.toPlainText()))
     payload_copy_button.clicked.connect(lambda: copy_to_clipboard(payload_text_edit.toPlainText()))
-    algo_copy_button.clicked.connect(lambda: copy_to_clipboard(algo_combo.currentText()))
 
     # Initialize display
     update_jwt_display()

@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style, get_error_input_style, get_warning_input_style, clear_input_style
+from ..styles import clear_input_style, get_error_input_style, get_tool_style, get_warning_input_style
 
 logger = logging.getLogger(__name__)
 
@@ -264,18 +264,11 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button_left = QPushButton("Clear")
-    settings_button = QPushButton()
-    settings_button.setObjectName("iconButton")
-    # Image description: A flat, gray gear icon for settings.
-    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-    settings_button.setFixedSize(32, 32)
 
     input_controls_layout.addWidget(QPushButton("Input:"))  # This is styled as a button in the screenshot
     input_controls_layout.addWidget(clipboard_button)
     input_controls_layout.addWidget(sample_button)
     input_controls_layout.addWidget(clear_button_left)
-    input_controls_layout.addSpacing(4)
-    input_controls_layout.addWidget(settings_button)
     input_controls_layout.addStretch()
 
     # UUID Input field
@@ -435,6 +428,7 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     count_input.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
     lowercased_checkbox = QCheckBox("lowercased")
+    lowercased_checkbox.setChecked(True)
 
     controls_layout.addWidget(generate_button)
     controls_layout.addWidget(copy_button)
@@ -448,7 +442,6 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     generate_label = QLabel("Generate new IDs")
 
     output_text_edit = QTextEdit()
-    output_text_edit.setPlaceholderText("- Right click > Save to file...")
     output_text_edit.setReadOnly(True)
 
     right_layout.addWidget(generate_label)

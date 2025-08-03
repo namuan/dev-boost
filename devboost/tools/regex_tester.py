@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style, get_error_input_style, clear_input_style, get_dialog_style
+from ..styles import clear_input_style, get_dialog_style, get_error_input_style, get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class RegexCheatSheetDialog(QDialog):
     def setup_ui(self):
         """Setup the cheat sheet dialog UI."""
         self.setStyleSheet(get_dialog_style())
-        
+
         layout = QVBoxLayout(self)
 
         # Create text area for cheat sheet content
@@ -134,7 +134,7 @@ class RegexSettingsDialog(QDialog):
     def setup_ui(self):
         """Setup the settings dialog UI."""
         self.setStyleSheet(get_dialog_style())
-        
+
         layout = QVBoxLayout(self)
 
         # Case insensitive option
@@ -375,14 +375,6 @@ def create_regexp_tester_widget(style_func):
     text_section_layout.addLayout(text_top_bar_layout)
 
     text_input_edit = QTextEdit()
-    placeholder_text_input = (
-        "- Enter Your Text\n"
-        "- Drag/Drop Files\n"
-        "- Right Click → Load from File...\n"
-        "- ⌘ + F to Search\n"
-        "- ⌘ + ⇧ + F to Replace"
-    )
-    text_input_edit.setPlaceholderText(placeholder_text_input)
     text_section_layout.addWidget(text_input_edit)
 
     # --- BOTTOM SECTION (OUTPUT & MATCHES) ---
@@ -413,7 +405,6 @@ def create_regexp_tester_widget(style_func):
 
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
-    output_text_edit.setPlaceholderText("- Right Click > Save to file...")
     output_section_layout.addLayout(output_top_bar_layout)
     output_section_layout.addWidget(output_text_edit, 1)
     bottom_layout.addWidget(output_section_frame, 1)

@@ -2,8 +2,7 @@ import json
 import logging
 
 from jsonpath_ng import parse
-from PyQt6.QtCore import QObject, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -21,7 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style, get_status_style, COLORS
+from ..styles import COLORS, get_status_style, get_tool_style
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
@@ -207,45 +206,12 @@ def create_json_formatter_widget(style_func):
     input_toolbar_layout.addWidget(QPushButton("Clear"))
     input_toolbar_layout.addStretch()
 
-    settings_button = QPushButton()
-    settings_button.setObjectName("iconButton")
-    # Image description: A black gear icon for settings, classic cogwheel shape.
-    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-    input_toolbar_layout.addWidget(settings_button)
-
     input_toolbar_layout.addWidget(QPushButton("JSON"))
-
-    json_toggle_button = QPushButton()
-    json_toggle_button.setObjectName("jsonToggleButton")
-    # Image description: A blue rectangular icon with two white vertical arrows inside. One arrow points up, the other points down.
-    pixmap = QPixmap(32, 32)
-    pixmap.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.fillRect(6, 4, 20, 24, QColor("#4285F4"))
-    painter.setPen(Qt.GlobalColor.white)
-    # Up arrow
-    painter.drawLine(16, 8, 12, 14)
-    painter.drawLine(16, 8, 20, 14)
-    # Down arrow
-    painter.drawLine(16, 24, 12, 18)
-    painter.drawLine(16, 24, 20, 18)
-    painter.end()
-    json_toggle_button.setIcon(QIcon(pixmap))
-    json_toggle_button.setIconSize(QSize(20, 20))
-    input_toolbar_layout.addWidget(json_toggle_button)
 
     left_layout.addLayout(input_toolbar_layout)
 
     # Input Text Area
     input_text_edit = QTextEdit()
-    input_text_edit.setPlaceholderText(
-        "— Enter Your Text\n"
-        "— Drag/Drop Files\n"
-        "— Right Click → Load from File...\n"
-        "— ⌘ + F to Search\n"
-        "— ⌘ + ⇧ + F to Replace"
-    )
     left_layout.addWidget(input_text_edit)
     splitter.addWidget(left_pane)
 
@@ -277,7 +243,6 @@ def create_json_formatter_widget(style_func):
 
     # Output Text Area
     output_text_edit = QTextEdit()
-    output_text_edit.setPlaceholderText("Right click → Save to file...")
     right_layout.addWidget(output_text_edit)
     splitter.addWidget(right_pane)
 
@@ -287,7 +252,9 @@ def create_json_formatter_widget(style_func):
     bottom_bar = QFrame()
     bottom_bar.setFrameShape(QFrame.Shape.NoFrame)
     bottom_bar.setFixedHeight(35)
-    bottom_bar.setStyleSheet(f"background-color: {COLORS['bg_secondary']}; border-top: 1px solid {COLORS['border_secondary']};")
+    bottom_bar.setStyleSheet(
+        f"background-color: {COLORS['bg_secondary']}; border-top: 1px solid {COLORS['border_secondary']};"
+    )
 
     bottom_layout = QHBoxLayout(bottom_bar)
     bottom_layout.setContentsMargins(10, 0, 10, 0)
@@ -324,10 +291,10 @@ def create_json_formatter_widget(style_func):
 
         if is_valid:
             output_text_edit.setPlainText(formatted_json)
-            output_text_edit.setStyleSheet(get_status_style('success'))
+            output_text_edit.setStyleSheet(get_status_style("success"))
         else:
             output_text_edit.setPlainText(f"Error: {error_message}")
-            output_text_edit.setStyleSheet(get_status_style('error'))
+            output_text_edit.setStyleSheet(get_status_style("error"))
 
     def load_sample():
         """Load sample JSON into input area."""
@@ -338,7 +305,7 @@ def create_json_formatter_widget(style_func):
         """Clear input text area."""
         input_text_edit.clear()
         output_text_edit.clear()
-        output_text_edit.setStyleSheet(get_status_style('info'))
+        output_text_edit.setStyleSheet(get_status_style("info"))
 
     def copy_output():
         """Copy output to clipboard."""
@@ -372,12 +339,12 @@ def create_json_formatter_widget(style_func):
 
         if is_valid:
             output_text_edit.setPlainText(result_json)
-            output_text_edit.setStyleSheet(get_status_style('success'))
+            output_text_edit.setStyleSheet(get_status_style("success"))
             if error_message:  # "No matches found" case
                 output_text_edit.setPlainText(f"Result: {result_json}\n\nNote: {error_message}")
         else:
             output_text_edit.setPlainText(f"Error: {error_message}")
-            output_text_edit.setStyleSheet(get_status_style('error'))
+            output_text_edit.setStyleSheet(get_status_style("error"))
 
     # Connect buttons to functions
     def on_run_button_clicked():

@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style, get_error_input_style, clear_input_style
+from ..styles import clear_input_style, get_error_input_style, get_tool_style
 
 
 class YAMLToJSONConverter:
@@ -155,22 +155,14 @@ def create_yaml_to_json_widget(style_func):
     input_layout.setContentsMargins(10, 10, 5, 10)
     input_layout.setSpacing(8)
 
-    input_layout.addWidget(QLabel("Input:"))
-
     input_buttons_layout = QHBoxLayout()
     input_buttons_layout.setSpacing(8)
     input_buttons_layout.setContentsMargins(0, 0, 0, 0)
-
-    input_icon_button = QPushButton()
-    input_icon_button.setObjectName("iconButton")
-    # Image description: A simple yellow lightning bolt icon.
-    input_icon_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
 
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
 
-    input_buttons_layout.addWidget(input_icon_button)
     input_buttons_layout.addWidget(clipboard_button)
     input_buttons_layout.addWidget(sample_button)
     input_buttons_layout.addWidget(clear_button)
@@ -179,14 +171,6 @@ def create_yaml_to_json_widget(style_func):
     input_layout.addLayout(input_buttons_layout)
 
     input_text_edit = QTextEdit()
-    placeholder_text_input = (
-        "- Enter Your Text\n"
-        "- Drag/Drop Files\n"
-        "- Right Click → Load from File...\n"
-        "- ⌘ + F to Search\n"
-        "- ⌘ + ⇧ + F to Replace"
-    )
-    input_text_edit.setPlaceholderText(placeholder_text_input)
     input_layout.addWidget(input_text_edit, 1)
 
     # --- Separator ---
@@ -223,12 +207,7 @@ def create_yaml_to_json_widget(style_func):
 
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
-    placeholder_text_output = (
-        "Tips:\n"
-        "- Right Click → Save to File...\n"
-        "- Right Click → Show Line Numbers\n"
-        "- Right Click → Line Wrapping"
-    )
+    placeholder_text_output = "Tips:\n" "- Right Click → Show Line Numbers\n" "- Right Click → Line Wrapping"
     output_text_edit.setPlaceholderText(placeholder_text_output)
 
     # Enable custom context menu for output text edit

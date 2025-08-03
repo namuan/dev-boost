@@ -53,30 +53,19 @@ def create_base64_string_encodec_widget(style_func):
     top_bar_layout = QHBoxLayout()
     top_bar_layout.setSpacing(8)
 
-    input_icon_button = QPushButton()
-    input_icon_button.setObjectName("iconButton")
-    # Image description: A simple yellow lightning bolt icon.
-    input_icon_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))  # Placeholder
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
 
-    settings_button = QPushButton()
-    settings_button.setObjectName("iconButton")
-    # Image description: A flat, gray gear icon for settings.
-    settings_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-
-    top_bar_layout.addWidget(input_icon_button)
     top_bar_layout.addWidget(clipboard_button)
     top_bar_layout.addWidget(sample_button)
     top_bar_layout.addWidget(clear_button)
     top_bar_layout.addSpacing(4)
-    top_bar_layout.addWidget(settings_button)
     top_bar_layout.addStretch()
 
     encode_radio = QRadioButton("Encode")
+    encode_radio.setChecked(True)
     decode_radio = QRadioButton("Decode")
-    decode_radio.setChecked(True)
 
     radio_group = QButtonGroup(widget)
     radio_group.addButton(encode_radio)
@@ -85,22 +74,11 @@ def create_base64_string_encodec_widget(style_func):
     top_bar_layout.addWidget(encode_radio)
     top_bar_layout.addWidget(decode_radio)
 
-    input_label = QLabel("Input:")
-    input_section_layout.addWidget(input_label)
     input_section_layout.addLayout(top_bar_layout)
 
     # Input Text Edit
     input_text_edit = QTextEdit()
     input_text_edit.setMinimumHeight(180)
-    placeholder_text_input = (
-        "- Enter Your Text\n"
-        "- Drag/Drop Files\n"
-        "- Right Click → Load from File...\n"
-        "- ⌘ + F to Search\n"
-        "- ⌘ + ⇧ + F to Replace"
-    )
-    # Using a QLabel for placeholder as QTextEdit placeholder is limited
-    input_text_edit.setPlaceholderText(placeholder_text_input)
     input_text_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     input_section_layout.addWidget(input_text_edit, 1)
 

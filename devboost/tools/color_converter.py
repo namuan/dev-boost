@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style, get_status_style, get_error_input_style, clear_input_style
+from ..styles import get_error_input_style, get_status_style, get_tool_style
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
@@ -1358,9 +1358,6 @@ def create_color_converter_widget(style_func):
 
     # Input header with buttons
     input_header_layout = QHBoxLayout()
-    input_label = QLabel("Input:")
-    input_header_layout.addWidget(input_label)
-    input_header_layout.addStretch()
 
     # Create header buttons
     clipboard_btn = QPushButton("Clipboard")
@@ -1370,6 +1367,7 @@ def create_color_converter_widget(style_func):
     input_header_layout.addWidget(clipboard_btn)
     input_header_layout.addWidget(sample_btn)
     input_header_layout.addWidget(clear_btn)
+    input_header_layout.addStretch()
     input_section_layout.addLayout(input_header_layout)
 
     # Input field and color preview
@@ -1455,7 +1453,7 @@ def create_color_converter_widget(style_func):
             logger.warning(f"Invalid color format: '{color_input}'")
             for line_edit in format_line_edits.values():
                 line_edit.setText("Invalid color format")
-                line_edit.setStyleSheet(get_status_style('error'))
+                line_edit.setStyleSheet(get_status_style("error"))
             color_preview.setStyleSheet(
                 f"QLabel#colorPreview {{ background-color: #ffffff; {get_error_input_style()} border-radius: 4px; }}"
             )
@@ -1495,7 +1493,7 @@ def create_color_converter_widget(style_func):
             # Handle any conversion errors
             for line_edit in format_line_edits.values():
                 line_edit.setText("Conversion error")
-                line_edit.setStyleSheet(get_status_style('error'))
+                line_edit.setStyleSheet(get_status_style("error"))
 
     def copy_to_clipboard(text: str):
         """Copy text to clipboard."""
