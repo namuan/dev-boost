@@ -86,17 +86,15 @@ def create_color_converter_widget():
     }
 
     # Create and add format rows to the grid
-    row = 0
-    for label_text, value_text in formats_data.items():
+    for index, (label_text, value_text) in enumerate(formats_data.items()):
         label = QLabel(f"{label_text}:")
         line_edit = QLineEdit(value_text)
         copy_button = QPushButton("Copy")
         copy_button.setFixedWidth(60)
 
-        formats_layout.addWidget(label, row, 0)
-        formats_layout.addWidget(line_edit, row, 1)
-        formats_layout.addWidget(copy_button, row, 2)
-        row += 1
+        formats_layout.addWidget(label, index, 0)
+        formats_layout.addWidget(line_edit, index, 1)
+        formats_layout.addWidget(copy_button, index, 2)
 
     formats_layout.setColumnStretch(1, 1)  # Allow the QLineEdit column to stretch
     left_panel_layout.addLayout(formats_layout)
