@@ -35,7 +35,7 @@ clean-build: ## Clean build artifacts
 
 .PHONY: context
 context: clean-build ## Build context file from application sources
-	llm-context-builder.py --extensions .py --ignored_dirs build dist generated venv .venv .idea .aider.tags.cache.v3 --print_contents --temp_file
+	llm-context-builder.py --extensions .py .toml --ignored_dirs build dist generated venv .venv .idea .aider.tags.cache.v3 --print_contents --temp_file
 
 .PHONY: help
 help:

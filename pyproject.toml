@@ -1,7 +1,7 @@
 [project]
-name = "devdriver"
+name = "devboost"
 version = "0.0.1"
-description = "Hyper focused reading"
+description = "Tools to boost developer productivity and streamline workflows"
 authors = [{ name = "Namuan", email = "namuan@deskriders.dev" }]
 readme = "README.md"
 keywords = ['python']
