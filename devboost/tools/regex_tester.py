@@ -316,7 +316,6 @@ def create_regexp_tester_widget(style_func):
 
     # --- REGEXP SECTION ---
     regexp_section_frame = QFrame()
-    regexp_section_frame.setObjectName("mainContainer")
     regexp_section_layout = QVBoxLayout(regexp_section_frame)
     regexp_section_layout.setContentsMargins(1, 1, 1, 1)  # Thin margins for inner layout
     regexp_top_bar_layout = QHBoxLayout()
@@ -356,7 +355,6 @@ def create_regexp_tester_widget(style_func):
 
     # --- TEXT INPUT SECTION ---
     text_section_frame = QFrame()
-    text_section_frame.setObjectName("mainContainer")
     text_section_layout = QVBoxLayout(text_section_frame)
     text_section_layout.setContentsMargins(10, 10, 10, 10)
     text_section_layout.setSpacing(8)
@@ -383,7 +381,6 @@ def create_regexp_tester_widget(style_func):
 
     # --- OUTPUT (Left Side) ---
     output_section_frame = QFrame()
-    output_section_frame.setObjectName("mainContainer")
     output_section_layout = QVBoxLayout(output_section_frame)
     output_section_layout.setContentsMargins(10, 10, 10, 10)
     output_section_layout.setSpacing(8)
@@ -411,7 +408,6 @@ def create_regexp_tester_widget(style_func):
 
     # --- MATCHES (Right Side) ---
     matches_section_frame = QFrame()
-    matches_section_frame.setObjectName("mainContainer")
     matches_section_layout = QVBoxLayout(matches_section_frame)
     matches_section_layout.setContentsMargins(10, 10, 10, 10)
     matches_section_layout.setSpacing(8)

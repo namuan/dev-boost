@@ -237,19 +237,6 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
 }}
 """
 
-FRAME_STYLE = f"""
-QFrame#mainContainer {{
-    background-color: {COLORS["bg_primary"]};
-    border: 1px solid {COLORS["border_secondary"]};
-    border-radius: 6px;
-}}
-
-QFrame#leftPanel {{
-    background-color: {COLORS["bg_primary"]};
-    border-right: 1px solid {COLORS["border_light"]};
-}}
-"""
-
 # Status-specific styles
 STATUS_STYLES = {
     "success": f"color: {COLORS['success']};",
@@ -320,7 +307,6 @@ TOOL_WIDGET_STYLE = f"""
 {LABEL_STYLE}
 {COMBOBOX_STYLE}
 {SCROLLBAR_STYLE}
-{FRAME_STYLE}
 {DIALOG_STYLE}
 """
 

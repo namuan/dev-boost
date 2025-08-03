@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from devboost.styles import get_tool_style
+
 logger = logging.getLogger(__name__)
 
 
@@ -237,6 +239,7 @@ def create_unix_time_converter_widget(style_func):
     main_layout.setContentsMargins(15, 15, 15, 15)
     main_layout.setSpacing(15)
     main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+    converter_widget.setStyleSheet(get_tool_style())
     logger.info("Main layout configured for Unix Time Converter")
 
     # Initialize converter backend
