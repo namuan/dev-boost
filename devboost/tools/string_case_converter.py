@@ -1,6 +1,8 @@
 import logging
+import re
 import sys
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -19,6 +21,137 @@ from PyQt6.QtWidgets import (
 logger = logging.getLogger(__name__)
 
 
+class StringCaseConverter:
+    """Backend class for string case conversion operations."""
+
+    def __init__(self):
+        """Initialize the StringCaseConverter."""
+        logger.info("Initializing StringCaseConverter")
+
+    def to_camel_case(self, text: str) -> str:
+        """Convert text to camelCase."""
+        if not text:
+            return ""
+
+        # Split by common delimiters and spaces
+        words = re.split(r"[\s_\-\.]+", text.strip())
+        if not words:
+            return ""
+
+        # First word lowercase, rest title case
+        result = words[0].lower()
+        for word in words[1:]:
+            if word:
+                result += word.capitalize()
+
+        return result
+
+    def to_pascal_case(self, text: str) -> str:
+        """Convert text to PascalCase."""
+        if not text:
+            return ""
+
+        # Split by common delimiters and spaces
+        words = re.split(r"[\s_\-\.]+", text.strip())
+        if not words:
+            return ""
+
+        # All words title case
+        result = ""
+        for word in words:
+            if word:
+                result += word.capitalize()
+
+        return result
+
+    def to_snake_case(self, text: str) -> str:
+        """Convert text to snake_case."""
+        if not text:
+            return ""
+
+        # Handle camelCase and PascalCase
+        text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", text)
+
+        # Split by common delimiters and spaces
+        words = re.split(r"[\s_\-\.]+", text.strip())
+
+        # Join with underscores and lowercase
+        return "_".join(word.lower() for word in words if word)
+
+    def to_kebab_case(self, text: str) -> str:
+        """Convert text to kebab-case."""
+        if not text:
+            return ""
+
+        # Handle camelCase and PascalCase
+        text = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", text)
+
+        # Split by common delimiters and spaces
+        words = re.split(r"[\s_\-\.]+", text.strip())
+
+        # Join with hyphens and lowercase
+        return "-".join(word.lower() for word in words if word)
+
+    def to_header_case(self, text: str) -> str:
+        """Convert text to Header-Case."""
+        if not text:
+            return ""
+
+        # Handle camelCase and PascalCase
+        text = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", text)
+
+        # Split by common delimiters and spaces
+        words = re.split(r"[\s_\-\.]+", text.strip())
+
+        # Join with hyphens and title case
+        return "-".join(word.capitalize() for word in words if word)
+
+    def to_uppercase(self, text: str) -> str:
+        """Convert text to UPPERCASE."""
+        return text.upper()
+
+    def to_lowercase(self, text: str) -> str:
+        """Convert text to lowercase."""
+        return text.lower()
+
+    def to_title_case(self, text: str) -> str:
+        """Convert text to Title Case."""
+        if not text:
+            return ""
+
+        # Handle camelCase and PascalCase by adding spaces
+        text = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
+
+        # Split by common delimiters
+        words = re.split(r"[\s_\-\.]+", text.strip())
+
+        # Join with spaces and title case
+        return " ".join(word.capitalize() for word in words if word)
+
+    def convert_case(self, text: str, case_type: str) -> str:
+        """Convert text to the specified case type."""
+        if not text:
+            return ""
+
+        case_methods = {
+            "camelCase": self.to_camel_case,
+            "PascalCase": self.to_pascal_case,
+            "snake_case": self.to_snake_case,
+            "kebab-case": self.to_kebab_case,
+            "Header-Case": self.to_header_case,
+            "UPPERCASE": self.to_uppercase,
+            "lowercase": self.to_lowercase,
+            "Title Case": self.to_title_case,
+        }
+
+        method = case_methods.get(case_type)
+        if method:
+            return method(text)
+        else:
+            logger.warning(f"Unknown case type: {case_type}")
+            return text
+
+
 def create_case_converter_widget(style_func):
     """
     Creates and returns the String Case Converter widget.
@@ -31,6 +164,14 @@ def create_case_converter_widget(style_func):
     """
     logger.info("Creating String Case Converter widget")
     widget = QWidget()
+
+    # Create backend converter instance
+    converter = StringCaseConverter()
+
+    # Timer for debounced input processing
+    update_timer = QTimer()
+    update_timer.setSingleShot(True)
+    update_timer.timeout.connect(lambda: update_output())
     widget.setStyleSheet("""
         QWidget {
             background-color: #ffffff;
@@ -196,6 +337,107 @@ def create_case_converter_widget(style_func):
     content_layout.addWidget(output_pane_widget, 1)
 
     main_layout.addLayout(content_layout, 1)
+
+    # --- Backend Integration Functions ---
+    def update_output():
+        """Update the output based on current input and selected case."""
+        try:
+            input_text = input_text_edit.toPlainText()
+            selected_case = case_combo.currentText()
+
+            if input_text.strip():
+                converted_text = converter.convert_case(input_text, selected_case)
+                output_text_edit.setPlainText(converted_text)
+            else:
+                output_text_edit.clear()
+        except Exception as e:
+            logger.error(f"Error during case conversion: {e}")
+            output_text_edit.setPlainText(f"Error: {e!s}")
+
+    def on_input_changed():
+        """Handle input text changes with debouncing."""
+        update_timer.stop()
+        update_timer.start(300)  # 300ms delay
+
+    def on_case_changed():
+        """Handle case selection changes."""
+        update_output()
+
+    def on_clipboard_clicked():
+        """Load text from clipboard."""
+        try:
+            clipboard = QApplication.clipboard()
+            text = clipboard.text()
+            if text:
+                input_text_edit.setPlainText(text)
+                update_output()
+        except Exception as e:
+            logger.error(f"Error loading from clipboard: {e}")
+
+    def on_sample_clicked():
+        """Load sample text."""
+        sample_text = "Hello World Example Text"
+        input_text_edit.setPlainText(sample_text)
+        update_output()
+
+    def on_clear_clicked():
+        """Clear input and output."""
+        input_text_edit.clear()
+        output_text_edit.clear()
+
+    def on_copy_clicked():
+        """Copy output to clipboard."""
+        try:
+            output_text = output_text_edit.toPlainText()
+            if output_text:
+                clipboard = QApplication.clipboard()
+                clipboard.setText(output_text)
+                logger.info("Output copied to clipboard")
+        except Exception as e:
+            logger.error(f"Error copying to clipboard: {e}")
+    
+    def on_lightning_clicked():
+        """Quick convert - automatically detect best case and convert."""
+        try:
+            input_text = input_text_edit.toPlainText().strip()
+            if not input_text:
+                return
+            
+            # Auto-detect current case and suggest next logical conversion
+            if '_' in input_text:
+                # snake_case -> camelCase
+                case_combo.setCurrentText("camelCase")
+            elif '-' in input_text:
+                # kebab-case -> camelCase
+                case_combo.setCurrentText("camelCase")
+            elif input_text.islower():
+                # lowercase -> Title Case
+                case_combo.setCurrentText("Title Case")
+            elif input_text.isupper():
+                # UPPERCASE -> lowercase
+                case_combo.setCurrentText("lowercase")
+            elif any(c.isupper() for c in input_text[1:]):
+                # camelCase or PascalCase -> snake_case
+                case_combo.setCurrentText("snake_case")
+            else:
+                # Default to camelCase
+                case_combo.setCurrentText("camelCase")
+            
+            update_output()
+        except Exception as e:
+            logger.error(f"Error in lightning conversion: {e}")
+
+    # --- Connect UI Events ---
+    input_text_edit.textChanged.connect(on_input_changed)
+    case_combo.currentTextChanged.connect(on_case_changed)
+    lightning_button.clicked.connect(on_lightning_clicked)
+    clipboard_button.clicked.connect(on_clipboard_clicked)
+    sample_button.clicked.connect(on_sample_clicked)
+    clear_button.clicked.connect(on_clear_clicked)
+    copy_button.clicked.connect(on_copy_clicked)
+
+    # Set initial case selection
+    case_combo.setCurrentText("camelCase")
 
     logger.info("Case Converter widget creation completed")
     return widget
