@@ -16,8 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .tools import create_json_formatter_widget, create_unix_time_converter_widget
-from .tools.base64_string_encodec import create_base64_string_encodec_widget
+from .tools import create_base64_string_encodec_widget, create_json_formatter_widget, create_unix_time_converter_widget
 
 # Configure logging
 logging.basicConfig(
