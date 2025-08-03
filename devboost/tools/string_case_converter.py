@@ -6,7 +6,6 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
-    QFrame,
     QHBoxLayout,
     QMainWindow,
     QPushButton,
@@ -181,7 +180,7 @@ def create_case_converter_widget(style_func):
     main_layout = QHBoxLayout(widget)
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(0)
-    
+
     main_splitter = QSplitter(Qt.Orientation.Horizontal)
     main_layout.addWidget(main_splitter)
 

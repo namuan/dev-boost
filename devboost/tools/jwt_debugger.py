@@ -254,13 +254,10 @@ def create_jwt_debugger_widget(style_func):
     left_controls_layout = QHBoxLayout()
     left_controls_layout.setSpacing(8)
 
-    input_label = QLabel("Input:")
-    input_label.setVisible(False)  # As per screenshot, no explicit "Input" label
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
 
-    left_controls_layout.addWidget(input_label)
     left_controls_layout.addWidget(clipboard_button)
     left_controls_layout.addWidget(sample_button)
     left_controls_layout.addWidget(clear_button)
