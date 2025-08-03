@@ -40,10 +40,10 @@ class DevDriverWindow(QMainWindow):
     def __init__(self):
         logger.info("Initializing DevDriverWindow")
         super().__init__()
-        self.setWindowTitle("Dev Driver")
+        self.setWindowTitle("Dev Boost")
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(950, 600)
-        logger.info("Window properties set: title='Dev Driver', geometry=(100,100,1200,800), min_size=(950,600)")
+        logger.info("Window properties set: title='Dev Boost', geometry=(100,100,1200,800), min_size=(950,600)")
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -169,7 +169,7 @@ class DevDriverWindow(QMainWindow):
         logger.info("Top bar created")
         top_bar_layout.setContentsMargins(15, 0, 15, 0)
 
-        self.top_bar_title = QLabel("Dev Driver")
+        self.top_bar_title = QLabel("")
         self.top_bar_title.setObjectName("topBarTitle")
 
         top_bar_layout.addWidget(self.top_bar_title)
@@ -224,7 +224,7 @@ class DevDriverWindow(QMainWindow):
         v_box.setSpacing(15)
         v_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        app_name_label = QLabel("Dev Driver")
+        app_name_label = QLabel("👈 Welcome to Dev Boost ... Select any tool")
         app_name_label.setObjectName("appName")
         app_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -271,10 +271,9 @@ class DevDriverWindow(QMainWindow):
             self.stacked_widget.setCurrentWidget(self.yaml_to_json_screen)
             logger.info("Switched to YAML to JSON view")
         else:
-            # You can add logic for other tools here
-            self.top_bar_title.setText("Dev Driver")
+            self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
-            logger.info("Switched to welcome screen (tool not implemented yet)")
+            logger.info("Switched to welcome screen .. Tool not implemented")
 
     def _apply_styles(self):
         logger.info("Applying application styles")
