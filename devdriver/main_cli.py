@@ -23,6 +23,7 @@ from .tools import (
     create_regexp_tester_widget,
     create_unix_time_converter_widget,
     create_url_codec_widget,
+    create_uuid_ulid_tool_widget,
 )
 
 # Configure logging
@@ -191,6 +192,8 @@ class DevDriverWindow(QMainWindow):
         self.regexp_tester_screen = create_regexp_tester_widget(self.style)
         logger.info("Creating URL Encode Decode screen")
         self.url_codec_screen = create_url_codec_widget(self.style)
+        logger.info("Creating UUID/ULID Generate/Decode screen")
+        self.uuid_ulid_generator_screen = create_uuid_ulid_tool_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -199,6 +202,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.jwt_debugger_screen)
         self.stacked_widget.addWidget(self.regexp_tester_screen)
         self.stacked_widget.addWidget(self.url_codec_screen)
+        self.stacked_widget.addWidget(self.uuid_ulid_generator_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -254,6 +258,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("URL Encode/Decode")
             self.stacked_widget.setCurrentWidget(self.url_codec_screen)
             logger.info("Switched to URL Encode/Decode view")
+        elif tool_name == "UUID/ULID Generate/Decode":
+            self.top_bar_title.setText("UUID/ULID Generate/Decode")
+            self.stacked_widget.setCurrentWidget(self.uuid_ulid_generator_screen)
+            logger.info("Switched to UUID/ULID Generate/Decode view")
         else:
             # You can add logic for other tools here
             self.top_bar_title.setText("Dev Driver")

@@ -4,6 +4,7 @@ from .jwt_debugger import create_jwt_debugger_widget
 from .regex_tester import create_regexp_tester_widget
 from .unix_time_converter import create_unix_time_converter_widget
 from .url_encode_decode import create_url_codec_widget
+from .uuid_ulid_generator import create_uuid_ulid_tool_widget
 
 __all__ = [
     "create_unix_time_converter_widget",
@@ -12,4 +13,5 @@ __all__ = [
     "create_jwt_debugger_widget",
     "create_regexp_tester_widget",
     "create_url_codec_widget",
+    "create_uuid_ulid_tool_widget",
 ]
