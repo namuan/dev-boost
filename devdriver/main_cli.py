@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .tools import create_base64_string_encodec_widget, create_json_formatter_widget, create_unix_time_converter_widget
+from .tools.jwt_debugger import create_jwt_debugger_widget
 
 # Configure logging
 logging.basicConfig(
@@ -199,13 +200,16 @@ class DevDriverWindow(QMainWindow):
         self.json_format_validate_screen = create_json_formatter_widget(self.style)
         logger.info("Creating Base64 String Encode/Decode screen")
         self.base64_string_encodec_screen = create_base64_string_encodec_widget(self.style)
+        logger.info("Creating JWT Debugger screen")
+        self.jwt_debugger_screen = create_jwt_debugger_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
         self.stacked_widget.addWidget(self.json_format_validate_screen)
         self.stacked_widget.addWidget(self.base64_string_encodec_screen)
+        self.stacked_widget.addWidget(self.jwt_debugger_screen)
         logger.info(
-            "Added welcome screen, Unix Time Converter, JSON Format/Validate, and Base64 String Encode/Decode to stacked widget"
+            "Added welcome screen, Unix Time Converter, JSON Format/Validate, Base64 String Encode/Decode, and JWT Debugger to stacked widget"
         )
 
         main_content_layout.addWidget(self.top_bar)
@@ -250,6 +254,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("Base64 String Encode/Decode")
             self.stacked_widget.setCurrentWidget(self.base64_string_encodec_screen)
             logger.info("Switched to Base64 String Encode/Decode view")
+        elif tool_name == "JWT Debugger":
+            self.top_bar_title.setText("JWT Debugger")
+            self.stacked_widget.setCurrentWidget(self.jwt_debugger_screen)
+            logger.info("Switched to JWT Debugger view")
         else:
             # You can add logic for other tools here
             self.top_bar_title.setText("Dev Driver")
