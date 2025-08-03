@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSplitter,
     QStyle,
     QVBoxLayout,
     QWidget,
@@ -235,15 +236,20 @@ def create_unix_time_converter_widget(style_func):
     converter_widget = QWidget()
     main_layout = QVBoxLayout(converter_widget)
     main_layout.setContentsMargins(15, 15, 15, 15)
-    main_layout.setSpacing(15)
-    main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+    main_layout.setSpacing(0)
+    
+    # Create main splitter
+    main_splitter = QSplitter(Qt.Orientation.Vertical)
+    main_layout.addWidget(main_splitter)
     logger.info("Main layout configured for Unix Time Converter")
 
     # Initialize converter backend
     converter = UnixTimeConverter()
 
     # --- Input Section ---
-    input_section_layout = QVBoxLayout()
+    input_section_widget = QWidget()
+    input_section_layout = QVBoxLayout(input_section_widget)
+    input_section_layout.setContentsMargins(10, 10, 10, 10)
     input_section_layout.setSpacing(8)
 
     top_controls_layout = QHBoxLayout()
@@ -278,15 +284,13 @@ def create_unix_time_converter_widget(style_func):
     input_section_layout.addLayout(input_fields_layout)
     input_section_layout.addWidget(tips_label)
 
-    main_layout.addLayout(input_section_layout)
-
-    # --- Separator ---
-    separator1 = QFrame()
-    separator1.setFrameShape(QFrame.Shape.HLine)
-    separator1.setFrameShadow(QFrame.Shadow.Sunken)
-    main_layout.addWidget(separator1)
+    main_splitter.addWidget(input_section_widget)
 
     # --- Results Section ---
+    results_section_widget = QWidget()
+    results_section_layout = QVBoxLayout(results_section_widget)
+    results_section_layout.setContentsMargins(10, 10, 10, 10)
+    results_section_layout.setSpacing(15)
     results_grid = QGridLayout()
     results_grid.setSpacing(15)
 
@@ -358,16 +362,13 @@ def create_unix_time_converter_widget(style_func):
     results_grid.setColumnStretch(3, 1)
     results_grid.setColumnStretch(5, 1)
 
-    main_layout.addLayout(results_grid)
-
-    # --- Separator ---
-    separator2 = QFrame()
-    separator2.setFrameShape(QFrame.Shape.HLine)
-    separator2.setFrameShadow(QFrame.Shadow.Sunken)
-    main_layout.addWidget(separator2)
+    results_section_layout.addLayout(results_grid)
+    main_splitter.addWidget(results_section_widget)
 
     # --- Timezone Section ---
-    timezone_section_layout = QVBoxLayout()
+    timezone_section_widget = QWidget()
+    timezone_section_layout = QVBoxLayout(timezone_section_widget)
+    timezone_section_layout.setContentsMargins(10, 10, 10, 10)
     timezone_section_layout.setSpacing(8)
 
     timezone_controls_layout = QHBoxLayout()
@@ -398,9 +399,10 @@ def create_unix_time_converter_widget(style_func):
     timezone_section_layout.addWidget(tz_info_label)
     timezone_section_layout.addLayout(timezone_displays_layout)
 
-    main_layout.addLayout(timezone_section_layout)
+    main_splitter.addWidget(timezone_section_widget)
 
-    main_layout.addStretch()  # Push everything up
+    # Set splitter proportions
+    main_splitter.setSizes([200, 400, 200])
 
     # --- Conversion Logic ---
     def update_conversion():

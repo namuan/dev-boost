@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
     QPushButton,
+    QSplitter,
     QStyle,
     QTextEdit,
     QVBoxLayout,
@@ -142,10 +143,13 @@ def create_yaml_to_json_widget(style_func):
     widget = QWidget()
     widget.setStyleSheet(get_tool_style())
 
-    # Main horizontal layout
+    # Main horizontal layout with splitter
     main_layout = QHBoxLayout(widget)
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(0)
+    
+    main_splitter = QSplitter(Qt.Orientation.Horizontal)
+    main_layout.addWidget(main_splitter)
 
     # --- Left Pane (Input) ---
     input_pane = QWidget()
@@ -171,10 +175,6 @@ def create_yaml_to_json_widget(style_func):
 
     input_text_edit = QTextEdit()
     input_layout.addWidget(input_text_edit, 1)
-
-    # --- Separator ---
-    separator = QFrame()
-    separator.setObjectName("separator")
 
     # --- Right Pane (Output) ---
     output_pane = QWidget()
@@ -274,9 +274,9 @@ def create_yaml_to_json_widget(style_func):
     output_layout.addWidget(output_text_edit, 1)
 
     # --- Assemble Main Layout ---
-    main_layout.addWidget(input_pane, 1)
-    main_layout.addWidget(separator)
-    main_layout.addWidget(output_pane, 1)
+    main_splitter.addWidget(input_pane)
+    main_splitter.addWidget(output_pane)
+    main_splitter.setSizes([400, 400])  # Equal split
 
     # --- Backend Integration ---
     converter = YAMLToJSONConverter()

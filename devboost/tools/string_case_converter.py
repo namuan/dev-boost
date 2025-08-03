@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
     QPushButton,
+    QSplitter,
     QStyle,
     QTextEdit,
     QVBoxLayout,
@@ -219,18 +220,11 @@ def create_case_converter_widget(style_func):
     main_layout.addWidget(top_bar)
 
     # --- Content Area (Input/Output Panes) ---
-    content_layout = QHBoxLayout()
-    content_layout.setSpacing(0)
-    content_layout.setContentsMargins(0, 0, 0, 0)
+    content_splitter = QSplitter(Qt.Orientation.Horizontal)
 
     # Input Pane (Left)
     input_text_edit = QTextEdit()
-    content_layout.addWidget(input_text_edit, 1)
-
-    # Separator
-    separator = QFrame()
-    separator.setObjectName("separator")
-    content_layout.addWidget(separator)
+    content_splitter.addWidget(input_text_edit)
 
     # Output Pane (Right)
     output_pane_widget = QWidget()
@@ -242,9 +236,10 @@ def create_case_converter_widget(style_func):
     output_text_edit.setReadOnly(True)
     output_layout.addWidget(output_text_edit)
 
-    content_layout.addWidget(output_pane_widget, 1)
+    content_splitter.addWidget(output_pane_widget)
+    content_splitter.setSizes([400, 400])  # Equal split
 
-    main_layout.addLayout(content_layout, 1)
+    main_layout.addWidget(content_splitter, 1)
 
     # --- Backend Integration Functions ---
     def update_output():

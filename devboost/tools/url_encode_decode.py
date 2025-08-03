@@ -2,7 +2,7 @@ import logging
 import sys
 import urllib.parse
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QRadioButton,
+    QSplitter,
     QStyle,
     QTextEdit,
     QVBoxLayout,
@@ -266,9 +267,13 @@ def create_url_codec_widget(style_func):
     main_layout = QVBoxLayout(widget)
     main_layout.setContentsMargins(15, 15, 15, 15)
     main_layout.setSpacing(0)
+    
+    main_splitter = QSplitter(Qt.Orientation.Vertical)
+    main_layout.addWidget(main_splitter)
 
     # --- TOP INPUT SECTION ---
-    input_section_layout = QVBoxLayout()
+    input_section_widget = QWidget()
+    input_section_layout = QVBoxLayout(input_section_widget)
     input_section_layout.setSpacing(8)
     input_section_layout.setContentsMargins(0, 0, 0, 12)
 
@@ -304,7 +309,8 @@ def create_url_codec_widget(style_func):
     input_section_layout.addWidget(input_text_edit, 1)
 
     # --- BOTTOM OUTPUT SECTION ---
-    output_section_layout = QVBoxLayout()
+    output_section_widget = QWidget()
+    output_section_layout = QVBoxLayout(output_section_widget)
     output_section_layout.setSpacing(8)
     output_section_layout.setContentsMargins(0, 12, 0, 0)
 
@@ -334,12 +340,9 @@ def create_url_codec_widget(style_func):
     output_text_edit.setMinimumHeight(180)
     output_section_layout.addWidget(output_text_edit, 1)
 
-    main_layout.addLayout(input_section_layout, 1)
-
-    separator = QFrame()
-    main_layout.addWidget(separator)
-
-    main_layout.addLayout(output_section_layout, 1)
+    main_splitter.addWidget(input_section_widget)
+    main_splitter.addWidget(output_section_widget)
+    main_splitter.setSizes([300, 300])  # Equal split
 
     # --- BACKEND FUNCTIONALITY CONNECTIONS ---
     settings = URLCodecSettings()
