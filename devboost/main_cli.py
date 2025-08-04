@@ -116,7 +116,7 @@ class DevDriverWindow(QMainWindow):
 
         for icon_text, tool_name in self.tools:
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, 32))
+            item.setSizeHint(QSize(0, 36))
             item_widget = self._create_tool_item_widget(icon_text, tool_name)
             item.setData(Qt.ItemDataRole.UserRole, tool_name)
             self.tool_list.addItem(item)
