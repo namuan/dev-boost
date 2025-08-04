@@ -3,6 +3,7 @@ from .color_converter import create_color_converter_widget
 from .json_format_validate import create_json_formatter_widget
 from .jwt_debugger import create_jwt_debugger_widget
 from .lorem_ipsum_generator import create_lorem_ipsum_tool_widget
+from .markdown_viewer import create_markdown_preview_widget
 from .regex_tester import create_regexp_tester_widget
 from .string_case_converter import create_case_converter_widget as create_string_case_converter_widget
 from .unix_time_converter import create_unix_time_converter_widget
@@ -17,6 +18,7 @@ __all__ = [
     "create_json_formatter_widget",
     "create_jwt_debugger_widget",
     "create_lorem_ipsum_tool_widget",
+    "create_markdown_preview_widget",
     "create_regexp_tester_widget",
     "create_string_case_converter_widget",
     "create_unix_time_converter_widget",

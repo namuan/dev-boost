@@ -18,7 +18,9 @@ classifiers = [
 dependencies = [
     "faker>=37.5.3",
     "jsonpath-ng>=1.7.0",
+    "markdown>=3.8.2",
     "pyqt6>=6.7.1",
+    "pyqt6-webengine>=6.9.0",
     "pyyaml>=6.0",
 ]
 
