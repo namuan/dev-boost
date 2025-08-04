@@ -253,17 +253,16 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     left_pane = QWidget()
     left_layout = QVBoxLayout(left_pane)
     left_layout.setContentsMargins(10, 5, 5, 10)
-    left_layout.setSpacing(5)
+    left_layout.setSpacing(8)
 
     # Top controls
     input_controls_layout = QHBoxLayout()
-    input_controls_layout.setSpacing(6)
+    input_controls_layout.setSpacing(8)
 
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
     clear_button_left = QPushButton("Clear")
 
-    input_controls_layout.addWidget(QPushButton("Input:"))  # This is styled as a button in the screenshot
     input_controls_layout.addWidget(clipboard_button)
     input_controls_layout.addWidget(sample_button)
     input_controls_layout.addWidget(clear_button_left)
@@ -410,7 +409,7 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
 
     # Generator controls
     controls_layout = QHBoxLayout()
-    controls_layout.setSpacing(6)
+    controls_layout.setSpacing(8)
 
     generate_button = QPushButton("Generate")
     copy_button = QPushButton("Copy")
