@@ -224,7 +224,6 @@ def create_field_row(name: str, style_func) -> tuple[QWidget, QLineEdit, QPushBu
     copy_button = QPushButton()
     copy_button.setObjectName("iconButton")
     # Image description: A simple black icon representing two overlapping pages, for copying.
-    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileLinkIcon))
     copy_button.setFixedSize(30, 30)
     field_layout.addWidget(copy_button)
 

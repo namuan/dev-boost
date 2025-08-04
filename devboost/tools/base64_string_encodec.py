@@ -96,7 +96,6 @@ def create_base64_string_encodec_widget(style_func):
 
     copy_button = QPushButton("Copy")
     # Image description: A copy icon. Two overlapping squares or pages.
-    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileLinkIcon))  # Placeholder
 
     use_as_input_button = QPushButton("Use as input")
     # Image description: An upward-pointing arrow icon.

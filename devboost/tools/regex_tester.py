@@ -416,7 +416,6 @@ def create_regexp_tester_widget(style_func):
     matches_top_bar_layout.setSpacing(8)
     copy_button = QPushButton("Copy")
     # Image description: A copy icon. Two overlapping squares or pages.
-    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileLinkIcon))
     search_matches_input = QLineEdit()
     search_matches_input.setPlaceholderText("Search matches...")
     # Image description: Placeholder for a magnifying glass search icon.

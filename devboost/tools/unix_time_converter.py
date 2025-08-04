@@ -305,7 +305,6 @@ def create_unix_time_converter_widget(style_func):
         copy_button = QPushButton()
         copy_button.setObjectName("iconButton")
         # Image description: A copy icon. Two overlapping squares. Black outlines.
-        copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))  # Placeholder
 
         # Connect copy button to copy text to clipboard
         def copy_to_clipboard():
@@ -490,7 +489,6 @@ def create_unix_time_converter_widget(style_func):
 
         copy_button = QPushButton()
         copy_button.setObjectName("iconButton")
-        copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
 
         remove_button = QPushButton()
         remove_button.setObjectName("iconButton")

@@ -48,7 +48,7 @@ class JSONValidator(QObject):
             Tuple of (is_valid, formatted_json, error_message)
         """
         if not input_text.strip():
-            return False, "", "Input is empty"
+            return True, "", ""  # Empty input is valid, just return empty result
 
         try:
             # Parse JSON to validate
@@ -193,7 +193,7 @@ def create_json_formatter_widget(style_func):
     input_toolbar_layout = QHBoxLayout()
     input_toolbar_layout.setSpacing(8)
 
-    input_toolbar_layout.addWidget(QLabel("Input:"))
+    # Removed "Input:" label for cleaner UI
 
     run_button = QPushButton()
     run_button.setObjectName("iconButton")
@@ -225,7 +225,7 @@ def create_json_formatter_widget(style_func):
     output_toolbar_layout = QHBoxLayout()
     output_toolbar_layout.setSpacing(8)
 
-    output_toolbar_layout.addWidget(QLabel("Output:"))
+    # Removed "Output:" label for cleaner UI
     output_toolbar_layout.addStretch()
 
     spaces_combo = QComboBox()
@@ -236,7 +236,6 @@ def create_json_formatter_widget(style_func):
 
     copy_button = QPushButton("Copy")
     # Image description: A simple black icon of two overlapping squares, representing 'copy'.
-    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileLinkIcon))  # Placeholder
     output_toolbar_layout.addWidget(copy_button)
 
     right_layout.addLayout(output_toolbar_layout)
@@ -381,6 +380,19 @@ def create_json_formatter_widget(style_func):
         clear_button.clicked.connect(clear_input)
 
     copy_button.clicked.connect(copy_output)
+
+    # Auto-format JSON when text changes
+    def auto_format_json():
+        """Automatically format JSON when input text changes."""
+        input_text = input_text_edit.toPlainText().strip()
+        if input_text:  # Only format if there's actual content
+            format_json()
+        else:
+            # Clear output when input is empty
+            output_text_edit.setPlainText("")
+            output_text_edit.setStyleSheet("")  # Reset to default style
+
+    input_text_edit.textChanged.connect(auto_format_json)
 
     return widget
 

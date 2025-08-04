@@ -235,7 +235,6 @@ def create_case_converter_widget(style_func):
 
     copy_button = QPushButton("Copy")
     # Image description: A standard copy icon, depicting two overlapping pages.
-    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
 
     output_header_layout.addStretch()
     output_header_layout.addWidget(case_combo)

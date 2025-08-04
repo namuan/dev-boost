@@ -193,7 +193,6 @@ def create_yaml_to_json_widget(style_func):
 
     copy_button = QPushButton("Copy")
     # Image description: A copy icon. Two overlapping squares or pages.
-    copy_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
 
     output_header_layout.addStretch()
     output_header_layout.addWidget(spaces_combo)

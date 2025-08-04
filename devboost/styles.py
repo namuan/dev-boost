@@ -316,6 +316,71 @@ QMainWindow {{
     background-color: {COLORS["bg_sidebar"]};
 }}
 
+QWidget#sidebar {{
+    background-color: {COLORS["bg_sidebar"]};
+    border-right: 1px solid {COLORS["border_primary"]};
+}}
+
+QWidget#contentArea {{
+    background-color: {COLORS["bg_content"]};
+}}
+
+QWidget#topBar {{
+    background-color: {COLORS["bg_primary"]};
+    border-bottom: 1px solid {COLORS["border_primary"]};
+}}
+
+QLabel#topBarTitle {{
+    font-size: 16px;
+    font-weight: 600;
+    color: {COLORS["text_primary"]};
+}}
+
+QLabel#appName {{
+    font-size: 18px;
+    font-weight: 500;
+    color: {COLORS["text_muted"]};
+}}
+
+QListWidget {{
+    background-color: transparent;
+    border: none;
+    outline: none;
+    selection-background-color: transparent;
+}}
+
+QListWidget::item {{
+    background-color: transparent;
+    border: none;
+    padding: 4px;
+    margin: 2px 0;
+    border-radius: 6px;
+}}
+
+QListWidget::item:hover {{
+    background-color: {COLORS["bg_secondary"]};
+}}
+
+QListWidget::item:selected {{
+    background-color: {COLORS["bg_primary"]};
+    border: 1px solid {COLORS["border_secondary"]};
+}}
+
+QListWidget::item:selected:hover {{
+    background-color: {COLORS["bg_primary"]};
+}}
+
+QLabel#toolIcon {{
+    font-size: 16px;
+    color: {COLORS["text_primary"]};
+}}
+
+QLabel#toolText {{
+    font-size: 13px;
+    font-weight: 500;
+    color: {COLORS["text_primary"]};
+}}
+
 """
 
 
