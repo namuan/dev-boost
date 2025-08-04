@@ -166,10 +166,9 @@ def create_json_formatter_widget(style_func):
     Returns:
         QWidget: The main widget for the tool.
     """
-    widget = QWidget()
-
-    # Create JSON validator instance
     json_validator = JSONValidator()
+
+    widget = QWidget()
     widget.setStyleSheet(get_tool_style())
 
     # Main layout

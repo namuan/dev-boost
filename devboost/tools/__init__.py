@@ -8,6 +8,7 @@ from .string_case_converter import create_case_converter_widget as create_string
 from .unix_time_converter import create_unix_time_converter_widget
 from .url_encode_decode import create_url_codec_widget
 from .uuid_ulid_generator import create_uuid_ulid_tool_widget
+from .xml_beautifier import create_xml_formatter_widget
 from .yaml_to_json import create_yaml_to_json_widget
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "create_unix_time_converter_widget",
     "create_url_codec_widget",
     "create_uuid_ulid_tool_widget",
+    "create_xml_formatter_widget",
     "create_yaml_to_json_widget",
 ]

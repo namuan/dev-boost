@@ -28,6 +28,7 @@ from .tools import (
     create_unix_time_converter_widget,
     create_url_codec_widget,
     create_uuid_ulid_tool_widget,
+    create_xml_formatter_widget,
     create_yaml_to_json_widget,
 )
 
@@ -109,6 +110,7 @@ class DevDriverWindow(QMainWindow):
             ("✳️", "RegExp Tester"),
             ("%", "URL Encode/Decode"),
             ("🆔", "UUID/ULID Generate/Decode"),
+            ("📄", "XML Beautifier"),
             ("⇄", "YAML to JSON"),
             ("✏️", "String Case Converter"),
             ("🎨", "Color Converter"),
@@ -195,6 +197,8 @@ class DevDriverWindow(QMainWindow):
         self.url_codec_screen = create_url_codec_widget(self.style)
         logger.info("Creating UUID/ULID Generate/Decode screen")
         self.uuid_ulid_generator_screen = create_uuid_ulid_tool_widget(self.style)
+        logger.info("Creating XML Beautifier screen")
+        self.xml_formatter_screen = create_xml_formatter_widget(self.style)
         logger.info("Creating YAML to JSON screen")
         self.yaml_to_json_screen = create_yaml_to_json_widget(self.style)
         logger.info("Creating String Case Converter screen")
@@ -212,6 +216,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.regexp_tester_screen)
         self.stacked_widget.addWidget(self.url_codec_screen)
         self.stacked_widget.addWidget(self.uuid_ulid_generator_screen)
+        self.stacked_widget.addWidget(self.xml_formatter_screen)
         self.stacked_widget.addWidget(self.yaml_to_json_screen)
         self.stacked_widget.addWidget(self.string_case_converter_screen)
         self.stacked_widget.addWidget(self.color_converter_screen)
@@ -276,6 +281,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("UUID/ULID Generate/Decode")
             self.stacked_widget.setCurrentWidget(self.uuid_ulid_generator_screen)
             logger.info("Switched to UUID/ULID Generate/Decode view")
+        elif tool_name == "XML Beautifier":
+            self.top_bar_title.setText("XML Beautifier")
+            self.stacked_widget.setCurrentWidget(self.xml_formatter_screen)
+            logger.info("Switched to XML Beautifier view")
         elif tool_name == "YAML to JSON":
             self.top_bar_title.setText("YAML to JSON")
             self.stacked_widget.setCurrentWidget(self.yaml_to_json_screen)

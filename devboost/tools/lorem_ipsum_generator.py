@@ -1,23 +1,21 @@
-import sys
 import random
-from faker import Faker  # pip install Faker
+import sys
 
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QIcon, QPixmap, QPainter
+from faker import Faker  # pip install Faker
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
     QHBoxLayout,
     QMainWindow,
     QPushButton,
+    QSpinBox,
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QSpinBox,
-    QFrame, QStyle
 )
 
 from devboost.styles import get_tool_style
+
 
 class LoremIpsumProcessor:
     """Backend logic class for generating placeholder text."""
@@ -25,6 +23,7 @@ class LoremIpsumProcessor:
     def __init__(self):
         self.fake = Faker()
 
+    # ruff: noqa: C901
     def generate(self, text_type: str, count: int) -> str:
         """Generates the specified type of text."""
         results = []
@@ -36,7 +35,7 @@ class LoremIpsumProcessor:
             elif text_type == "Word":
                 results.append(self.fake.word())
             elif text_type == "Title":
-                results.append(self.fake.sentence(nb_words=4).rstrip('.').title())
+                results.append(self.fake.sentence(nb_words=4).rstrip(".").title())
             elif text_type == "First name":
                 results.append(self.fake.first_name())
             elif text_type == "Last name":
@@ -48,11 +47,11 @@ class LoremIpsumProcessor:
             elif text_type == "URL":
                 results.append(self.fake.url())
             elif text_type == "Short tweet":
-                text = self.fake.sentence(nb_words=random.randint(8, 15))
+                text = self.fake.sentence(nb_words=random.randint(8, 15))  # noqa: S311
                 hashtag = f"#{self.fake.word().lower()}"
                 results.append(f"{text} {hashtag}")
             elif text_type == "Long tweet":
-                text = self.fake.paragraph(nb_sentences=random.randint(2, 3))
+                text = self.fake.paragraph(nb_sentences=random.randint(2, 3))  # noqa: S311
                 hashtags = f"#{self.fake.word().lower()} #{self.fake.word().lower()}"
                 results.append(f"{text} {hashtags}")
             else:
@@ -112,7 +111,7 @@ def create_lorem_ipsum_tool_widget(style_func) -> QWidget:
 
     clear_button = QPushButton("Clear")
     copy_button = QPushButton("Copy")
-    
+
     controls_layout.addWidget(count_spinbox)
     controls_layout.addWidget(mode_combo)
     controls_layout.addStretch()
@@ -143,7 +142,7 @@ def create_lorem_ipsum_tool_widget(style_func) -> QWidget:
                 output_text_edit.append("\n" + generated_text)
             else:
                 output_text_edit.setPlainText(generated_text)
-        else: # Replace
+        else:  # Replace
             output_text_edit.setPlainText(generated_text)
 
     def copy_to_clipboard():
@@ -151,9 +150,17 @@ def create_lorem_ipsum_tool_widget(style_func) -> QWidget:
 
     # --- ADD BUTTONS and CONNECT ---
     button_types = [
-        "Paragraph", "Sentence", "Word", "Title",
-        "First name", "Last name", "Full name", "Email", "URL",
-        "Short tweet", "Long tweet"
+        "Paragraph",
+        "Sentence",
+        "Word",
+        "Title",
+        "First name",
+        "Last name",
+        "Full name",
+        "Email",
+        "URL",
+        "Short tweet",
+        "Long tweet",
     ]
 
     for btn_type in button_types:
@@ -168,9 +175,10 @@ def create_lorem_ipsum_tool_widget(style_func) -> QWidget:
 
     # --- FINAL ASSEMBLY ---
     main_layout.addWidget(left_pane)
-    main_layout.addWidget(right_pane, 1) # Give right pane more weight
+    main_layout.addWidget(right_pane, 1)  # Give right pane more weight
 
     return main_widget
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
