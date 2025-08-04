@@ -221,7 +221,6 @@ def create_json_formatter_widget(style_func):
     output_toolbar_layout.addWidget(spaces_combo)
 
     copy_button = QPushButton("Copy")
-    # Image description: A simple black icon of two overlapping squares, representing 'copy'.
     output_toolbar_layout.addWidget(copy_button)
 
     right_layout.addLayout(output_toolbar_layout)

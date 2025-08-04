@@ -22,6 +22,7 @@ from .tools import (
     create_color_converter_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
+    create_lorem_ipsum_tool_widget,
     create_regexp_tester_widget,
     create_string_case_converter_widget,
     create_unix_time_converter_widget,
@@ -111,6 +112,7 @@ class DevDriverWindow(QMainWindow):
             ("⇄", "YAML to JSON"),
             ("✏️", "String Case Converter"),
             ("🎨", "Color Converter"),
+            ("📝", "Lorem Ipsum Generator"),
         ]
         logger.info(f"Defined {len(self.tools)} tools for the sidebar")
 
@@ -199,6 +201,8 @@ class DevDriverWindow(QMainWindow):
         self.string_case_converter_screen = create_string_case_converter_widget(self.style)
         logger.info("Creating Color Converter screen")
         self.color_converter_screen = create_color_converter_widget(self.style)
+        logger.info("Creating Lorem Ipsum Generator screen")
+        self.lorem_ipsum_generator_screen = create_lorem_ipsum_tool_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -211,6 +215,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.yaml_to_json_screen)
         self.stacked_widget.addWidget(self.string_case_converter_screen)
         self.stacked_widget.addWidget(self.color_converter_screen)
+        self.stacked_widget.addWidget(self.lorem_ipsum_generator_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -283,6 +288,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("Color Converter")
             self.stacked_widget.setCurrentWidget(self.color_converter_screen)
             logger.info("Switched to Color Converter view")
+        elif tool_name == "Lorem Ipsum Generator":
+            self.top_bar_title.setText("Lorem Ipsum Generator")
+            self.stacked_widget.setCurrentWidget(self.lorem_ipsum_generator_screen)
+            logger.info("Switched to Lorem Ipsum Generator view")
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
