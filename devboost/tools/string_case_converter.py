@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSplitter,
-    QStyle,
     QTextEdit,
     QVBoxLayout,
     QWidget,
