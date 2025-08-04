@@ -181,14 +181,13 @@ def create_case_converter_widget(style_func):
     main_layout.setSpacing(0)
 
     main_splitter = QSplitter(Qt.Orientation.Horizontal)
-    main_layout.addWidget(main_splitter)
+    main_layout.addWidget(main_splitter, 1)
 
     # --- Left Pane (Input) ---
     input_pane = QWidget()
-    input_pane.setObjectName("pane")
     input_layout = QVBoxLayout(input_pane)
-    input_layout.setContentsMargins(10, 10, 5, 10)
-    input_layout.setSpacing(8)
+    input_layout.setContentsMargins(10, 5, 5, 10)
+    input_layout.setSpacing(5)
 
     input_buttons_layout = QHBoxLayout()
     input_buttons_layout.setSpacing(8)
@@ -210,14 +209,12 @@ def create_case_converter_widget(style_func):
 
     # --- Right Pane (Output) ---
     output_pane = QWidget()
-    output_pane.setObjectName("pane")
     output_layout = QVBoxLayout(output_pane)
-    output_layout.setContentsMargins(5, 10, 10, 10)
-    output_layout.setSpacing(8)
+    output_layout.setContentsMargins(10, 5, 5, 10)
+    output_layout.setSpacing(5)
 
     output_header_layout = QHBoxLayout()
     output_header_layout.setSpacing(8)
-    output_header_layout.setContentsMargins(0, 0, 0, 0)
 
     case_combo = QComboBox()
     case_combo.addItems([
@@ -306,37 +303,6 @@ def create_case_converter_widget(style_func):
                 logger.info("Output copied to clipboard")
         except Exception:
             logger.exception("Error copying to clipboard")
-
-    def on_lightning_clicked():
-        """Quick convert - automatically detect best case and convert."""
-        try:
-            input_text = input_text_edit.toPlainText().strip()
-            if not input_text:
-                return
-
-            # Auto-detect current case and suggest next logical conversion
-            if "_" in input_text:
-                # snake_case -> camelCase
-                case_combo.setCurrentText("camelCase")
-            elif "-" in input_text:
-                # kebab-case -> camelCase
-                case_combo.setCurrentText("camelCase")
-            elif input_text.islower():
-                # lowercase -> Title Case
-                case_combo.setCurrentText("Title Case")
-            elif input_text.isupper():
-                # UPPERCASE -> lowercase
-                case_combo.setCurrentText("lowercase")
-            elif any(c.isupper() for c in input_text[1:]):
-                # camelCase or PascalCase -> snake_case
-                case_combo.setCurrentText("snake_case")
-            else:
-                # Default to camelCase
-                case_combo.setCurrentText("camelCase")
-
-            update_output()
-        except Exception:
-            logger.exception("Error in lightning conversion")
 
     # --- Connect UI Events ---
     input_text_edit.textChanged.connect(on_input_changed)

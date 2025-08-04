@@ -244,13 +244,13 @@ def create_jwt_debugger_widget(style_func):
 
     # Create horizontal splitter for main content
     main_splitter = QSplitter(Qt.Orientation.Horizontal)
-    main_splitter.setContentsMargins(0, 10, 0, 10)
+    main_splitter.setContentsMargins(0, 0, 0, 0)
 
     # --- Left Pane (Encoded Input) ---
     left_pane = QWidget()
     left_layout = QVBoxLayout(left_pane)
-    left_layout.setContentsMargins(10, 0, 10, 0)
-    left_layout.setSpacing(8)
+    left_layout.setContentsMargins(10, 5, 5, 10)
+    left_layout.setSpacing(5)
 
     # Top controls
     left_controls_layout = QHBoxLayout()
@@ -276,8 +276,8 @@ def create_jwt_debugger_widget(style_func):
     right_pane = QWidget()
     right_pane.setObjectName("rightPane")
     right_layout = QVBoxLayout(right_pane)
-    right_layout.setContentsMargins(10, 0, 10, 0)
-    right_layout.setSpacing(15)
+    right_layout.setContentsMargins(10, 5, 5, 10)
+    right_layout.setSpacing(5)
 
     # Algorithm selector
     algo_layout = QHBoxLayout()
@@ -328,7 +328,7 @@ def create_jwt_debugger_widget(style_func):
     verification_frame.setObjectName("verificationFrame")
     verification_layout = QVBoxLayout(verification_frame)
     verification_layout.setContentsMargins(0, 0, 0, 0)
-    verification_layout.setSpacing(0)
+    verification_layout.setSpacing(5)
 
     signature_formula_edit = QTextEdit()
     signature_formula_edit.setObjectName("signatureFormulaEdit")
@@ -359,7 +359,7 @@ def create_jwt_debugger_widget(style_func):
 
     main_splitter.addWidget(left_pane)
     main_splitter.addWidget(right_pane)
-    main_splitter.setSizes([400, 600])  # Give more space to right pane for decoded content
+    main_splitter.setSizes([500, 500])  # Give more space to right pane for decoded content
 
     # --- Status Bar ---
     status_bar = QWidget()

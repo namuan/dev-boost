@@ -13,7 +13,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSplitter,
-    QStyle,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -207,14 +206,12 @@ def create_json_formatter_widget(style_func):
     # --- Right Pane (Output) ---
     right_pane = QWidget()
     right_layout = QVBoxLayout(right_pane)
-    right_layout.setContentsMargins(5, 5, 10, 10)
+    right_layout.setContentsMargins(10, 5, 5, 10)
     right_layout.setSpacing(5)
 
     # Output Toolbar
     output_toolbar_layout = QHBoxLayout()
     output_toolbar_layout.setSpacing(8)
-
-    # Removed "Output:" label for cleaner UI
     output_toolbar_layout.addStretch()
 
     spaces_combo = QComboBox()
@@ -245,19 +242,12 @@ def create_json_formatter_widget(style_func):
     )
 
     bottom_layout = QHBoxLayout(bottom_bar)
-    bottom_layout.setContentsMargins(10, 0, 10, 0)
-    bottom_layout.setSpacing(5)
+    bottom_layout.setContentsMargins(5, 0, 5, 0)
 
     json_path_input = QLineEdit()
     json_path_input.setObjectName("jsonPathInput")
-    json_path_input.setPlaceholderText("JSON Path: (e.g., $.store.book[*].author)")
+    json_path_input.setPlaceholderText("JSON Path: (e.g., $.name)")
     bottom_layout.addWidget(json_path_input)
-
-    help_button = QPushButton()
-    help_button.setObjectName("iconButton")
-    # Image description: A simple, black question mark icon.
-    help_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion))
-    bottom_layout.addWidget(help_button)
 
     main_layout.addWidget(bottom_bar)
 

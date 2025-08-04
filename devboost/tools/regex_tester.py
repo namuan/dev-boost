@@ -311,16 +311,16 @@ def create_regexp_tester_widget(style_func):
 
     # --- MAIN LAYOUT ---
     main_layout = QVBoxLayout(widget)
-    main_layout.setContentsMargins(15, 15, 15, 15)
-    main_layout.setSpacing(12)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setSpacing(0)
 
     # --- REGEXP SECTION ---
     regexp_section_frame = QFrame()
     regexp_section_layout = QVBoxLayout(regexp_section_frame)
     regexp_section_layout.setContentsMargins(1, 1, 1, 1)  # Thin margins for inner layout
     regexp_top_bar_layout = QHBoxLayout()
-    regexp_top_bar_layout.setContentsMargins(10, 10, 10, 10)
-    regexp_top_bar_layout.setSpacing(8)
+    regexp_top_bar_layout.setContentsMargins(10, 5, 5, 10)
+    regexp_top_bar_layout.setSpacing(5)
 
     regexp_label = QLabel("RegExp:")
     regexp_input = QLineEdit()

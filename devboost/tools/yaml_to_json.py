@@ -147,18 +147,17 @@ def create_yaml_to_json_widget(style_func):
     main_layout.setSpacing(0)
 
     main_splitter = QSplitter(Qt.Orientation.Horizontal)
-    main_layout.addWidget(main_splitter)
+    main_layout.addWidget(main_splitter, 1)
 
     # --- Left Pane (Input) ---
     input_pane = QWidget()
-    input_pane.setObjectName("pane")
     input_layout = QVBoxLayout(input_pane)
-    input_layout.setContentsMargins(10, 10, 5, 10)
-    input_layout.setSpacing(8)
+    input_layout.setContentsMargins(10, 5, 5, 10)
+    input_layout.setSpacing(5)
 
     input_buttons_layout = QHBoxLayout()
-    input_buttons_layout.setSpacing(8)
     input_buttons_layout.setContentsMargins(0, 0, 0, 0)
+    input_buttons_layout.setSpacing(8)
 
     clipboard_button = QPushButton("Clipboard")
     sample_button = QPushButton("Sample")
@@ -178,8 +177,8 @@ def create_yaml_to_json_widget(style_func):
     output_pane = QWidget()
     output_pane.setObjectName("pane")
     output_layout = QVBoxLayout(output_pane)
-    output_layout.setContentsMargins(5, 10, 10, 10)
-    output_layout.setSpacing(8)
+    output_layout.setContentsMargins(10, 5, 5, 10)
+    output_layout.setSpacing(5)
 
     output_header_layout = QHBoxLayout()
     output_header_layout.setSpacing(8)
@@ -188,7 +187,6 @@ def create_yaml_to_json_widget(style_func):
     spaces_combo = QComboBox()
     spaces_combo.addItem("2 spaces")
     spaces_combo.addItem("4 spaces")
-    spaces_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
     copy_button = QPushButton("Copy")
     # Image description: A copy icon. Two overlapping squares or pages.

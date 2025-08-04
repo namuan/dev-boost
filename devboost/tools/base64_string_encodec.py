@@ -40,7 +40,7 @@ def create_base64_string_encodec_widget(style_func):
     widget.setStyleSheet(get_tool_style())
 
     main_layout = QVBoxLayout(widget)
-    main_layout.setContentsMargins(15, 15, 15, 15)
+    main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(0)
 
     main_splitter = QSplitter(Qt.Orientation.Vertical)
@@ -49,8 +49,8 @@ def create_base64_string_encodec_widget(style_func):
     # --- TOP INPUT SECTION ---
     input_section_widget = QWidget()
     input_section_layout = QVBoxLayout(input_section_widget)
-    input_section_layout.setSpacing(8)
-    input_section_layout.setContentsMargins(0, 0, 0, 12)
+    input_section_layout.setContentsMargins(10, 5, 5, 10)
+    input_section_layout.setSpacing(5)
 
     # Top Bar: Controls and Mode Selection
     top_bar_layout = QHBoxLayout()
@@ -88,8 +88,8 @@ def create_base64_string_encodec_widget(style_func):
     # --- BOTTOM OUTPUT SECTION ---
     output_section_widget = QWidget()
     output_section_layout = QVBoxLayout(output_section_widget)
-    output_section_layout.setSpacing(8)
-    output_section_layout.setContentsMargins(0, 12, 0, 0)
+    output_section_layout.setContentsMargins(10, 5, 5, 10)
+    output_section_layout.setSpacing(5)
 
     # Output Controls Bar
     output_bar_layout = QHBoxLayout()

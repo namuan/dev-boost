@@ -246,14 +246,14 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     main_widget.setStyleSheet(get_tool_style())
 
     main_layout = QHBoxLayout(main_widget)
-    main_layout.setContentsMargins(10, 10, 10, 10)
-    main_layout.setSpacing(12)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setSpacing(0)
 
     # --- LEFT PANE (DECODER) ---
     left_pane = QWidget()
     left_layout = QVBoxLayout(left_pane)
-    left_layout.setContentsMargins(0, 0, 0, 0)
-    left_layout.setSpacing(8)
+    left_layout.setContentsMargins(10, 5, 5, 10)
+    left_layout.setSpacing(5)
 
     # Top controls
     input_controls_layout = QHBoxLayout()
@@ -405,8 +405,8 @@ def create_uuid_ulid_tool_widget(style_func) -> QWidget:
     # --- RIGHT PANE (GENERATOR) ---
     right_pane = QWidget()
     right_layout = QVBoxLayout(right_pane)
-    right_layout.setContentsMargins(0, 0, 0, 0)
-    right_layout.setSpacing(8)
+    right_layout.setContentsMargins(10, 5, 5, 10)
+    right_layout.setSpacing(5)
 
     # Generator controls
     controls_layout = QHBoxLayout()

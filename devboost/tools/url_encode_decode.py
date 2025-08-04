@@ -6,15 +6,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
-    QCheckBox,
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QGridLayout,
-    QGroupBox,
     QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QMainWindow,
     QPushButton,
     QRadioButton,
@@ -25,7 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_dialog_style, get_tool_style
+from ..styles import get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -138,116 +130,6 @@ class URLCodec:
             return f"Error: {e!s}"
 
 
-class URLCodecSettingsDialog(QDialog):
-    """Settings dialog for URL encoding options."""
-
-    def __init__(self, settings: URLCodecSettings, parent=None):
-        super().__init__(parent)
-        self.settings = settings
-        self.setWindowTitle("URL Encoding Settings")
-        self.setModal(True)
-        self.resize(400, 300)
-
-        self.setup_ui()
-        self.load_settings()
-
-    def setup_ui(self):
-        """Setup the settings dialog UI."""
-        self.setStyleSheet(get_dialog_style())
-
-        layout = QVBoxLayout(self)
-
-        # Encoding Type Group
-        encoding_group = QGroupBox("Encoding Type")
-        encoding_layout = QVBoxLayout(encoding_group)
-
-        self.standard_radio = QRadioButton("Standard URL Encoding (+ for spaces)")
-        self.component_radio = QRadioButton("Component Encoding (%20 for spaces)")
-
-        encoding_layout.addWidget(self.standard_radio)
-        encoding_layout.addWidget(self.component_radio)
-
-        # Space Handling Group
-        space_group = QGroupBox("Space Handling")
-        space_layout = QVBoxLayout(space_group)
-
-        self.plus_space_checkbox = QCheckBox("Use + for spaces (when applicable)")
-        space_layout.addWidget(self.plus_space_checkbox)
-
-        # Safe Characters Group
-        safe_group = QGroupBox("Safe Characters")
-        safe_layout = QGridLayout(safe_group)
-
-        safe_layout.addWidget(QLabel("Preset Safe Characters:"), 0, 0)
-        self.safe_preset_combo = QComboBox()
-        self.safe_preset_combo.addItems([
-            "None",
-            "Alphanumeric only",
-            "URL safe: -_.~",
-            "Extended: -_.~:/?#[]@!$&'()*+,;=",
-        ])
-        safe_layout.addWidget(self.safe_preset_combo, 0, 1)
-
-        safe_layout.addWidget(QLabel("Custom Safe Characters:"), 1, 0)
-        self.custom_safe_edit = QLineEdit()
-        self.custom_safe_edit.setPlaceholderText("Enter additional safe characters")
-        safe_layout.addWidget(self.custom_safe_edit, 1, 1)
-
-        # Buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-
-        # Add to main layout
-        layout.addWidget(encoding_group)
-        layout.addWidget(space_group)
-        layout.addWidget(safe_group)
-        layout.addStretch()
-        layout.addWidget(button_box)
-
-        # Connect signals
-        self.safe_preset_combo.currentTextChanged.connect(self.update_safe_characters)
-
-    def load_settings(self):
-        """Load current settings into the dialog."""
-        if self.settings.encoding_type == "component":
-            self.component_radio.setChecked(True)
-        else:
-            self.standard_radio.setChecked(True)
-
-        self.plus_space_checkbox.setChecked(self.settings.plus_for_space)
-        self.custom_safe_edit.setText(self.settings.custom_safe_chars)
-
-        # Set preset based on current safe characters
-        if self.settings.safe_characters == "":
-            self.safe_preset_combo.setCurrentText("None")
-        elif self.settings.safe_characters == "-_.~":
-            self.safe_preset_combo.setCurrentText("URL safe: -_.~")
-        elif self.settings.safe_characters == "-_.~:/?#[]@!$&'()*+,;=":
-            self.safe_preset_combo.setCurrentText("Extended: -_.~:/?#[]@!$&'()*+,;=")
-
-    def update_safe_characters(self, preset_text: str):
-        """Update safe characters based on preset selection."""
-        preset_map = {
-            "None": "",
-            "Alphanumeric only": "",
-            "URL safe: -_.~": "-_.~",
-            "Extended: -_.~:/?#[]@!$&'()*+,;=": "-_.~:/?#[]@!$&'()*+,;=",
-        }
-        self.settings.safe_characters = preset_map.get(preset_text, "")
-
-    def accept(self):
-        """Save settings when dialog is accepted."""
-        self.settings.encoding_type = "component" if self.component_radio.isChecked() else "standard"
-        self.settings.plus_for_space = self.plus_space_checkbox.isChecked()
-        self.settings.custom_safe_chars = self.custom_safe_edit.text()
-
-        # Update safe characters from preset
-        self.update_safe_characters(self.safe_preset_combo.currentText())
-
-        super().accept()
-
-
 # ruff: noqa: C901
 def create_url_codec_widget(style_func):
     """
@@ -264,7 +146,7 @@ def create_url_codec_widget(style_func):
     widget.setStyleSheet(get_tool_style())
 
     main_layout = QVBoxLayout(widget)
-    main_layout.setContentsMargins(15, 15, 15, 15)
+    main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(0)
 
     main_splitter = QSplitter(Qt.Orientation.Vertical)
@@ -273,8 +155,8 @@ def create_url_codec_widget(style_func):
     # --- TOP INPUT SECTION ---
     input_section_widget = QWidget()
     input_section_layout = QVBoxLayout(input_section_widget)
-    input_section_layout.setSpacing(8)
-    input_section_layout.setContentsMargins(0, 0, 0, 12)
+    input_section_layout.setContentsMargins(10, 5, 5, 10)
+    input_section_layout.setSpacing(5)
 
     # Top Bar: Controls and Mode Selection
     top_bar_layout = QHBoxLayout()
@@ -310,8 +192,8 @@ def create_url_codec_widget(style_func):
     # --- BOTTOM OUTPUT SECTION ---
     output_section_widget = QWidget()
     output_section_layout = QVBoxLayout(output_section_widget)
-    output_section_layout.setSpacing(8)
-    output_section_layout.setContentsMargins(0, 12, 0, 0)
+    output_section_layout.setSpacing(5)
+    output_section_layout.setContentsMargins(10, 5, 5, 10)
 
     # Output Controls Bar
     output_bar_layout = QHBoxLayout()
@@ -350,13 +232,6 @@ def create_url_codec_widget(style_func):
         result = codec.encode_url(input_text) if encode_radio.isChecked() else codec.decode_url(input_text)
 
         output_text_edit.setPlainText(result)
-
-    def open_settings():
-        """Open settings dialog."""
-        dialog = URLCodecSettingsDialog(settings, widget)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            # Settings were updated, reprocess current text
-            process_text()
 
     def on_input_changed():
         """Handle input text changes with debouncing."""

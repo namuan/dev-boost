@@ -1348,8 +1348,8 @@ def create_color_converter_widget(style_func):
     left_panel = QWidget()
     left_panel.setObjectName("leftPanel")
     left_panel_layout = QVBoxLayout(left_panel)
-    left_panel_layout.setContentsMargins(20, 20, 20, 20)
-    left_panel_layout.setSpacing(15)
+    left_panel_layout.setContentsMargins(10, 5, 5, 10)
+    left_panel_layout.setSpacing(5)
     left_panel.setFixedWidth(450)
 
     # Top input section
