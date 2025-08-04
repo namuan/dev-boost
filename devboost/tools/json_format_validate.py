@@ -193,20 +193,10 @@ def create_json_formatter_widget(style_func):
     input_toolbar_layout = QHBoxLayout()
     input_toolbar_layout.setSpacing(8)
 
-    # Removed "Input:" label for cleaner UI
-
-    run_button = QPushButton()
-    run_button.setObjectName("iconButton")
-    # Image description: A simple, black, solid lightning bolt icon.
-    run_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))  # Placeholder
-    input_toolbar_layout.addWidget(run_button)
-
     input_toolbar_layout.addWidget(QPushButton("Clipboard"))
     input_toolbar_layout.addWidget(QPushButton("Sample"))
     input_toolbar_layout.addWidget(QPushButton("Clear"))
     input_toolbar_layout.addStretch()
-
-    input_toolbar_layout.addWidget(QPushButton("JSON"))
 
     left_layout.addLayout(input_toolbar_layout)
 
@@ -345,15 +335,6 @@ def create_json_formatter_widget(style_func):
             output_text_edit.setPlainText(f"Error: {error_message}")
             output_text_edit.setStyleSheet(get_status_style("error"))
 
-    # Connect buttons to functions
-    def on_run_button_clicked():
-        """Handle run button click - check if JSON Path is present."""
-        if json_path_input.text().strip():
-            execute_json_path()
-        else:
-            format_json()
-
-    run_button.clicked.connect(on_run_button_clicked)
     json_path_input.returnPressed.connect(execute_json_path)
     sample_button = None
     clipboard_button = None
