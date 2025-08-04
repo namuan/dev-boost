@@ -253,6 +253,41 @@ WARNING_INPUT_STYLE = f"""
 border: 1px solid {COLORS["warning"]};
 """
 
+TAB_BAR_STYLE = f"""
+QLabel#colorPreview {{
+    border: 1px solid {COLORS["border_primary"]};
+    border-radius: 4px;
+}}
+QTabWidget#presetsTab::pane {{
+    border: none;
+}}
+QTabBar::tab {{
+    background: {COLORS["bg_secondary"]};
+    color: {COLORS["text_secondary"]};
+    padding: 8px 16px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}}
+QTabBar::tab:selected {{
+    background: {COLORS["bg_primary"]};
+    color: {COLORS["text_primary"]};
+}}
+QTabBar::tab:!selected:hover {{
+    background: {COLORS["btn_hover"]};
+}}
+QTextEdit#codePresetsEdit {{
+    background-color: {COLORS["bg_primary"]};
+    border: none;
+    font-family: {FONTS["mono"]};
+    font-size: 14px;
+    color: {COLORS["text_primary"]};
+    line-height: 1.5;
+}}
+"""
+
 DIALOG_STYLE = f"""
 QDialog {{
     background-color: {COLORS["bg_primary"]};
@@ -307,6 +342,7 @@ TOOL_WIDGET_STYLE = f"""
 {LABEL_STYLE}
 {COMBOBOX_STYLE}
 {SCROLLBAR_STYLE}
+{TAB_BAR_STYLE}
 {DIALOG_STYLE}
 """
 
