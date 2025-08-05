@@ -46,7 +46,7 @@ class JSONValidator(QObject):
             Tuple of (is_valid, formatted_json, error_message)
         """
         if not input_text.strip():
-            return True, "", ""  # Empty input is valid, just return empty result
+            return False, "", "Input is empty"
 
         try:
             # Parse JSON to validate
