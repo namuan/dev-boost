@@ -7,6 +7,8 @@ __pycache__/
 !assets/
 !prompts/
 !tests/
+!docs/
+!.trae/
 
 # unignore files
 !.gitignore
