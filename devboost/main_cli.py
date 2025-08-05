@@ -1,8 +1,8 @@
 import logging
 import sys
 
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -74,7 +74,39 @@ class DevDriverWindow(QMainWindow):
 
         self.tool_list.itemClicked.connect(self._on_tool_selected)
         logger.info("Tool selection event handler connected")
+
+        # Initialize debounce timer for search input
+        self.search_debounce_timer = QTimer()
+        self.search_debounce_timer.setSingleShot(True)
+        self.search_debounce_timer.timeout.connect(self._perform_search)
+        logger.info("Search debounce timer initialized")
+
+        # Setup keyboard shortcuts
+        self._setup_keyboard_shortcuts()
+        logger.info("Keyboard shortcuts initialized")
+
         logger.info("DevDriverWindow initialization completed successfully")
+
+    def _setup_keyboard_shortcuts(self):
+        """Setup keyboard shortcuts for the application."""
+        logger.info("Setting up keyboard shortcuts")
+
+        # Create shortcut for focusing search input (Cmd+Shift+F on macOS, Ctrl+Shift+F on other platforms)
+        search_shortcut = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        search_shortcut.activated.connect(self._focus_search_input)
+        logger.info("Search focus shortcut (Ctrl+Shift+F) created")
+
+        # On macOS, also add the Cmd+Shift+F variant
+        if sys.platform == "darwin":
+            search_shortcut_mac = QShortcut(QKeySequence("Cmd+Shift+F"), self)
+            search_shortcut_mac.activated.connect(self._focus_search_input)
+            logger.info("Search focus shortcut (Cmd+Shift+F) created for macOS")
+
+    def _focus_search_input(self):
+        """Focus the search input and select all text."""
+        logger.info("Focusing search input via keyboard shortcut")
+        self.search_input.setFocus()
+        self.search_input.selectAll()
 
     def _create_sidebar(self):
         logger.info("Starting sidebar creation")
@@ -88,15 +120,44 @@ class DevDriverWindow(QMainWindow):
         sidebar_layout.setSpacing(10)
 
         search_container = QWidget()
-        search_layout = QHBoxLayout(search_container)
+        search_layout = QVBoxLayout(search_container)
         search_layout.setContentsMargins(0, 0, 0, 0)
+        search_layout.setSpacing(5)
 
-        search_input = QLineEdit()
-        search_input.setPlaceholderText("Search...   ⌘⇧F")
-        search_input.setFixedHeight(38)
+        # Search input row
+        search_input_container = QWidget()
+        search_input_layout = QHBoxLayout(search_input_container)
+        search_input_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search...   ⌘⇧F")
+        self.search_input.setFixedHeight(38)
         logger.info("Search input field created")
 
-        search_layout.addWidget(search_input)
+        # Connect text change signal to filtering logic
+        self.search_input.textChanged.connect(self.on_search_text_changed)
+        logger.info("Search input textChanged signal connected to on_search_text_changed")
+
+        # Connect Enter key press to focus first visible tool
+        self.search_input.returnPressed.connect(self._focus_first_visible_tool)
+        logger.info("Search input returnPressed signal connected to _focus_first_visible_tool")
+
+        search_input_layout.addWidget(self.search_input)
+
+        # Search results feedback label
+        self.search_results_label = QLabel()
+        self.search_results_label.setStyleSheet("""
+            QLabel {
+                color: #666;
+                font-size: 12px;
+                padding: 2px 4px;
+            }
+        """)
+        self.search_results_label.hide()  # Initially hidden
+        logger.info("Search results feedback label created")
+
+        search_layout.addWidget(search_input_container)
+        search_layout.addWidget(self.search_results_label)
 
         self.tool_list = QListWidget()
         self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -104,23 +165,23 @@ class DevDriverWindow(QMainWindow):
         logger.info("Tool list widget created")
 
         self.tools = [
-            ("🕒", "Unix Time Converter"),
-            ("{}", "JSON Format/Validate"),
-            ("64", "Base64 String Encode/Decode"),
-            ("✴️", "JWT Debugger"),
-            ("✳️", "RegExp Tester"),
-            ("%", "URL Encode/Decode"),
-            ("🆔", "UUID/ULID Generate/Decode"),
-            ("📄", "XML Beautifier"),
-            ("⇄", "YAML to JSON"),
-            ("✏️", "String Case Converter"),
-            ("🎨", "Color Converter"),
-            ("📝", "Lorem Ipsum Generator"),
-            ("📋", "Markdown Viewer"),
+            ("🕒", "Unix Time Converter", "timestamp epoch time date convert unix"),
+            ("{}", "JSON Format/Validate", "json format validate pretty print beautify"),
+            ("64", "Base64 String Encode/Decode", "base64 encode decode string text"),
+            ("✴️", "JWT Debugger", "jwt token debug decode verify json web token"),
+            ("✳️", "RegExp Tester", "regex regexp regular expression test match pattern"),
+            ("%", "URL Encode/Decode", "url encode decode percent encoding uri"),
+            ("🆔", "UUID/ULID Generate/Decode", "uuid ulid generate decode identifier unique"),
+            ("📄", "XML Beautifier", "xml format beautify pretty print"),
+            ("⇄", "YAML to JSON", "yaml json convert transform"),
+            ("✏️", "String Case Converter", "string case convert upper lower camel snake"),
+            ("🎨", "Color Converter", "color convert hex rgb hsl css"),
+            ("📝", "Lorem Ipsum Generator", "lorem ipsum text placeholder dummy"),
+            ("📋", "Markdown Viewer", "markdown preview render view md"),
         ]
         logger.info(f"Defined {len(self.tools)} tools for the sidebar")
 
-        for icon_text, tool_name in self.tools:
+        for icon_text, tool_name, _keywords in self.tools:
             item = QListWidgetItem()
             item.setSizeHint(QSize(0, 36))
             item_widget = self._create_tool_item_widget(icon_text, tool_name)
@@ -314,6 +375,209 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
             logger.info("Switched to welcome screen .. Tool not implemented")
+
+    def on_search_text_changed(self, text: str):
+        """Handle search input text change events with debouncing.
+
+        Args:
+            text: The current text in the search input field
+        """
+        logger.info(f"Search text changed: '{text}'")
+        # Store the current search text for the debounced search
+        self.current_search_text = text
+        # Stop any existing timer and start a new one
+        self.search_debounce_timer.stop()
+        self.search_debounce_timer.start(300)  # 300ms debounce delay
+
+    def _perform_search(self):
+        """Perform the actual search filtering after debounce delay."""
+        if hasattr(self, "current_search_text"):
+            logger.info(f"Performing debounced search for: '{self.current_search_text}'")
+            self.filter_tools(self.current_search_text)
+
+    def _set_item_visibility(self, item: QListWidgetItem, visible: bool):
+        """Set the visibility of a QListWidget item.
+
+        Args:
+            item: The QListWidgetItem to show or hide
+            visible: True to show the item, False to hide it
+        """
+        if visible:
+            item.setSizeHint(QSize(0, 36))  # Restore original size
+        else:
+            item.setSizeHint(QSize(0, 0))  # Hide by setting size to 0
+
+        # Also hide/show the item widget if it exists
+        widget = self.tool_list.itemWidget(item)
+        if widget:
+            widget.setVisible(visible)
+
+    def _matches_search_criteria(self, tool_name: str, tool_keywords: str, search_query: str) -> bool:
+        """Check if a tool matches the search criteria.
+
+        Args:
+            tool_name: The name of the tool
+            tool_keywords: The keywords associated with the tool
+            search_query: The search query to match against
+
+        Returns:
+            True if the tool matches the search criteria, False otherwise
+        """
+        if not search_query or not search_query.strip():
+            return True  # Empty search shows all items
+
+        query_lower = search_query.lower().strip()
+        name_lower = tool_name.lower()
+        keywords_lower = tool_keywords.lower()
+
+        # Check for partial matches in name or keywords
+        return query_lower in name_lower or query_lower in keywords_lower
+
+    def _update_tool_visibility(self, search_query: str) -> int:
+        """Update the visibility of all tool items based on search query.
+
+        Args:
+            search_query: The search query to filter tools by
+
+        Returns:
+            The number of visible tools after filtering
+        """
+        visible_count = 0
+
+        # Iterate through all tool items and set visibility
+        for i in range(self.tool_list.count()):
+            item = self.tool_list.item(i)
+            tool_name = item.data(Qt.ItemDataRole.UserRole)
+
+            # Find the corresponding tool data
+            tool_data = None
+            for icon, name, keywords in self.tools:
+                if name == tool_name:
+                    tool_data = (icon, name, keywords)
+                    break
+
+            if tool_data:
+                icon, name, keywords = tool_data
+                # Check if item matches search query using the dedicated method
+                if self._matches_search_criteria(name, keywords, search_query):
+                    self._set_item_visibility(item, True)
+                    visible_count += 1
+                else:
+                    self._set_item_visibility(item, False)
+            else:
+                # If tool data not found, hide the item
+                self._set_item_visibility(item, False)
+
+        # Force the list widget to update its layout
+        self.tool_list.update()
+
+        return visible_count
+
+    def _focus_first_visible_tool(self):
+        """Focus on the first visible tool in the filtered results and switch to its view.
+
+        This method is called when the user presses Enter in the search input.
+        It finds the first tool item that is currently visible, selects it, and
+        automatically triggers the tool selection to switch to the corresponding tool view.
+        """
+        for i in range(self.tool_list.count()):
+            item = self.tool_list.item(i)
+            # Check if the item is visible (size hint height > 0)
+            if item.sizeHint().height() > 0:
+                # Set the current item and focus on it
+                self.tool_list.setCurrentItem(item)
+                self.tool_list.setFocus()
+                # Trigger tool selection to switch to the tool view
+                self._on_tool_selected(item)
+                logger.info(f"Selected and switched to first visible tool: {item.data(Qt.ItemDataRole.UserRole)}")
+                return
+
+        logger.info("No visible tools found to focus on")
+
+    def filter_tools(self, search_query: str):
+        """Filter the tools list based on search query using visibility management.
+
+        Args:
+            search_query: The search string to filter tools by
+        """
+        logger.info(f"Filtering tools with query: '{search_query}'")
+
+        # If the tool list is empty, populate it first
+        if self.tool_list.count() == 0:
+            self._populate_tool_list()
+
+        # Update tool visibility based on search query
+        visible_count = self._update_tool_visibility(search_query)
+
+        # Update visual feedback for search results
+        self._update_search_feedback(search_query, visible_count)
+
+        logger.info(f"Visible tools: {visible_count} out of {self.tool_list.count()} tools")
+
+    def _update_search_feedback(self, search_query: str, visible_count: int):
+        """Update visual feedback for search results.
+
+        Args:
+            search_query: The current search query
+            visible_count: Number of visible tools after filtering
+        """
+        if not search_query.strip():
+            # No search query - hide feedback label
+            self.search_results_label.hide()
+            return
+
+        # Show feedback label when searching
+        self.search_results_label.show()
+
+        total_tools = self.tool_list.count()
+
+        if visible_count == 0:
+            # No results found
+            self.search_results_label.setText(f"No tools found for '{search_query}'")
+            self.search_results_label.setStyleSheet("""
+                QLabel {
+                    color: #ff6b6b;
+                    font-size: 12px;
+                    padding: 2px 4px;
+                    font-style: italic;
+                }
+            """)
+        elif visible_count == total_tools:
+            # All tools visible
+            self.search_results_label.setText(f"Showing all {total_tools} tools")
+            self.search_results_label.setStyleSheet("""
+                QLabel {
+                    color: #51cf66;
+                    font-size: 12px;
+                    padding: 2px 4px;
+                }
+            """)
+        else:
+            # Some tools filtered
+            self.search_results_label.setText(f"Showing {visible_count} of {total_tools} tools")
+            self.search_results_label.setStyleSheet("""
+                QLabel {
+                    color: #339af0;
+                    font-size: 12px;
+                    padding: 2px 4px;
+                }
+            """)
+
+        logger.info(f"Search feedback updated: '{self.search_results_label.text()}'")
+
+    def _populate_tool_list(self):
+        """Populate the tool list with all available tools."""
+        logger.info("Populating tool list with all tools")
+
+        for icon_text, tool_name, _keywords in self.tools:
+            item = QListWidgetItem()
+            item.setSizeHint(QSize(0, 36))
+            item_widget = self._create_tool_item_widget(icon_text, tool_name)
+            item.setData(Qt.ItemDataRole.UserRole, tool_name)
+            self.tool_list.addItem(item)
+            self.tool_list.setItemWidget(item, item_widget)
+
+        logger.info(f"Tool list populated with {len(self.tools)} tools")
 
     def _apply_styles(self):
         logger.info("Applying application styles")

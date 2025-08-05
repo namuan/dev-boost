@@ -6,6 +6,10 @@ Each task contains a list of subtasks in the form of check list items.
 
 The checklist is already there so do not create a new checklist.
 
+Use to mob tool to start a mob session.
+
+mob start -i -b <branch-name>
+
 Get the next available task.
 
 Mark the task as WIP.
@@ -15,6 +19,8 @@ Get the next checklist item from that task.
 Implement that checklist item using the task title and description as guide.
 
 Also update the checklist when the work is done for that checklist item.
+
+After the sub task/check list is completed. Use `mob next -s` to create a checkpoint.
 
 Mark the whole task as completed once every checklist item is completed within that task
 

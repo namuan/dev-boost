@@ -130,7 +130,6 @@ class URLCodec:
             return f"Error: {e!s}"
 
 
-# ruff: noqa: C901
 def create_url_codec_widget(style_func):
     """
     Creates and returns the URL Encode/Decode widget.
