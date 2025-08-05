@@ -1,9 +1,77 @@
 import logging
 
 from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QLabel, QListWidget, QListWidgetItem
 
 logger = logging.getLogger(__name__)
+
+
+class NavigableToolsList(QListWidget):
+    """Custom QListWidget that supports arrow key navigation through visible items only."""
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle key press events for arrow key navigation and Enter selection.
+
+        Args:
+            event: The key press event
+        """
+        if event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            self._navigate_visible_items(event.key())
+        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            # Trigger item click for the current item
+            current_item = self.currentItem()
+            if current_item:
+                self.itemClicked.emit(current_item)
+                logger.info(f"Enter pressed - selected tool: {current_item.data(Qt.ItemDataRole.UserRole)}")
+        else:
+            # Let the parent handle other keys
+            super().keyPressEvent(event)
+
+    def _navigate_visible_items(self, key):
+        """Navigate through visible items only.
+
+        Args:
+            key: The arrow key pressed (Qt.Key.Key_Up or Qt.Key.Key_Down)
+        """
+        visible_items = self._get_visible_items()
+        if not visible_items:
+            return
+
+        current_item = self.currentItem()
+        current_index = -1
+
+        # Find current item in visible items list
+        if current_item:
+            for i, item in enumerate(visible_items):
+                if item == current_item:
+                    current_index = i
+                    break
+
+        # Calculate next index based on key direction
+        if key == Qt.Key.Key_Down:
+            next_index = (current_index + 1) % len(visible_items)
+        else:  # Key_Up
+            next_index = (current_index - 1) % len(visible_items)
+
+        # Set the new current item
+        next_item = visible_items[next_index]
+        self.setCurrentItem(next_item)
+        self.scrollToItem(next_item)
+        logger.info(f"Navigated to: {next_item.data(Qt.ItemDataRole.UserRole)}")
+
+    def _get_visible_items(self):
+        """Get a list of currently visible items.
+
+        Returns:
+            List of QListWidgetItem objects that are currently visible
+        """
+        visible_items = []
+        for i in range(self.count()):
+            item = self.item(i)
+            if item.sizeHint().height() > 0:  # Item is visible
+                visible_items.append(item)
+        return visible_items
 
 
 class ToolsSearch:
@@ -148,6 +216,23 @@ class ToolsSearch:
                 logger.info(f"Selected and switched to first visible tool: {item.data(Qt.ItemDataRole.UserRole)}")
                 return
 
+    def focus_tool_list(self):
+        """Focus the tool list widget for keyboard navigation.
+
+        This method sets focus to the tool list and ensures the first visible
+        item is selected if no item is currently selected.
+        """
+        # If no current item is selected, select the first visible one
+        if not self.tool_list.currentItem():
+            for i in range(self.tool_list.count()):
+                item = self.tool_list.item(i)
+                if item.sizeHint().height() > 0:  # Item is visible
+                    self.tool_list.setCurrentItem(item)
+                    break
+
+        self.tool_list.setFocus()
+        logger.info("Tool list focused for keyboard navigation")
+
         logger.info("No visible tools found to focus on")
 
     def filter_tools(self, search_query: str):
@@ -206,7 +291,9 @@ class ToolsSearch:
             """)
         else:
             # Some tools filtered
-            self.search_results_label.setText(f"Showing {visible_count} of {total_tools} tools")
+            self.search_results_label.setText(
+                f"{visible_count}/{total_tools} tools" f" [ENTER to select / ↑↓ to navigate]"
+            )
             self.search_results_label.setStyleSheet("""
                 QLabel {
                     color: #339af0;

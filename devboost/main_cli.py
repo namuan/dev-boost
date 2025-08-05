@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QListWidget,
     QListWidgetItem,
     QMainWindow,
     QStackedWidget,
@@ -32,7 +31,7 @@ from .tools import (
     create_xml_formatter_widget,
     create_yaml_to_json_widget,
 )
-from .tools_search import ToolsSearch
+from .tools_search import NavigableToolsList, ToolsSearch
 
 # Configure logging
 logging.basicConfig(
@@ -104,17 +103,31 @@ class DevDriverWindow(QMainWindow):
         search_shortcut.activated.connect(self._focus_search_input)
         logger.info("Search focus shortcut (Ctrl+Shift+F) created")
 
-        # On macOS, also add the Cmd+Shift+F variant
+        # Create shortcut for focusing tool list (Cmd+Shift+T on macOS, Ctrl+Shift+T on other platforms)
+        tools_shortcut = QShortcut(QKeySequence("Ctrl+Shift+T"), self)
+        tools_shortcut.activated.connect(self._focus_tool_list)
+        logger.info("Tool list focus shortcut (Ctrl+Shift+T) created")
+
+        # On macOS, also add the Cmd variants
         if sys.platform == "darwin":
             search_shortcut_mac = QShortcut(QKeySequence("Cmd+Shift+F"), self)
             search_shortcut_mac.activated.connect(self._focus_search_input)
             logger.info("Search focus shortcut (Cmd+Shift+F) created for macOS")
+
+            tools_shortcut_mac = QShortcut(QKeySequence("Cmd+Shift+T"), self)
+            tools_shortcut_mac.activated.connect(self._focus_tool_list)
+            logger.info("Tool list focus shortcut (Cmd+Shift+T) created for macOS")
 
     def _focus_search_input(self):
         """Focus the search input and select all text."""
         logger.info("Focusing search input via keyboard shortcut")
         self.search_input.setFocus()
         self.search_input.selectAll()
+
+    def _focus_tool_list(self):
+        """Focus the tool list for keyboard navigation."""
+        logger.info("Focusing tool list via keyboard shortcut")
+        self.tools_search.focus_tool_list()
 
     def _create_sidebar(self):
         logger.info("Starting sidebar creation")
@@ -161,10 +174,10 @@ class DevDriverWindow(QMainWindow):
         search_layout.addWidget(search_input_container)
         search_layout.addWidget(self.search_results_label)
 
-        self.tool_list = QListWidget()
+        self.tool_list = NavigableToolsList()
         self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        logger.info("Tool list widget created")
+        logger.info("Navigable tool list widget created")
 
         self.tools = [
             ("🕒", "Unix Time Converter", "timestamp epoch time date convert unix"),

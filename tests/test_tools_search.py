@@ -2,9 +2,10 @@ import unittest
 from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import QSize, Qt, QTimer
-from PyQt6.QtWidgets import QApplication, QLabel, QListWidget, QListWidgetItem
+from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtWidgets import QApplication, QLabel, QListWidgetItem
 
-from devboost.tools_search import ToolsSearch
+from devboost.tools_search import NavigableToolsList, ToolsSearch
 
 
 class TestToolsSearch(unittest.TestCase):
@@ -20,7 +21,7 @@ class TestToolsSearch(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures before each test method."""
-        self.tool_list = QListWidget()
+        self.tool_list = NavigableToolsList()
         self.search_results_label = QLabel()
         self.tools = [
             ("icon1", "Base64 Encoder", "base64 encode decode string"),
@@ -287,6 +288,196 @@ class TestToolsSearch(unittest.TestCase):
         with patch.object(self.search_results_label, "hide") as mock_hide:
             self.tools_search._update_search_feedback("   \n\t   ", 4)
             mock_hide.assert_called_once()
+
+    def test_focus_tool_list_with_no_current_item(self):
+        """Test focusing tool list when no item is currently selected."""
+        # Make first item visible, others hidden
+        self.tool_list.item(0).setSizeHint(QSize(0, 36))  # visible
+        for i in range(1, self.tool_list.count()):
+            self.tool_list.item(i).setSizeHint(QSize(0, 0))  # hidden
+
+        # Ensure no current item is selected
+        self.tool_list.setCurrentItem(None)
+
+        with patch.object(self.tool_list, "setFocus") as mock_focus:
+            self.tools_search.focus_tool_list()
+
+            # Should select first visible item and focus the list
+            current_item = self.tool_list.currentItem()
+            self.assertIsNotNone(current_item)
+            self.assertEqual(current_item.data(Qt.ItemDataRole.UserRole), "Base64 Encoder")
+            mock_focus.assert_called_once()
+
+    def test_focus_tool_list_with_current_item(self):
+        """Test focusing tool list when an item is already selected."""
+        # Set current item
+        current_item = self.tool_list.item(1)
+        self.tool_list.setCurrentItem(current_item)
+
+        with patch.object(self.tool_list, "setFocus") as mock_focus:
+            self.tools_search.focus_tool_list()
+
+            # Should keep the current item and focus the list
+            self.assertEqual(self.tool_list.currentItem(), current_item)
+            mock_focus.assert_called_once()
+
+    def test_focus_tool_list_no_visible_items(self):
+        """Test focusing tool list when no items are visible."""
+        # Hide all items
+        for i in range(self.tool_list.count()):
+            self.tool_list.item(i).setSizeHint(QSize(0, 0))
+
+        # Clear current selection
+        self.tool_list.setCurrentItem(None)
+
+        with patch.object(self.tool_list, "setFocus") as mock_focus:
+            self.tools_search.focus_tool_list()
+
+            # Should still focus the list even if no items are visible
+            self.assertIsNone(self.tool_list.currentItem())
+            mock_focus.assert_called_once()
+
+
+class TestNavigableToolsList(unittest.TestCase):
+    """Test cases for NavigableToolsList class."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up QApplication for testing."""
+        if not QApplication.instance():
+            cls.app = QApplication([])
+        else:
+            cls.app = QApplication.instance()
+
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        self.tool_list = NavigableToolsList()
+
+        # Create test items
+        self.test_items = [
+            ("Tool 1", True),  # visible
+            ("Tool 2", False),  # hidden
+            ("Tool 3", True),  # visible
+            ("Tool 4", True),  # visible
+            ("Tool 5", False),  # hidden
+        ]
+
+        for name, visible in self.test_items:
+            item = QListWidgetItem(name)
+            item.setData(Qt.ItemDataRole.UserRole, name)
+            if visible:
+                item.setSizeHint(QSize(0, 36))  # visible
+            else:
+                item.setSizeHint(QSize(0, 0))  # hidden
+            self.tool_list.addItem(item)
+
+    def test_get_visible_items(self):
+        """Test getting visible items only."""
+        visible_items = self.tool_list._get_visible_items()
+
+        # Should only return visible items (Tool 1, Tool 3, Tool 4)
+        self.assertEqual(len(visible_items), 3)
+        visible_names = [item.data(Qt.ItemDataRole.UserRole) for item in visible_items]
+        self.assertEqual(visible_names, ["Tool 1", "Tool 3", "Tool 4"])
+
+    def test_navigate_visible_items_down(self):
+        """Test navigating down through visible items."""
+        # Set current item to first visible item (Tool 1)
+        first_visible = self.tool_list.item(0)
+        self.tool_list.setCurrentItem(first_visible)
+
+        # Navigate down
+        self.tool_list._navigate_visible_items(Qt.Key.Key_Down)
+
+        # Should move to Tool 3 (next visible item)
+        current_item = self.tool_list.currentItem()
+        self.assertEqual(current_item.data(Qt.ItemDataRole.UserRole), "Tool 3")
+
+    def test_navigate_visible_items_up(self):
+        """Test navigating up through visible items."""
+        # Set current item to Tool 3 (second visible item)
+        second_visible = self.tool_list.item(2)
+        self.tool_list.setCurrentItem(second_visible)
+
+        # Navigate up
+        self.tool_list._navigate_visible_items(Qt.Key.Key_Up)
+
+        # Should move to Tool 1 (previous visible item)
+        current_item = self.tool_list.currentItem()
+        self.assertEqual(current_item.data(Qt.ItemDataRole.UserRole), "Tool 1")
+
+    def test_navigate_wrap_around_down(self):
+        """Test that navigation wraps around when going down from last item."""
+        # Set current item to last visible item (Tool 4)
+        last_visible = self.tool_list.item(3)
+        self.tool_list.setCurrentItem(last_visible)
+
+        # Navigate down (should wrap to first)
+        self.tool_list._navigate_visible_items(Qt.Key.Key_Down)
+
+        # Should wrap to Tool 1 (first visible item)
+        current_item = self.tool_list.currentItem()
+        self.assertEqual(current_item.data(Qt.ItemDataRole.UserRole), "Tool 1")
+
+    def test_navigate_wrap_around_up(self):
+        """Test that navigation wraps around when going up from first item."""
+        # Set current item to first visible item (Tool 1)
+        first_visible = self.tool_list.item(0)
+        self.tool_list.setCurrentItem(first_visible)
+
+        # Navigate up (should wrap to last)
+        self.tool_list._navigate_visible_items(Qt.Key.Key_Up)
+
+        # Should wrap to Tool 4 (last visible item)
+        current_item = self.tool_list.currentItem()
+        self.assertEqual(current_item.data(Qt.ItemDataRole.UserRole), "Tool 4")
+
+    def test_key_press_event_arrow_keys(self):
+        """Test that arrow key events are handled correctly."""
+        with patch.object(self.tool_list, "_navigate_visible_items") as mock_navigate:
+            # Test down arrow
+            down_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Down, Qt.KeyboardModifier.NoModifier)
+            self.tool_list.keyPressEvent(down_event)
+            mock_navigate.assert_called_with(Qt.Key.Key_Down)
+
+            # Test up arrow
+            up_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Up, Qt.KeyboardModifier.NoModifier)
+            self.tool_list.keyPressEvent(up_event)
+            mock_navigate.assert_called_with(Qt.Key.Key_Up)
+
+    def test_key_press_event_enter_key(self):
+        """Test that Enter key events trigger item selection."""
+        # Set a current item
+        first_item = self.tool_list.item(0)
+        self.tool_list.setCurrentItem(first_item)
+
+        with patch.object(self.tool_list, "itemClicked") as mock_clicked:
+            # Test Enter key
+            enter_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier)
+            self.tool_list.keyPressEvent(enter_event)
+            mock_clicked.emit.assert_called_once_with(first_item)
+
+    def test_key_press_event_other_keys(self):
+        """Test that other keys are passed to parent class."""
+        with patch("PyQt6.QtWidgets.QListWidget.keyPressEvent") as mock_parent:
+            # Test a non-arrow, non-enter key
+            other_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_A, Qt.KeyboardModifier.NoModifier)
+            self.tool_list.keyPressEvent(other_event)
+            mock_parent.assert_called_once_with(other_event)
+
+    def test_navigate_with_no_visible_items(self):
+        """Test navigation when no items are visible."""
+        # Hide all items
+        for i in range(self.tool_list.count()):
+            item = self.tool_list.item(i)
+            item.setSizeHint(QSize(0, 0))
+
+        # Navigation should do nothing
+        current_before = self.tool_list.currentItem()
+        self.tool_list._navigate_visible_items(Qt.Key.Key_Down)
+        current_after = self.tool_list.currentItem()
+
+        self.assertEqual(current_before, current_after)
 
 
 if __name__ == "__main__":
