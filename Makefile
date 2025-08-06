@@ -37,6 +37,12 @@ clean-build: ## Clean build artifacts
 context: clean-build ## Build context file from application sources
 	llm-context-builder.py --extensions .py --ignored_dirs build dist generated venv .venv .idea .aider.tags.cache.v3 --print_contents --temp_file
 
+package: clean-build ## Run installer
+	uv run pyinstaller main.spec
+
+install-macosx: package ## Installs application in users Application folder
+	./scripts/install-macosx.sh DevBoost.app
+
 .PHONY: help
 help:
 	@uv run python -c "import re; \

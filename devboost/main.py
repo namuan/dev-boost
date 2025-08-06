@@ -413,7 +413,3 @@ def main():
 
     logger.info("Starting application event loop")
     sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
