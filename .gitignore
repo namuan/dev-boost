@@ -22,3 +22,4 @@ __pycache__/
 !LICENSE
 !tox.ini
 !main.spec
+!main_cli.py
