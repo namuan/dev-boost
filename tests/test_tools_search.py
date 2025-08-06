@@ -277,7 +277,7 @@ class TestToolsSearch(unittest.TestCase):
             self.tools_search._update_search_feedback("json", 2)
 
             mock_show.assert_called_once()
-            mock_set_text.assert_called_once_with("Showing 2 of 4 tools")
+            mock_set_text.assert_called_once_with("2/4 tools [ENTER to select / ↑↓ to navigate]")
             mock_set_style.assert_called_once()
             # Check that the style contains info color
             style_call = mock_set_style.call_args[0][0]
