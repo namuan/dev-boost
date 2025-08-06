@@ -33,11 +33,11 @@ COLORS = {
     "info": "#ff8c00",
 }
 
-# Font families
+# Font families - using simple system fonts to avoid loading delays
 FONTS = {
-    "ui": '"Segoe UI", Arial, sans-serif',
-    "mono": '"Consolas", "Courier New", monospace',
-    "system": '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    "ui": "Arial, sans-serif",
+    "mono": "Monaco, monospace",
+    "system": "Arial, sans-serif",
 }
 
 # Layout spacing and margins

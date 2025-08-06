@@ -402,9 +402,10 @@ def main():
     app = QApplication(sys.argv)
     logger.info("QApplication created")
 
-    font = QFont("Inter")  # A nice modern system font, falls back to default
+    # Use system default font to avoid font loading overhead
+    font = QFont()  # Uses system default font
     app.setFont(font)
-    logger.info("Application font set to Inter")
+    logger.info("Application font set to system default")
 
     logger.info("Creating main window")
     window = DevDriverWindow()

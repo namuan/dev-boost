@@ -22,15 +22,6 @@ from PyQt6.QtWidgets import (
 
 from ..styles import get_tool_style
 
-# Attempt to import QWebEngineView and handle potential ImportError
-try:
-    from PyQt6.QtWebEngineWidgets import QWebEngineView
-
-    WEBENGINE_AVAILABLE = True
-except ImportError:
-    WEBENGINE_AVAILABLE = False
-    logging.info("PyQtWebEngine not found. Using lightweight QTextEdit for markdown preview.")
-
 # It's good practice to have a logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -138,15 +129,11 @@ def create_markdown_preview_widget():
 
     output_layout.addLayout(output_header_layout)
 
-    if WEBENGINE_AVAILABLE:
-        output_view = QWebEngineView()
-        output_view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-    else:
-        # Use QTextEdit with native markdown support as lightweight alternative
-        output_view = QTextEdit()
-        output_view.setReadOnly(True)
-        # Set some basic styling for better appearance
-        output_view.setStyleSheet("""
+    # Use QTextEdit with native markdown support as lightweight alternative
+    output_view = QTextEdit()
+    output_view.setReadOnly(True)
+    # Set some basic styling for better appearance
+    output_view.setStyleSheet("""
             QTextEdit {
                 background-color: white;
                 border: 1px solid #ccc;
@@ -156,6 +143,7 @@ def create_markdown_preview_widget():
                 padding: 10px;
             }
         """)
+
     output_layout.addWidget(output_view, 1)
 
     # --- Assemble Main Layout ---
@@ -167,48 +155,12 @@ def create_markdown_preview_widget():
     def update_preview():
         try:
             text = input_text_edit.toPlainText()
-            html = markdown.markdown(text, extensions=["fenced_code", "tables"])
+            html = markdown.markdown(text, extensions=["markdown.extensions.fenced_code", "markdown.extensions.tables"])
+            output_view.setHtml(html)
 
-            if WEBENGINE_AVAILABLE:
-                full_html = f"""
-                <html>
-                <head>
-                    <style>
-                        body {{
-                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                            line-height: 1.6;
-                            color: #333;
-                            background-color: #FFFFFF;
-                            padding: 10px;
-                        }}
-                        pre {{
-                            background-color: #F5F5F5;
-                            padding: 10px;
-                            border-radius: 4px;
-                            overflow-x: auto;
-                        }}
-                        code {{
-                            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-                        }}
-                        table {{ border-collapse: collapse; width: 100%; }}
-                        th, td {{ border: 1px solid #ddd; padding: 8px; }}
-                        th {{ background-color: #f2f2f2; }}
-                        blockquote {{ border-left: 4px solid #ddd; padding-left: 10px; color: #666; }}
-                    </style>
-                </head>
-                <body>{html}</body>
-                </html>
-                """
-                output_view.setHtml(full_html)
-            else:
-                # For QTextEdit, set the HTML directly (basic rendering)
-                output_view.setHtml(html)
         except Exception as e:
             logger.exception("Error during Markdown conversion")
-            if WEBENGINE_AVAILABLE:
-                output_view.setHtml(f"<h1>Error</h1><p>Could not render Markdown: {e!s}</p>")
-            else:
-                output_view.setPlainText(f"Error: Could not render Markdown: {e!s}")
+            output_view.setPlainText(f"Error: Could not render Markdown: {e!s}")
 
     def on_input_changed():
         update_timer.start(250)
@@ -227,10 +179,7 @@ def create_markdown_preview_widget():
 
     def on_clear_clicked():
         input_text_edit.clear()
-        if WEBENGINE_AVAILABLE:
-            output_view.setHtml("")
-        else:
-            output_view.clear()
+        output_view.clear()
 
     def on_open_browser_clicked():
         def save_and_open(html):
@@ -243,12 +192,9 @@ def create_markdown_preview_widget():
                 logger.exception("Failed to save or open temporary file", exc_info=e)
 
         try:
-            if WEBENGINE_AVAILABLE:
-                output_view.page().toHtml(save_and_open)
-            else:
-                # For QTextEdit, get the HTML content directly
-                html_content = output_view.toHtml()
-                save_and_open(html_content)
+            # For QTextEdit, get the HTML content directly
+            html_content = output_view.toHtml()
+            save_and_open(html_content)
         except Exception as e:
             logger.exception("Error getting HTML from view", exc_info=e)
 
@@ -263,10 +209,7 @@ def create_markdown_preview_widget():
                     update_preview()
             except Exception as e:
                 logger.exception("Error loading file", exc_info=e)
-                if WEBENGINE_AVAILABLE:
-                    output_view.setHtml(f"<h1>Error</h1><p>Could not load file: {e!s}</p>")
-                else:
-                    output_view.setPlainText(f"Error: Could not load file: {e!s}")
+                output_view.setPlainText(f"Error: Could not load file: {e!s}")
                 QMessageBox.critical(widget, "Error", f"Could not read file:\n{e}")
 
     def show_context_menu(position):
