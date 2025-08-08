@@ -79,6 +79,10 @@ class DevDriverWindow(QMainWindow):
         self.tools_search = ToolsSearch(self.tool_list, self.search_results_label, self.tools)
         logger.info("Tools search functionality initialized")
 
+        # Set clear search callback for tools list
+        self.tool_list.set_clear_search_callback(self.clear_search)
+        logger.info("Clear search callback set for tools list")
+
         # Connect search functionality after tools_search is initialized
         self.search_input.textChanged.connect(self.tools_search.on_search_text_changed)
         logger.info("Search input textChanged signal connected to tools_search.on_search_text_changed")
@@ -129,6 +133,23 @@ class DevDriverWindow(QMainWindow):
         logger.info("Focusing tool list via keyboard shortcut")
         self.tools_search.focus_tool_list()
 
+    def _search_input_key_press_event(self, event):
+        """Handle key press events for the search input, including Escape to clear."""
+        if event.key() == Qt.Key.Key_Escape:
+            logger.info("Escape key pressed in search input - clearing search")
+            self.clear_search()
+        else:
+            # Call the original keyPressEvent for other keys
+            QLineEdit.keyPressEvent(self.search_input, event)
+
+    def clear_search(self):
+        """Clear the search input and reset the tool list to show all tools."""
+        logger.info("Clearing search input")
+        self.search_input.clear()
+        self.search_input.setFocus()
+        # The textChanged signal will automatically trigger the search update
+        # which will show all tools when the search is empty
+
     def _create_sidebar(self):
         logger.info("Starting sidebar creation")
         sidebar_container = QWidget()
@@ -151,9 +172,13 @@ class DevDriverWindow(QMainWindow):
         search_input_layout.setContentsMargins(0, 0, 0, 0)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search...   ⌘⇧F")
+        self.search_input.setPlaceholderText("Search...   ⌘⇧F | ESC to clear")
         self.search_input.setFixedHeight(38)
         logger.info("Search input field created")
+
+        # Add Escape key handling to clear search
+        self.search_input.keyPressEvent = self._search_input_key_press_event
+        logger.info("Search input key press event handler set")
 
         # Note: Search input connections are made after tools_search initialization
 

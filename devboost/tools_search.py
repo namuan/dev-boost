@@ -10,8 +10,21 @@ logger = logging.getLogger(__name__)
 class NavigableToolsList(QListWidget):
     """Custom QListWidget that supports arrow key navigation through visible items only."""
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.clear_search_callback = None
+
+    def set_clear_search_callback(self, callback):
+        """Set the callback function to clear the search.
+
+        Args:
+            callback: Function to call when Escape key is pressed
+        """
+        self.clear_search_callback = callback
+        logger.info("Clear search callback set for NavigableToolsList")
+
     def keyPressEvent(self, event: QKeyEvent):
-        """Handle key press events for arrow key navigation and Enter selection.
+        """Handle key press events for arrow key navigation, Enter selection, and Escape to clear search.
 
         Args:
             event: The key press event
@@ -24,6 +37,13 @@ class NavigableToolsList(QListWidget):
             if current_item:
                 self.itemClicked.emit(current_item)
                 logger.info(f"Enter pressed - selected tool: {current_item.data(Qt.ItemDataRole.UserRole)}")
+        elif event.key() == Qt.Key.Key_Escape:
+            # Clear the search when Escape is pressed
+            if self.clear_search_callback:
+                logger.info("Escape pressed in tools list - clearing search")
+                self.clear_search_callback()
+            else:
+                logger.warning("Escape pressed but no clear search callback set")
         else:
             # Let the parent handle other keys
             super().keyPressEvent(event)
