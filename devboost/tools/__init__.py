@@ -6,6 +6,7 @@ from .lorem_ipsum_generator import create_lorem_ipsum_tool_widget
 from .markdown_viewer import create_markdown_preview_widget
 from .random_string_generator import create_random_string_tool_widget
 from .regex_tester import create_regexp_tester_widget
+from .scratch_pad import create_scratch_pad_widget
 from .string_case_converter import create_case_converter_widget as create_string_case_converter_widget
 from .unix_time_converter import create_unix_time_converter_widget
 from .url_encode_decode import create_url_codec_widget
@@ -22,6 +23,7 @@ __all__ = [
     "create_markdown_preview_widget",
     "create_random_string_tool_widget",
     "create_regexp_tester_widget",
+    "create_scratch_pad_widget",
     "create_string_case_converter_widget",
     "create_unix_time_converter_widget",
     "create_url_codec_widget",

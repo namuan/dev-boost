@@ -5,11 +5,13 @@ from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
+    QDockWidget,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidgetItem,
     QMainWindow,
+    QPushButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -25,6 +27,7 @@ from .tools import (
     create_markdown_preview_widget,
     create_random_string_tool_widget,
     create_regexp_tester_widget,
+    create_scratch_pad_widget,
     create_string_case_converter_widget,
     create_unix_time_converter_widget,
     create_url_codec_widget,
@@ -51,6 +54,16 @@ class DevDriverWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(950, 600)
         logger.info("Window properties set: title='Dev Boost', geometry=(100,100,1200,800), min_size=(950,600)")
+
+        # Create scratch pad widget
+        self.scratch_pad_widget = create_scratch_pad_widget(self.style)
+        self.scratch_pad_dock = QDockWidget("Scratch Pad", self)
+        self.scratch_pad_dock.setWidget(self.scratch_pad_widget)
+        self.scratch_pad_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.scratch_pad_dock)
+        self.scratch_pad_dock.hide()  # Initially hidden
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -113,6 +126,11 @@ class DevDriverWindow(QMainWindow):
         tools_shortcut.activated.connect(self._focus_tool_list)
         logger.info("Tool list focus shortcut (Ctrl+Shift+T) created")
 
+        # Create shortcut for toggling scratch pad (Cmd+Shift+S on macOS, Ctrl+Shift+S on other platforms)
+        scratch_pad_shortcut = QShortcut(QKeySequence("Ctrl+Shift+S"), self)
+        scratch_pad_shortcut.activated.connect(self.toggle_scratch_pad)
+        logger.info("Scratch pad toggle shortcut (Ctrl+Shift+S) created")
+
         # On macOS, also add the Cmd variants
         if sys.platform == "darwin":
             search_shortcut_mac = QShortcut(QKeySequence("Cmd+Shift+F"), self)
@@ -122,6 +140,10 @@ class DevDriverWindow(QMainWindow):
             tools_shortcut_mac = QShortcut(QKeySequence("Cmd+Shift+T"), self)
             tools_shortcut_mac.activated.connect(self._focus_tool_list)
             logger.info("Tool list focus shortcut (Cmd+Shift+T) created for macOS")
+
+            scratch_pad_shortcut_mac = QShortcut(QKeySequence("Cmd+Shift+S"), self)
+            scratch_pad_shortcut_mac.activated.connect(self.toggle_scratch_pad)
+            logger.info("Scratch pad toggle shortcut (Cmd+Shift+S) created for macOS")
 
     def _focus_search_input(self):
         """Focus the search input and select all text."""
@@ -279,8 +301,28 @@ class DevDriverWindow(QMainWindow):
         self.top_bar_title = QLabel("")
         self.top_bar_title.setObjectName("topBarTitle")
 
+        # Add scratch pad toggle button
+        self.scratch_pad_toggle_button = QPushButton("📝 Scratch Pad")
+        self.scratch_pad_toggle_button.setCheckable(True)
+        self.scratch_pad_toggle_button.clicked.connect(self.toggle_scratch_pad)
+        self.scratch_pad_toggle_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e6e6e6;
+            }
+            QPushButton:checked {
+                background-color: #dcdcdc;
+            }
+        """)
+
         top_bar_layout.addWidget(self.top_bar_title)
         top_bar_layout.addStretch()
+        top_bar_layout.addWidget(self.scratch_pad_toggle_button)
 
         # Stacked widget for different tool views
         self.stacked_widget = QStackedWidget()
@@ -289,17 +331,17 @@ class DevDriverWindow(QMainWindow):
         logger.info("Creating welcome screen")
         self.welcome_screen = self._create_welcome_screen()
         logger.info("Creating Unix Time Converter screen")
-        self.unix_time_converter_screen = create_unix_time_converter_widget(self.style)
+        self.unix_time_converter_screen = create_unix_time_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating JSON Format/Validate screen")
-        self.json_format_validate_screen = create_json_formatter_widget(self.style)
+        self.json_format_validate_screen = create_json_formatter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Base64 String Encode/Decode screen")
-        self.base64_string_encodec_screen = create_base64_string_encodec_widget(self.style)
+        self.base64_string_encodec_screen = create_base64_string_encodec_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating JWT Debugger screen")
-        self.jwt_debugger_screen = create_jwt_debugger_widget(self.style)
+        self.jwt_debugger_screen = create_jwt_debugger_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating RegExp Tester screen")
-        self.regexp_tester_screen = create_regexp_tester_widget(self.style)
+        self.regexp_tester_screen = create_regexp_tester_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating URL Encode Decode screen")
-        self.url_codec_screen = create_url_codec_widget(self.style)
+        self.url_codec_screen = create_url_codec_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating UUID/ULID Generate/Decode screen")
         self.uuid_ulid_generator_screen = create_uuid_ulid_tool_widget(self.style)
         logger.info("Creating XML Beautifier screen")
@@ -429,6 +471,35 @@ class DevDriverWindow(QMainWindow):
         logger.info("Applying application styles")
         self.setStyleSheet(get_main_app_style())
         logger.info("Application styles applied successfully")
+
+    def toggle_scratch_pad(self):
+        """
+        Toggle the visibility of the scratch pad dock widget.
+        """
+        if self.scratch_pad_dock.isVisible():
+            self.scratch_pad_dock.hide()
+            self.scratch_pad_toggle_button.setChecked(False)
+        else:
+            self.scratch_pad_dock.show()
+            self.scratch_pad_toggle_button.setChecked(True)
+
+    def send_to_scratch_pad(self, content):
+        """
+        Send content to the scratch pad.
+
+        Args:
+            content (str): The content to send to the scratch pad.
+        """
+        if self.scratch_pad_widget and content:
+            # Ensure the scratch pad is visible
+            if not self.scratch_pad_dock.isVisible():
+                self.scratch_pad_dock.show()
+                self.scratch_pad_toggle_button.setChecked(True)
+
+            # Append content to the scratch pad with a separator
+            current_content = self.scratch_pad_widget.get_content()
+            new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+            self.scratch_pad_widget.set_content(new_content)
 
 
 def main():

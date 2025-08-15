@@ -292,12 +292,13 @@ class RegexTester:
 
 
 # ruff: noqa: C901
-def create_regexp_tester_widget(style_func):
+def create_regexp_tester_widget(style_func, scratch_pad=None):
     """
     Creates and returns the RegExp Tester widget.
 
     Args:
         style_func: Function to get QStyle for standard icons.
+        scratch_pad: Optional scratch pad widget to send results to.
 
     Returns:
         QWidget: The complete RegExp Tester widget.
@@ -394,10 +395,18 @@ def create_regexp_tester_widget(style_func):
     help_button.setObjectName("iconButton")
     # Image description: A question mark icon inside a circle.
     help_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion))
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    send_to_scratch_pad_button = None
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+
     output_top_bar_layout.addWidget(output_label)
     output_top_bar_layout.addSpacing(5)
     output_top_bar_layout.addWidget(output_input, 1)
     output_top_bar_layout.addWidget(help_button)
+    if send_to_scratch_pad_button:
+        output_top_bar_layout.addWidget(send_to_scratch_pad_button)
     output_top_bar_layout.addStretch()
 
     output_text_edit = QTextEdit()
@@ -440,8 +449,13 @@ def create_regexp_tester_widget(style_func):
     main_layout.addLayout(bottom_layout, 3)
 
     # --- FUNCTIONALITY CONNECTIONS ---
+    # Store matches for later use in formatting
+    current_matches = []
+
     def update_results():
         """Update the results based on current pattern and text."""
+        nonlocal current_matches
+
         pattern = regexp_input.text()
         text = text_input_edit.toPlainText()
         output_format = output_input.text()
@@ -456,6 +470,7 @@ def create_regexp_tester_widget(style_func):
             matches_label.setText("Invalid pattern")
             output_text_edit.clear()
             matches_text_edit.clear()
+            current_matches = []
             return
         else:
             # Valid pattern - reset styling
@@ -472,6 +487,7 @@ def create_regexp_tester_widget(style_func):
 
             # Update matches display
             matches = regex_tester.find_matches()
+            current_matches = matches  # Store for later use
             matches_display = []
             for i, (match_text, start, end) in enumerate(matches, 1):
                 matches_display.append(f"{i}. {match_text} (pos {start}-{end})")
@@ -479,6 +495,7 @@ def create_regexp_tester_widget(style_func):
         else:
             output_text_edit.clear()
             matches_text_edit.clear()
+            current_matches = []
 
     def on_sample_clicked():
         """Load a sample pattern and text."""
@@ -562,8 +579,68 @@ def create_regexp_tester_widget(style_func):
     cheat_sheet_button.clicked.connect(on_cheat_sheet_clicked)
     search_matches_input.textChanged.connect(filter_matches)
 
+    # Connect "Send to Scratch Pad" button if it exists
+    if send_to_scratch_pad_button:
+
+        def on_send_to_scratch_pad():
+            # Get current state for formatting
+            pattern = regexp_input.text()
+            text = text_input_edit.toPlainText()
+            output_text = output_text_edit.toPlainText()
+
+            # Format with context
+            formatted_content = format_regexp_output_for_scratch_pad(pattern, text, current_matches, output_text)
+            send_to_scratch_pad(scratch_pad, formatted_content)
+
+        send_to_scratch_pad_button.clicked.connect(on_send_to_scratch_pad)
+
     logger.info("RegExp Tester widget creation completed")
     return widget
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)
+
+
+def format_regexp_output_for_scratch_pad(pattern, text, matches, output_text):
+    """
+    Format RegExp Tester output for sending to scratch pad with context.
+
+    Args:
+        pattern (str): The regex pattern used
+        text (str): The input text
+        matches (list): List of matches found
+        output_text (str): The formatted output text
+
+    Returns:
+        str: Formatted content for scratch pad
+    """
+    # Create a header with context
+    header = f"RegExp Tester Results\nPattern: {pattern}\nMatches Found: {len(matches)}\n" + "=" * 50
+
+    # Format matches with details
+    matches_section = "MATCHES:\n"
+    for i, (match_text, start, end) in enumerate(matches, 1):
+        matches_section += f"{i}. '{match_text}' (position {start}-{end})\n"
+
+    # Add the formatted output
+    output_section = f"\nFORMATTED OUTPUT:\n{output_text}"
+
+    # Add the original text for reference
+    text_section = f"\nINPUT TEXT:\n{text}"
+
+    return f"{header}\n\n{matches_section}\n{output_section}\n{text_section}"
 
 
 if __name__ == "__main__":

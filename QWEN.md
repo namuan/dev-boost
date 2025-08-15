@@ -1,0 +1,1 @@
+/Users/nnn/workspace/dev-boost/.trae/rules/project_rules.md

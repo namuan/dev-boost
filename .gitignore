@@ -23,3 +23,4 @@ __pycache__/
 !tox.ini
 !main.spec
 !main_cli.py
+!QWEN.md

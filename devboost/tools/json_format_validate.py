@@ -156,12 +156,13 @@ class JSONValidator(QObject):
 
 
 # ruff: noqa: C901
-def create_json_formatter_widget(style_func):
+def create_json_formatter_widget(style_func, scratch_pad=None):
     """
     Creates the main widget for the JSON formatter tool.
 
     Args:
         style_func: A function that returns a QStyle object to fetch standard icons.
+        scratch_pad: Optional scratch pad widget to send results to.
 
     Returns:
         QWidget: The main widget for the tool.
@@ -221,6 +222,14 @@ def create_json_formatter_widget(style_func):
 
     copy_button = QPushButton("Copy")
     output_toolbar_layout.addWidget(copy_button)
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+        send_to_scratch_pad_button.clicked.connect(
+            lambda: send_to_scratch_pad(scratch_pad, output_text_edit.toPlainText())
+        )
+        output_toolbar_layout.addWidget(send_to_scratch_pad_button)
 
     right_layout.addLayout(output_toolbar_layout)
 
@@ -363,6 +372,21 @@ def create_json_formatter_widget(style_func):
     input_text_edit.textChanged.connect(auto_format_json)
 
     return widget
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)
 
 
 if __name__ == "__main__":

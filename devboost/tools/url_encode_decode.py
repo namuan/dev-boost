@@ -130,12 +130,14 @@ class URLCodec:
             return f"Error: {e!s}"
 
 
-def create_url_codec_widget(style_func):
+# ruff: noqa: C901
+def create_url_codec_widget(style_func, scratch_pad=None):
     """
     Creates and returns the URL Encode/Decode widget.
 
     Args:
         style_func: Function to get QStyle for standard icons.
+        scratch_pad: Optional scratch pad widget to send results to.
 
     Returns:
         QWidget: The complete URL encoder/decoder widget.
@@ -201,12 +203,19 @@ def create_url_codec_widget(style_func):
     copy_button = QPushButton("Copy")
     # Image description: A copy icon. Two overlapping squares or pages.
 
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    send_to_scratch_pad_button = None
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+
     use_as_input_button = QPushButton("Use as input")
     # Image description: An upward-pointing arrow icon, simple and bold.
     use_as_input_button.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))  # Placeholder
 
     output_bar_layout.addStretch()
     output_bar_layout.addWidget(copy_button)
+    if send_to_scratch_pad_button:
+        output_bar_layout.addWidget(send_to_scratch_pad_button)
     output_bar_layout.addWidget(use_as_input_button)
     output_section_layout.addLayout(output_bar_layout)
 
@@ -268,6 +277,41 @@ def create_url_codec_widget(style_func):
         output_text = output_text_edit.toPlainText()
         input_text_edit.setPlainText(output_text)
 
+    def send_to_scratch_pad(scratch_pad, content):
+        """
+        Send content to the scratch pad.
+
+        Args:
+            scratch_pad: The scratch pad widget.
+            content (str): The content to send.
+        """
+        if scratch_pad and content:
+            # Append content to the scratch pad with a separator
+            current_content = scratch_pad.get_content()
+            new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+            scratch_pad.set_content(new_content)
+
+    def format_url_codec_output_for_scratch_pad(input_text, output_text, mode):
+        """
+        Format URL Codec output for sending to scratch pad with context.
+
+        Args:
+            input_text (str): The input text
+            output_text (str): The output text
+            mode (str): The mode ("Encode" or "Decode")
+
+        Returns:
+            str: Formatted content for scratch pad
+        """
+        # Create a header with context
+        header = f"URL Codec Results\nMode: {mode}\n" + "=" * 50
+
+        # Add input and output sections
+        input_section = f"INPUT:\n{input_text}"
+        output_section = f"\n\nOUTPUT:\n{output_text}"
+
+        return f"{header}\n{input_section}{output_section}"
+
     # Connect signals
     input_text_edit.textChanged.connect(on_input_changed)
     encode_radio.toggled.connect(process_text)
@@ -277,6 +321,21 @@ def create_url_codec_widget(style_func):
     copy_button.clicked.connect(copy_to_clipboard)
     clipboard_button.clicked.connect(paste_from_clipboard)
     use_as_input_button.clicked.connect(use_output_as_input)
+
+    # Connect "Send to Scratch Pad" button if it exists
+    if send_to_scratch_pad_button:
+
+        def on_send_to_scratch_pad():
+            # Get current state for formatting
+            input_text = input_text_edit.toPlainText()
+            output_text = output_text_edit.toPlainText()
+            mode = "Encode" if encode_radio.isChecked() else "Decode"
+
+            # Format with context
+            formatted_content = format_url_codec_output_for_scratch_pad(input_text, output_text, mode)
+            send_to_scratch_pad(scratch_pad, formatted_content)
+
+        send_to_scratch_pad_button.clicked.connect(on_send_to_scratch_pad)
 
     logger.info("URL Codec widget creation completed")
     return widget

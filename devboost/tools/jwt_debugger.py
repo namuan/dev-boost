@@ -216,7 +216,7 @@ class JWTDebugger:
 
 
 # ruff: noqa: C901
-def create_jwt_debugger_widget(style_func):
+def create_jwt_debugger_widget(style_func, scratch_pad=None):
     """
     Creates the main JWT Debugger widget.
 
@@ -226,6 +226,7 @@ def create_jwt_debugger_widget(style_func):
 
     Args:
         style_func: A function that returns a QStyle object, used for standard icons.
+        scratch_pad: Optional scratch pad widget to send results to.
 
     Returns:
         QWidget: The fully constructed JWT Debugger widget.
@@ -260,9 +261,16 @@ def create_jwt_debugger_widget(style_func):
     sample_button = QPushButton("Sample")
     clear_button = QPushButton("Clear")
 
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    send_to_scratch_pad_button = None
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+
     left_controls_layout.addWidget(clipboard_button)
     left_controls_layout.addWidget(sample_button)
     left_controls_layout.addWidget(clear_button)
+    if send_to_scratch_pad_button:
+        left_controls_layout.addWidget(send_to_scratch_pad_button)
     left_controls_layout.addStretch()
 
     # Input text area
@@ -483,10 +491,73 @@ def create_jwt_debugger_widget(style_func):
     header_copy_button.clicked.connect(lambda: copy_to_clipboard(header_text_edit.toPlainText()))
     payload_copy_button.clicked.connect(lambda: copy_to_clipboard(payload_text_edit.toPlainText()))
 
+    # Connect "Send to Scratch Pad" button if it exists
+    if send_to_scratch_pad_button:
+
+        def on_send_to_scratch_pad():
+            # Get current state for formatting
+            token = encoded_text_edit.toPlainText().strip()
+            header_text = header_text_edit.toPlainText()
+            payload_text = payload_text_edit.toPlainText()
+            secret = secret_input.toPlainText().strip()
+            status_text = status_label.text()
+
+            # Format with context
+            formatted_content = format_jwt_output_for_scratch_pad(
+                token, header_text, payload_text, secret, status_text, jwt_backend.is_valid
+            )
+            send_to_scratch_pad(scratch_pad, formatted_content)
+
+        send_to_scratch_pad_button.clicked.connect(on_send_to_scratch_pad)
+
     # Initialize display
     update_jwt_display()
 
     return main_widget
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)
+
+
+def format_jwt_output_for_scratch_pad(token, header, payload, secret, status, is_valid):
+    """
+    Format JWT Debugger output for sending to scratch pad with context.
+
+    Args:
+        token (str): The JWT token
+        header (str): The header JSON
+        payload (str): The payload JSON
+        secret (str): The secret used for verification
+        status (str): The verification status
+        is_valid (bool): Whether the signature is valid
+
+    Returns:
+        str: Formatted content for scratch pad
+    """
+    # Create a header with context
+    header_text = "JWT Debugger Results\n" + "=" * 50
+
+    # Format the results
+    token_section = f"TOKEN:\n{token}"
+    header_section = f"\n\nHEADER:\n{header}"
+    payload_section = f"\n\nPAYLOAD:\n{payload}"
+    secret_section = f"\n\nSECRET:\n{secret}" if secret else "\n\nSECRET:\n(None provided)"
+    status_section = f"\n\nVERIFICATION STATUS:\n{status}"
+    validity_section = f"\n\nSIGNATURE VALID:\n{'Yes' if is_valid else 'No'}"
+
+    return f"{header_text}\n{token_section}{header_section}{payload_section}{secret_section}{status_section}{validity_section}"
 
 
 if __name__ == "__main__":

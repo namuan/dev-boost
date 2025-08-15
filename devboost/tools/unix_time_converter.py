@@ -224,11 +224,12 @@ class UnixTimeConverter:
 
 
 # ruff: noqa: C901
-def create_unix_time_converter_widget(style_func):
+def create_unix_time_converter_widget(style_func, scratch_pad=None):
     """Create and return the Unix Time Converter widget.
 
     Args:
         style_func: Function to get QStyle for standard icons
+        scratch_pad: Optional scratch pad widget to send results to.
 
     Returns:
         QWidget: The complete Unix Time Converter widget
@@ -257,9 +258,16 @@ def create_unix_time_converter_widget(style_func):
     clipboard_button = QPushButton("Clipboard")
     clear_button = QPushButton("Clear")
 
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    send_to_scratch_pad_button = None
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+
     top_controls_layout.addWidget(now_button)
     top_controls_layout.addWidget(clipboard_button)
     top_controls_layout.addWidget(clear_button)
+    if send_to_scratch_pad_button:
+        top_controls_layout.addWidget(send_to_scratch_pad_button)
     top_controls_layout.addStretch()
 
     input_fields_layout = QHBoxLayout()
@@ -572,8 +580,78 @@ def create_unix_time_converter_widget(style_func):
     add_tz_button.clicked.connect(on_add_timezone_clicked)
     input_line_edit.textChanged.connect(update_conversion)
 
+    # Connect "Send to Scratch Pad" button if it exists
+    if send_to_scratch_pad_button:
+
+        def on_send_to_scratch_pad():
+            # Get current state for formatting
+            input_text = input_line_edit.text()
+
+            # Format with context
+            formatted_content = format_unix_time_output_for_scratch_pad(
+                input_text,
+                local_output.text(),
+                utc_output.text(),
+                relative_output.text(),
+                day_of_year_output.text(),
+                week_of_year_output.text(),
+                leap_year_output.text(),
+            )
+            send_to_scratch_pad(scratch_pad, formatted_content)
+
+        send_to_scratch_pad_button.clicked.connect(on_send_to_scratch_pad)
+
     # Initialize with current time
     on_now_clicked()
 
     logger.info("Unix Time Converter widget creation completed successfully")
     return converter_widget
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)
+
+
+def format_unix_time_output_for_scratch_pad(
+    input_text, local_time, utc_time, relative_time, day_of_year, week_of_year, leap_year
+):
+    """
+    Format Unix Time Converter output for sending to scratch pad with context.
+
+    Args:
+        input_text (str): The input timestamp
+        local_time (str): The local time representation
+        utc_time (str): The UTC time representation
+        relative_time (str): The relative time representation
+        day_of_year (str): The day of year
+        week_of_year (str): The week of year
+        leap_year (str): Whether it's a leap year
+
+    Returns:
+        str: Formatted content for scratch pad
+    """
+    # Create a header with context
+    header = f"Unix Time Converter Results\nInput: {input_text}\n" + "=" * 50
+
+    # Format the results
+    results_section = (
+        f"LOCAL TIME: {local_time}\n"
+        f"UTC TIME: {utc_time}\n"
+        f"RELATIVE TIME: {relative_time}\n"
+        f"DAY OF YEAR: {day_of_year}\n"
+        f"WEEK OF YEAR: {week_of_year}\n"
+        f"IS LEAP YEAR: {leap_year}"
+    )
+
+    return f"{header}\n{results_section}"
