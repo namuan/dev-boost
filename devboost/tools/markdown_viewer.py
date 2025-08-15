@@ -62,7 +62,7 @@ hello_world()```
 
 
 # ruff: noqa: C901
-def create_markdown_preview_widget():
+def create_markdown_preview_widget(style_func=None, scratch_pad=None):
     """
     Creates and returns the Markdown Preview widget.
 
@@ -123,6 +123,12 @@ def create_markdown_preview_widget():
     output_header_layout.setSpacing(8)
 
     open_browser_button = QPushButton("Open in Browser")
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+        send_to_scratch_pad_button.clicked.connect(lambda: send_to_scratch_pad(scratch_pad, output_view.toHtml()))
+        output_header_layout.addWidget(send_to_scratch_pad_button)
 
     output_header_layout.addStretch()
     output_header_layout.addWidget(open_browser_button)
@@ -241,9 +247,24 @@ if __name__ == "__main__":
     main_window.setWindowTitle("Markdown Preview Tool")
     main_window.setGeometry(100, 100, 1000, 700)
 
-    markdown_tool_widget = create_markdown_preview_widget()
+    markdown_tool_widget = create_markdown_preview_widget(app.style, None)
 
     main_window.setCentralWidget(markdown_tool_widget)
     main_window.show()
 
     sys.exit(app.exec())
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)

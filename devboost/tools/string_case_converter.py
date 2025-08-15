@@ -153,7 +153,7 @@ class StringCaseConverter:
 
 
 # ruff: noqa: C901
-def create_case_converter_widget(style_func):
+def create_case_converter_widget(style_func, scratch_pad=None):
     """
     Creates and returns the String Case Converter widget.
 
@@ -231,6 +231,14 @@ def create_case_converter_widget(style_func):
 
     copy_button = QPushButton("Copy")
     # Image description: A standard copy icon, depicting two overlapping pages.
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+        send_to_scratch_pad_button.clicked.connect(
+            lambda: send_to_scratch_pad(scratch_pad, output_text_edit.toPlainText())
+        )
+        output_header_layout.addWidget(send_to_scratch_pad_button)
 
     output_header_layout.addStretch()
     output_header_layout.addWidget(case_combo)
@@ -329,10 +337,25 @@ if __name__ == "__main__":
     main_window.setGeometry(100, 100, 900, 600)
 
     # The widget needs a function to get the application style
-    case_converter_tool_widget = create_case_converter_widget(app.style)
+    case_converter_tool_widget = create_case_converter_widget(app.style, None)
 
     # Set the created widget as the central widget of the main window.
     main_window.setCentralWidget(case_converter_tool_widget)
 
     main_window.show()
     sys.exit(app.exec())
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)

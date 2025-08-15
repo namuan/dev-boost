@@ -1325,7 +1325,7 @@ class ColorConverter:
 
 
 # ruff: noqa: C901
-def create_color_converter_widget(style_func):
+def create_color_converter_widget(style_func, scratch_pad=None):
     """
     Creates the Color Converter widget.
 
@@ -1592,7 +1592,20 @@ def create_color_converter_widget(style_func):
     code_presets_layout = QVBoxLayout(code_presets_tab)
     code_presets_layout.setContentsMargins(15, 15, 15, 15)
 
+    # Add toolbar for code presets
+    presets_toolbar = QHBoxLayout()
+    presets_toolbar.addStretch()
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+        send_to_scratch_pad_button.clicked.connect(
+            lambda: send_to_scratch_pad(scratch_pad, code_presets_edit.toPlainText())
+        )
+        presets_toolbar.addWidget(send_to_scratch_pad_button)
+
     code_presets_edit = QTextEdit()
+    code_presets_layout.addLayout(presets_toolbar)
     code_presets_edit.setObjectName("codePresetsEdit")
     code_presets_edit.setReadOnly(True)
 
@@ -1733,6 +1746,21 @@ new Color32({red_b}, {green_b}, {blue_b}, {alpha_b})"""
     main_layout.addWidget(right_panel, 1)  # Make right panel stretch
 
     return widget
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)
 
 
 if __name__ == "__main__":

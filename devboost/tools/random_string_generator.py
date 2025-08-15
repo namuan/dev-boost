@@ -114,7 +114,7 @@ class RandomStringProcessor:
 
 
 # ruff: noqa: C901
-def create_random_string_tool_widget(style=None) -> QWidget:
+def create_random_string_tool_widget(style=None, scratch_pad=None) -> QWidget:
     """
     Creates the Random String Generator tool widget.
 
@@ -248,6 +248,14 @@ def create_random_string_tool_widget(style=None) -> QWidget:
     count_spinbox.setFixedWidth(40)
 
     copy_button = QPushButton("Copy")
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+        send_to_scratch_pad_button.clicked.connect(
+            lambda: send_to_scratch_pad(scratch_pad, output_text_edit.toPlainText())
+        )
+        controls_layout.addWidget(send_to_scratch_pad_button)
 
     controls_layout.addStretch()
     controls_layout.addWidget(colors_checkbox)
@@ -421,7 +429,22 @@ if __name__ == "__main__":
     main_window = QMainWindow()
     main_window.setWindowTitle("Random String Generator")
     main_window.setGeometry(100, 100, 900, 600)
-    random_string_widget = create_random_string_tool_widget()
+    random_string_widget = create_random_string_tool_widget(scratch_pad=None)
     main_window.setCentralWidget(random_string_widget)
     main_window.show()
     sys.exit(app.exec())
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)

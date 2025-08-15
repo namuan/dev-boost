@@ -64,7 +64,8 @@ class XMLProcessor(QObject):
 </data>"""
 
 
-def create_xml_formatter_widget(style_func):
+# ruff: noqa: C901
+def create_xml_formatter_widget(style_func, scratch_pad=None):
     """Creates the main widget for the XML formatter tool."""
     xml_processor = XMLProcessor()
 
@@ -118,6 +119,14 @@ def create_xml_formatter_widget(style_func):
 
     copy_button = QPushButton("Copy")
     output_toolbar_layout.addWidget(copy_button)
+
+    # Add "Send to Scratch Pad" button if scratch_pad is provided
+    if scratch_pad:
+        send_to_scratch_pad_button = QPushButton("Send to Scratch Pad")
+        send_to_scratch_pad_button.clicked.connect(
+            lambda: send_to_scratch_pad(scratch_pad, output_text_edit.toPlainText())
+        )
+        output_toolbar_layout.addWidget(send_to_scratch_pad_button)
 
     right_layout.addLayout(output_toolbar_layout)
 
@@ -182,8 +191,23 @@ if __name__ == "__main__":
     main_window.setWindowTitle("XML Beautify/Minify Tool")
     main_window.setGeometry(100, 100, 800, 600)
 
-    central_widget = create_xml_formatter_widget(app.style)
+    central_widget = create_xml_formatter_widget(app.style, None)
     main_window.setCentralWidget(central_widget)
 
     main_window.show()
     sys.exit(app.exec())
+
+
+def send_to_scratch_pad(scratch_pad, content):
+    """
+    Send content to the scratch pad.
+
+    Args:
+        scratch_pad: The scratch pad widget.
+        content (str): The content to send.
+    """
+    if scratch_pad and content:
+        # Append content to the scratch pad with a separator
+        current_content = scratch_pad.get_content()
+        new_content = f"{current_content}\n\n---\n{content}" if current_content else content
+        scratch_pad.set_content(new_content)
