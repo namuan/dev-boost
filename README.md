@@ -19,6 +19,7 @@ Tools to boost developer productivity and improve workflows
 - **Color Converter**: Parse and convert colors between formats like HEX (3/4/6/8-digit), RGB/A, HSL/A, HSB/HSV, HWB, and CMYK. Generates code presets for CSS, Swift, Java, and other languages.
 - **Lorem Ipsum Generator**: Generate placeholder text (Lorem Ipsum) for design and testing purposes.
 - **Markdown Viewer**: Render and preview Markdown content in a clean, formatted view.
+- **Image Optimizer**: Compress and optimize images with quality control, format conversion, and resizing options. Supports JPEG, PNG, and WEBP formats.
 
 ## Installation
 
