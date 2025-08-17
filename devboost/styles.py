@@ -26,11 +26,11 @@ COLORS = {
     "btn_bg": "#f0f0f0",
     "btn_hover": "#e6e6e6",
     "btn_border": "#dcdcdc",
-    # Status colors
-    "success": "#28a745",
-    "warning": "#ffc107",
-    "error": "#dc3545",
-    "info": "#ff8c00",
+    # Neutral status colors
+    "success": "#4a6b57",
+    "warning": "#8c7d32",
+    "error": "#8c4d4d",
+    "info": "#4a637b",
 }
 
 # Font families - using simple system fonts to avoid loading delays
