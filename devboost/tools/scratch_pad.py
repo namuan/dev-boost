@@ -42,6 +42,8 @@ class ScratchPadWidget(QWidget):
         # Create a text edit for the scratch pad
         self.text_edit = QTextEdit()
         self.text_edit.setPlaceholderText("Start typing your notes here...")
+        # Set to plain text mode by default
+        self.text_edit.setAcceptRichText(False)
 
         # Create a button to clear the scratch pad
         clear_button = QPushButton("Clear")
