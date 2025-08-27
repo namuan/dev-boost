@@ -35,6 +35,7 @@ class ScratchPadWidget(QWidget):
         Initialize the user interface for the scratch pad.
         """
         self.setStyleSheet(get_tool_style())
+        self.setMinimumWidth(350)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)

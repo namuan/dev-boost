@@ -64,6 +64,8 @@ class DevDriverWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetFloatable
         )
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.scratch_pad_dock)
+        # Set a larger default width for the scratch pad dock using resizeDocks
+        self.resizeDocks([self.scratch_pad_dock], [400], Qt.Orientation.Horizontal)
         self.scratch_pad_dock.hide()  # Initially hidden
 
         central_widget = QWidget()
