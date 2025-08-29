@@ -231,10 +231,23 @@ def create_http_client_widget(style_func, scratch_pad=None):
     headers_table.setMaximumHeight(150)
     request_layout.addWidget(headers_table)
 
+    # Header buttons layout
+    header_buttons_layout = QHBoxLayout()
+
     # Add header button
     add_header_button = QPushButton("Add Header")
     add_header_button.setFixedWidth(100)
-    request_layout.addWidget(add_header_button)
+    header_buttons_layout.addWidget(add_header_button)
+
+    # Delete header button
+    delete_header_button = QPushButton("Delete Header")
+    delete_header_button.setFixedWidth(120)
+    header_buttons_layout.addWidget(delete_header_button)
+
+    # Add stretch to push buttons to the left
+    header_buttons_layout.addStretch()
+
+    request_layout.addLayout(header_buttons_layout)
 
     # Body section
     body_label = QLabel("Request Body:")
@@ -298,6 +311,18 @@ def create_http_client_widget(style_func, scratch_pad=None):
         headers_table.setItem(row_count, 0, QTableWidgetItem(""))
         headers_table.setItem(row_count, 1, QTableWidgetItem(""))
         logger.debug(f"Added header row {row_count}")
+
+    def delete_header_row():
+        """Delete selected header row(s) from the table."""
+        selected_rows = set()
+        for item in headers_table.selectedItems():
+            selected_rows.add(item.row())
+
+        # Delete rows in reverse order to maintain correct indices
+        for row in sorted(selected_rows, reverse=True):
+            headers_table.removeRow(row)
+
+        logger.debug(f"Deleted header row(s) {selected_rows}")
 
     def get_headers() -> dict[str, str]:
         """Extract headers from the table."""
@@ -415,6 +440,7 @@ Content Type: {response_data["content_type"]}"""
 
     # Connect signals
     add_header_button.clicked.connect(add_header_row)
+    delete_header_button.clicked.connect(delete_header_row)
     send_button.clicked.connect(make_request)
     clear_button.clicked.connect(clear_all)
     copy_response_button.clicked.connect(copy_response)

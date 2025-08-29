@@ -291,6 +291,51 @@ class TestHTTPClientWidget:
         # Verify row was added
         assert headers_table.rowCount() == initial_row_count + 1
 
+    def test_delete_header_functionality(self):
+        """Test deleting headers from the headers table."""
+        widget = create_http_client_widget(self.app.style)
+
+        # Find headers table
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+
+        tables = widget.findChildren(QTableWidget)
+        headers_table = None
+        for table in tables:
+            if (
+                table.columnCount() == 2
+                and table.horizontalHeaderItem(0)
+                and table.horizontalHeaderItem(0).text() == "Key"
+            ):
+                headers_table = table
+                break
+
+        assert headers_table is not None
+
+        # Add a row first
+        initial_row_count = headers_table.rowCount()
+        headers_table.setRowCount(initial_row_count + 1)
+        headers_table.setItem(initial_row_count, 0, QTableWidgetItem("Test-Key"))
+        headers_table.setItem(initial_row_count, 1, QTableWidgetItem("Test-Value"))
+
+        # Select the row and click delete header button
+        from PyQt6.QtWidgets import QPushButton
+
+        buttons = widget.findChildren(QPushButton)
+        delete_header_button = None
+        for button in buttons:
+            if button.text() == "Delete Header":
+                delete_header_button = button
+                break
+
+        assert delete_header_button is not None
+
+        # Select the row we just added
+        headers_table.selectRow(initial_row_count)
+        delete_header_button.click()
+
+        # Verify row was deleted
+        assert headers_table.rowCount() == initial_row_count
+
     def test_method_selector_options(self):
         """Test that method selector has all HTTP methods."""
         widget = create_http_client_widget(self.app.style)
