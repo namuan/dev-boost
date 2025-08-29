@@ -21,6 +21,7 @@ from .styles import get_main_app_style
 from .tools import (
     create_base64_string_encodec_widget,
     create_color_converter_widget,
+    create_http_client_widget,
     create_image_optimizer_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
@@ -246,6 +247,7 @@ class DevDriverWindow(QMainWindow):
             ("📋", "Markdown Viewer", "markdown preview render view md"),
             ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
             ("🎲", "Random String Generator", "random string generator password characters"),
+            ("🌐", "HTTP Client", "http client request api rest get post put delete"),
         ]
         logger.info(f"Defined {len(self.tools)} tools for the sidebar")
 
@@ -364,6 +366,8 @@ class DevDriverWindow(QMainWindow):
         self.random_string_generator_screen = create_random_string_tool_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Image Optimizer screen")
         self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating HTTP Client screen")
+        self.http_client_screen = create_http_client_widget(self.style, self.scratch_pad_widget)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -381,6 +385,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.markdown_viewer_screen)
         self.stacked_widget.addWidget(self.random_string_generator_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
+        self.stacked_widget.addWidget(self.http_client_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -473,6 +478,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("Image Optimizer")
             self.stacked_widget.setCurrentWidget(self.image_optimizer_screen)
             logger.info("Switched to Image Optimizer view")
+        elif tool_name == "HTTP Client":
+            self.top_bar_title.setText("HTTP Client")
+            self.stacked_widget.setCurrentWidget(self.http_client_screen)
+            logger.info("Switched to HTTP Client view")
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)

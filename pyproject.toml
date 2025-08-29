@@ -23,6 +23,7 @@ dependencies = [
     "pyyaml>=6.0",
     "appdirs>=1.4.4",
     "Pillow>=9.0.0",
+    "requests>=2.32.5",
 ]
 
 [project.urls]
