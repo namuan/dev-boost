@@ -408,7 +408,13 @@ class TestHTTPClientWidget:
         from PyQt6.QtWidgets import QLineEdit
 
         line_edits = widget.findChildren(QLineEdit)
-        url_input = line_edits[0]  # First line edit should be URL input
+        url_input = None
+        for line_edit in line_edits:
+            if hasattr(line_edit, "placeholderText") and "Enter URL" in line_edit.placeholderText():
+                url_input = line_edit
+                break
+
+        assert url_input is not None
         url_input.setText("https://api.example.com/test")
 
         # Find body input and set some text

@@ -196,6 +196,21 @@ def create_http_client_widget(style_func, scratch_pad=None):
     request_layout.setContentsMargins(10, 10, 10, 10)
     request_layout.setSpacing(8)
 
+    # Action buttons
+    action_layout = QHBoxLayout()
+    action_layout.addStretch()
+
+    clear_button = QPushButton("Clear")
+    copy_response_button = QPushButton("Copy Response")
+    send_to_scratch_button = QPushButton("Send to Scratch Pad")
+
+    action_layout.addWidget(clear_button)
+    action_layout.addWidget(copy_response_button)
+    if scratch_pad:
+        action_layout.addWidget(send_to_scratch_button)
+
+    request_layout.addLayout(action_layout)
+
     # URL and method row
     url_layout = QHBoxLayout()
     url_layout.setSpacing(8)
@@ -291,17 +306,6 @@ def create_http_client_widget(style_func, scratch_pad=None):
     # Action buttons
     action_layout = QHBoxLayout()
     action_layout.addStretch()
-
-    clear_button = QPushButton("Clear")
-    copy_response_button = QPushButton("Copy Response")
-    send_to_scratch_button = QPushButton("Send to Scratch Pad")
-
-    action_layout.addWidget(clear_button)
-    action_layout.addWidget(copy_response_button)
-    if scratch_pad:
-        action_layout.addWidget(send_to_scratch_button)
-
-    main_layout.addLayout(action_layout)
 
     # Event handlers
     def add_header_row():
