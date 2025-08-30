@@ -27,7 +27,6 @@ from .tools import (
     create_jwt_debugger_widget,
     create_lorem_ipsum_tool_widget,
     create_markdown_preview_widget,
-    create_pipx_runner_widget,
     create_random_string_tool_widget,
     create_regexp_tester_widget,
     create_scratch_pad_widget,
@@ -35,6 +34,7 @@ from .tools import (
     create_unix_time_converter_widget,
     create_url_codec_widget,
     create_uuid_ulid_tool_widget,
+    create_uvx_runner_widget,
     create_xml_formatter_widget,
     create_yaml_to_json_widget,
 )
@@ -249,7 +249,7 @@ class DevDriverWindow(QMainWindow):
             ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌐", "HTTP Client", "http client request api rest get post put delete"),
-            ("📦", "Pipx Runner", "pipx tools runner install execute command line utilities"),
+            ("📦", "Uvx Runner", "uvx tools runner install execute command line utilities"),
         ]
         logger.info(f"Defined {len(self.tools)} tools for the sidebar")
 
@@ -370,8 +370,8 @@ class DevDriverWindow(QMainWindow):
         self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating HTTP Client screen")
         self.http_client_screen = create_http_client_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Pipx Runner screen")
-        self.pipx_runner_screen = create_pipx_runner_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating Uvx Runner screen")
+        self.uvx_runner_screen = create_uvx_runner_widget(self.style, self.scratch_pad_widget)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -390,7 +390,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.random_string_generator_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
-        self.stacked_widget.addWidget(self.pipx_runner_screen)
+        self.stacked_widget.addWidget(self.uvx_runner_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -487,10 +487,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("HTTP Client")
             self.stacked_widget.setCurrentWidget(self.http_client_screen)
             logger.info("Switched to HTTP Client view")
-        elif tool_name == "Pipx Runner":
-            self.top_bar_title.setText("Pipx Runner")
-            self.stacked_widget.setCurrentWidget(self.pipx_runner_screen)
-            logger.info("Switched to Pipx Runner view")
+        elif tool_name == "Uvx Runner":
+            self.top_bar_title.setText("Uvx Runner")
+            self.stacked_widget.setCurrentWidget(self.uvx_runner_screen)
+            logger.info("Switched to Uvx Runner view")
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)

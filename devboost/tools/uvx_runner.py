@@ -24,8 +24,8 @@ from ..styles import get_autocomplete_dropdown_style, get_status_style, get_tool
 # Logger for debugging
 logger = logging.getLogger(__name__)
 
-# Predefined pipx tools with descriptions
-PIPX_TOOLS = {
+# Predefined uvx tools with descriptions
+UVX_TOOLS = {
     "bump2version": "Version-bump your software with a single command",
     "catsql": "Filter and analyze CSV, TSV, JSON, and SQLite files",
     "cookiecutter": "Command-line utility for creating projects from templates",
@@ -70,9 +70,9 @@ PIPX_TOOLS = {
 }
 
 
-class PipxRunner(QObject):
+class UvxRunner(QObject):
     """
-    Backend pipx runner logic with proper process management and output handling.
+    Backend uvx runner logic with proper process management and output handling.
     """
 
     command_started = pyqtSignal()
@@ -88,13 +88,13 @@ class PipxRunner(QObject):
         self.working_directory = os.path.join(os.path.expanduser("~"), "temp")
         # Create the directory if it doesn't exist
         os.makedirs(self.working_directory, exist_ok=True)
-        logger.info(f"PipxRunner initialized with working directory: {self.working_directory}")
+        logger.info(f"UvxRunner initialized with working directory: {self.working_directory}")
 
-    def _parse_installed_tools(self, pipx_output: str) -> list[str]:
-        """Parse pipx list output to extract installed tool names."""
+    def _parse_installed_tools(self, uvx_output: str) -> list[str]:
+        """Parse uvx list output to extract installed tool names."""
         installed_tools = []
-        if pipx_output.strip():
-            for line in pipx_output.strip().split("\n"):
+        if uvx_output.strip():
+            for line in uvx_output.strip().split("\n"):
                 line = line.strip()
                 # Skip empty lines and warning messages
                 if (
@@ -110,15 +110,6 @@ class PipxRunner(QObject):
                     installed_tools.append(package_name)
         return installed_tools
 
-    def _get_not_installed_help_text(self, tool_name: str) -> str:
-        """Generate help text for tools that are not installed."""
-        return (
-            f"Tool '{tool_name}' is not installed.\n\n"
-            f"Description: {PIPX_TOOLS[tool_name]}\n\n"
-            f"To install: pipx install {tool_name}\n\n"
-            "You can install it using the 'Install Tool' button below."
-        )
-
     def _get_tool_help_text(self, tool_name: str, help_result) -> str:
         """Generate help text from tool --help command result."""
         if help_result.returncode == 0:
@@ -127,38 +118,29 @@ class PipxRunner(QObject):
                 help_text += f"\n\nAdditional info:\n{help_result.stderr}"
         else:
             help_text = f"Could not get help for {tool_name}.\n\n"
-            help_text += f"Description: {PIPX_TOOLS[tool_name]}\n\n"
+            help_text += f"Description: {UVX_TOOLS[tool_name]}\n\n"
             if help_result.stderr:
                 help_text += f"Error: {help_result.stderr}"
         return help_text
 
     def get_tool_help(self, tool_name: str) -> None:
         """
-        Get help information for a specific pipx tool.
+        Get help information for a specific uvx tool.
 
         Args:
-            tool_name: Name of the pipx tool to get help for
+            tool_name: Name of the uvx tool to get help for
         """
-        logger.info(f"Getting help for pipx tool: {tool_name}")
+        logger.info(f"Getting help for uvx tool: {tool_name}")
 
-        if not tool_name or tool_name not in PIPX_TOOLS:
+        if not tool_name or tool_name not in UVX_TOOLS:
             self.help_received.emit("Please select a valid tool from the dropdown.")
             return
 
         try:
-            # Check if tool is installed
-            result = subprocess.run(["pipx", "list", "--short"], capture_output=True, text=True, timeout=10)  # noqa: S603, S607
-            installed_tools = self._parse_installed_tools(result.stdout)
+            # Get help directly from the tool using uvx
+            help_result = subprocess.run(["uvx", tool_name, "--help"], capture_output=True, text=True, timeout=15)  # noqa: S603,S607
 
-            if tool_name not in installed_tools:
-                help_text = self._get_not_installed_help_text(tool_name)
-                self.help_received.emit(help_text)
-                return
-
-            # Get help for installed tool
-            help_result = subprocess.run([tool_name, "--help"], capture_output=True, text=True, timeout=15)  # noqa: S603
             help_text = self._get_tool_help_text(tool_name, help_result)
-
             self.help_received.emit(help_text)
             logger.debug(f"Help retrieved successfully for {tool_name}")
 
@@ -171,36 +153,35 @@ class PipxRunner(QObject):
             logger.exception(error_msg)
             self.help_received.emit(f"Error: {error_msg}")
 
-    def install_tool(self, tool_name: str) -> None:
-        """
-        Install a pipx tool.
-
-        Args:
-            tool_name: Name of the tool to install
-        """
-        if not tool_name or tool_name not in PIPX_TOOLS:
-            self.command_failed.emit("Please select a valid tool from the dropdown.")
-            return
-
-        logger.info(f"Installing pipx tool: {tool_name}")
-        self._run_command(["pipx", "install", tool_name])
+    def _get_tool_help_text(self, tool_name: str, help_result) -> str:
+        """Generate help text from tool --help command result."""
+        if help_result.returncode == 0:
+            help_text = f"Help for {tool_name}:\n\n{help_result.stdout}"
+            if help_result.stderr:
+                help_text += f"\n\nAdditional info:\n{help_result.stderr}"
+        else:
+            help_text = f"Could not get help for {tool_name}.\n\n"
+            help_text += f"Description: {UVX_TOOLS[tool_name]}\n\n"
+            if help_result.stderr:
+                help_text += f"Error: {help_result.stderr}"
+        return help_text
 
     def run_tool(self, tool_name: str, arguments: str) -> None:
         """
-        Run a pipx tool with the provided arguments.
+        Run a uvx tool with the provided arguments.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Command line arguments for the tool
         """
-        if not tool_name or tool_name not in PIPX_TOOLS:
+        if not tool_name or tool_name not in UVX_TOOLS:
             self.command_failed.emit("Please select a valid tool from the dropdown.")
             return
 
-        logger.info(f"Running pipx tool: {tool_name} with arguments: {arguments}")
+        logger.info(f"Running uvx tool: {tool_name} with arguments: {arguments}")
 
         # Build command
-        cmd = [tool_name]
+        cmd = ["uvx", tool_name]
         if arguments.strip():
             # Simple argument splitting - could be enhanced for more complex cases
             cmd.extend(arguments.strip().split())
@@ -274,9 +255,9 @@ class PipxRunner(QObject):
             self.process = None
 
 
-def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
+def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     """
-    Creates the main widget for the Pipx Runner tool.
+    Creates the main widget for the Uvx Runner tool.
 
     Args:
         style_func: A function that returns a QStyle object to fetch standard icons.
@@ -285,7 +266,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     Returns:
         QWidget: The main widget for the tool.
     """
-    pipx_runner = PipxRunner()
+    uvx_runner = UvxRunner()
 
     widget = QWidget()
     widget.setStyleSheet(get_tool_style())
@@ -311,7 +292,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     dir_layout.addWidget(dir_label)
 
     dir_input = QLineEdit()
-    dir_input.setText(pipx_runner.working_directory)
+    dir_input.setText(uvx_runner.working_directory)
     dir_layout.addWidget(dir_input)
 
     dir_button = QPushButton("Browse...")
@@ -372,7 +353,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     # Store tool items with name and description for better filtering
     tool_items = []
-    for tool_name, description in PIPX_TOOLS.items():
+    for tool_name, description in UVX_TOOLS.items():
         display_text = f"{tool_name} - {description}"
         tool_items.append((tool_name, display_text))
 
@@ -562,13 +543,11 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     button_layout.setSpacing(8)
 
     get_help_button = QPushButton("Get Help")
-    install_button = QPushButton("Install Tool")
     run_button = QPushButton("Run Tool")
     stop_button = QPushButton("Stop")
     stop_button.setEnabled(False)
 
     button_layout.addWidget(get_help_button)
-    button_layout.addWidget(install_button)
     button_layout.addWidget(run_button)
     button_layout.addWidget(stop_button)
     button_layout.addStretch()
@@ -625,7 +604,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         directory = QFileDialog.getExistingDirectory(widget, "Select Working Directory", dir_input.text())
         if directory:
             dir_input.setText(directory)
-            pipx_runner.working_directory = directory
+            uvx_runner.working_directory = directory
             status_label.setText(f"Working directory set to: {directory}")
 
     def on_get_help():
@@ -635,10 +614,10 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
         logger.debug(f"Tool name to get help for: '{tool_name}'")
-        if tool_name and tool_name in PIPX_TOOLS:
+        if tool_name and tool_name in UVX_TOOLS:
             logger.info(f"Getting help for tool: {tool_name}")
             status_label.setText(f"Getting help for {tool_name}...")
-            pipx_runner.get_tool_help(tool_name)
+            uvx_runner.get_tool_help(tool_name)
         else:
             logger.warning(f"Cannot get help - invalid tool: '{tool_name}'")
             QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
@@ -650,10 +629,10 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
         logger.debug(f"Tool name to install: '{tool_name}'")
-        if tool_name and tool_name in PIPX_TOOLS:
+        if tool_name and tool_name in UVX_TOOLS:
             logger.info(f"Installing tool: {tool_name}")
             status_label.setText(f"Installing {tool_name}...")
-            pipx_runner.install_tool(tool_name)
+            uvx_runner.install_tool(tool_name)
         else:
             logger.warning(f"Cannot install - invalid tool: '{tool_name}'")
             QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
@@ -662,26 +641,26 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         logger.debug(f"on_run_tool called. Current selected tool: {current_selected_tool}")
         logger.debug(f"Tool input text: '{tool_input.text()}'")
         # Update working directory from input field
-        pipx_runner.working_directory = dir_input.text()
+        uvx_runner.working_directory = dir_input.text()
 
         tool_name = (
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
         logger.debug(f"Tool name to run: '{tool_name}'")
-        if tool_name and tool_name in PIPX_TOOLS:
+        if tool_name and tool_name in UVX_TOOLS:
             arguments = args_input.text().strip()
             logger.info(
-                f"Running tool: {tool_name} with args: {arguments} in directory: {pipx_runner.working_directory}"
+                f"Running tool: {tool_name} with args: {arguments} in directory: {uvx_runner.working_directory}"
             )
-            status_label.setText(f"Running {tool_name} in {pipx_runner.working_directory}...")
-            pipx_runner.run_tool(tool_name, arguments)
+            status_label.setText(f"Running {tool_name} in {uvx_runner.working_directory}...")
+            uvx_runner.run_tool(tool_name, arguments)
         else:
             logger.warning(f"Cannot run - invalid tool: '{tool_name}'")
             QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_stop_command():
         logger.info("Stopping command")
-        pipx_runner.stop_command()
+        uvx_runner.stop_command()
         status_label.setText("Command stopped")
 
     def on_clear_output():
@@ -713,7 +692,6 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     # Signal connections
     dir_button.clicked.connect(on_browse_directory)
     get_help_button.clicked.connect(on_get_help)
-    install_button.clicked.connect(on_install_tool)
     run_button.clicked.connect(on_run_tool)
     stop_button.clicked.connect(on_stop_command)
     clear_output_button.clicked.connect(on_clear_output)
@@ -721,31 +699,28 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     if scratch_pad:
         send_to_scratch_button.clicked.connect(on_send_to_scratch)
 
-    # Pipx runner signal connections
+    # Uvx runner signal connections
     def on_command_started():
         logger.debug("Command started - updating UI")
         progress_bar.setVisible(True)
         run_button.setEnabled(False)
-        install_button.setEnabled(False)
         stop_button.setEnabled(True)
-        status_label.setText(f"Command running in {pipx_runner.working_directory}...")
+        status_label.setText(f"Command running in {uvx_runner.working_directory}...")
 
     def on_command_finished(exit_code):
         logger.debug(f"Command finished with exit code {exit_code} - updating UI")
         progress_bar.setVisible(False)
         run_button.setEnabled(True)
-        install_button.setEnabled(True)
         stop_button.setEnabled(False)
         if exit_code == 0:
-            status_label.setText(f"Command completed successfully in {pipx_runner.working_directory}")
+            status_label.setText(f"Command completed successfully in {uvx_runner.working_directory}")
         else:
-            status_label.setText(f"Command failed with exit code {exit_code} in {pipx_runner.working_directory}")
+            status_label.setText(f"Command failed with exit code {exit_code} in {uvx_runner.working_directory}")
 
     def on_command_failed(error_message):
         logger.error(f"Command failed: {error_message}")
         progress_bar.setVisible(False)
         run_button.setEnabled(True)
-        install_button.setEnabled(True)
         stop_button.setEnabled(False)
         status_label.setText(f"Error: {error_message}")
         output_text.append(f"\n[ERROR] {error_message}\n")
@@ -764,11 +739,11 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         output_text.append(help_text)
         status_label.setText("Help information displayed")
 
-    pipx_runner.command_started.connect(on_command_started)
-    pipx_runner.command_finished.connect(on_command_finished)
-    pipx_runner.command_failed.connect(on_command_failed)
-    pipx_runner.output_received.connect(on_output_received)
-    pipx_runner.help_received.connect(on_help_received)
+    uvx_runner.command_started.connect(on_command_started)
+    uvx_runner.command_finished.connect(on_command_finished)
+    uvx_runner.command_failed.connect(on_command_failed)
+    uvx_runner.output_received.connect(on_output_received)
+    uvx_runner.help_received.connect(on_help_received)
 
-    logger.info("Pipx Runner widget created successfully")
+    logger.info("Uvx Runner widget created successfully")
     return widget

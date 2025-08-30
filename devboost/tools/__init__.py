@@ -6,7 +6,6 @@ from .json_format_validate import create_json_formatter_widget
 from .jwt_debugger import create_jwt_debugger_widget
 from .lorem_ipsum_generator import create_lorem_ipsum_tool_widget
 from .markdown_viewer import create_markdown_preview_widget
-from .pipx_runner import create_pipx_runner_widget
 from .random_string_generator import create_random_string_tool_widget
 from .regex_tester import create_regexp_tester_widget
 from .scratch_pad import create_scratch_pad_widget
@@ -14,6 +13,7 @@ from .string_case_converter import create_case_converter_widget as create_string
 from .unix_time_converter import create_unix_time_converter_widget
 from .url_encode_decode import create_url_codec_widget
 from .uuid_ulid_generator import create_uuid_ulid_tool_widget
+from .uvx_runner import create_uvx_runner_widget
 from .xml_beautifier import create_xml_formatter_widget
 from .yaml_to_json import create_yaml_to_json_widget
 
@@ -26,7 +26,7 @@ __all__ = [
     "create_jwt_debugger_widget",
     "create_lorem_ipsum_tool_widget",
     "create_markdown_preview_widget",
-    "create_pipx_runner_widget",
+    "create_uvx_runner_widget",
     "create_random_string_tool_widget",
     "create_regexp_tester_widget",
     "create_scratch_pad_widget",

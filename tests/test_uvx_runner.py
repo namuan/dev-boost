@@ -4,47 +4,49 @@ from unittest.mock import Mock, patch
 import pytest
 from PyQt6.QtCore import QProcess
 
-from devboost.tools.pipx_runner import (
-    PIPX_TOOLS,
-    PipxRunner,
-    create_pipx_runner_widget,
+from devboost.tools.uvx_runner import (
+    UVX_TOOLS,
+    UvxRunner,
+    create_uvx_runner_widget,
 )
 
 
-class TestPipxRunner:
-    """Test cases for PipxRunner class."""
+class TestUvxRunner:
+    """Test cases for UvxRunner class."""
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
-        self.pipx_runner = PipxRunner()
+        self.uvx_runner = UvxRunner()
 
-    def test_pipx_runner_initialization(self):
-        """Test PipxRunner initialization."""
-        assert self.pipx_runner is not None
-        assert self.pipx_runner.process is None
-        assert hasattr(self.pipx_runner, "command_started")
-        assert hasattr(self.pipx_runner, "command_finished")
-        assert hasattr(self.pipx_runner, "command_failed")
-        assert hasattr(self.pipx_runner, "output_received")
-        assert hasattr(self.pipx_runner, "help_received")
+    def test_uvx_runner_initialization(self):
+        """Test UvxRunner initialization."""
+        assert self.uvx_runner is not None
+        assert self.uvx_runner.process is None
+        assert hasattr(self.uvx_runner, "command_started")
+        assert hasattr(self.uvx_runner, "command_finished")
+        assert hasattr(self.uvx_runner, "command_failed")
+        assert hasattr(self.uvx_runner, "output_received")
+        assert hasattr(self.uvx_runner, "help_received")
 
     def test_pipx_tools_constant(self):
-        """Test that PIPX_TOOLS constant is properly defined."""
-        assert isinstance(PIPX_TOOLS, dict)
-        assert len(PIPX_TOOLS) > 0
+        """Test that UVX_TOOLS constant is properly defined."""
+        assert isinstance(UVX_TOOLS, dict)
+        assert len(UVX_TOOLS) > 0
 
         # Check that all expected tools are present
-        expected_tools = ["pgcli", "req2toml", "restview", "yt-dlp", "videogrep"]
+        expected_tools = ["bump2version", "catsql", "cookiecutter", "gallery-dl", "grip"]
         for tool in expected_tools:
-            assert tool in PIPX_TOOLS
-            assert isinstance(PIPX_TOOLS[tool], str)
-            assert len(PIPX_TOOLS[tool]) > 0
+            assert tool in UVX_TOOLS
+            assert isinstance(UVX_TOOLS[tool], str)
+            assert len(UVX_TOOLS[tool]) > 0
 
     @patch("subprocess.run")
     def test_get_tool_help_tool_not_installed(self, mock_subprocess_run):
-        """Test getting help for a tool that is not installed."""
-        # Mock pipx list command to return empty (tool not installed)
-        mock_subprocess_run.return_value = Mock(stdout="", stderr="", returncode=0)
+        """Test getting help for a tool that returns an error."""
+        # Mock tool help command that fails
+        help_result = Mock(stdout="", stderr="command not found", returncode=1)
+
+        mock_subprocess_run.return_value = help_result
 
         help_text = None
 
@@ -52,30 +54,32 @@ class TestPipxRunner:
             nonlocal help_text
             help_text = text
 
-        self.pipx_runner.help_received.connect(capture_help)
+        self.uvx_runner.help_received.connect(capture_help)
 
-        # Test getting help for pgcli
-        self.pipx_runner.get_tool_help("pgcli")
+        # Test getting help for bump2version
+        self.uvx_runner.get_tool_help("bump2version")
 
-        # Verify subprocess was called to check installed tools
-        mock_subprocess_run.assert_called_with(["pipx", "list", "--short"], capture_output=True, text=True, timeout=10)
+        # Verify subprocess was called to get help
+        mock_subprocess_run.assert_called_with(
+            ["uvx", "bump2version", "--help"], capture_output=True, text=True, timeout=15
+        )
 
-        # Verify help text indicates tool is not installed
+        # Verify help text contains error information
         assert help_text is not None
-        assert "not installed" in help_text
-        assert "pgcli" in help_text
-        assert "To install: pipx install pgcli" in help_text
+        assert "Could not get help for bump2version" in help_text
+        assert "Version-bump your software with a single command" in help_text
 
     @patch("subprocess.run")
     def test_get_tool_help_tool_installed(self, mock_subprocess_run):
-        """Test getting help for an installed tool."""
-        # Mock pipx list command to show tool is installed
-        list_result = Mock(stdout="pgcli\nother-tool\n", stderr="", returncode=0)
-
+        """Test getting help for a tool."""
         # Mock tool help command
-        help_result = Mock(stdout="pgcli - PostgreSQL CLI\nUsage: pgcli [OPTIONS]\n", stderr="", returncode=0)
+        help_result = Mock(
+            stdout="bump2version - Version-bump your software with a single command\nUsage: bump2version [OPTIONS]\n",
+            stderr="",
+            returncode=0,
+        )
 
-        mock_subprocess_run.side_effect = [list_result, help_result]
+        mock_subprocess_run.return_value = help_result
 
         help_text = None
 
@@ -83,26 +87,20 @@ class TestPipxRunner:
             nonlocal help_text
             help_text = text
 
-        self.pipx_runner.help_received.connect(capture_help)
+        self.uvx_runner.help_received.connect(capture_help)
 
-        # Test getting help for pgcli
-        self.pipx_runner.get_tool_help("pgcli")
+        # Test getting help for bump2version
+        self.uvx_runner.get_tool_help("bump2version")
 
-        # Verify both subprocess calls were made
-        assert mock_subprocess_run.call_count == 2
-
-        # Check first call (pipx list)
-        first_call = mock_subprocess_run.call_args_list[0]
-        assert first_call[0][0] == ["pipx", "list", "--short"]
-
-        # Check second call (tool help)
-        second_call = mock_subprocess_run.call_args_list[1]
-        assert second_call[0][0] == ["pgcli", "--help"]
+        # Verify subprocess was called to get help
+        mock_subprocess_run.assert_called_with(
+            ["uvx", "bump2version", "--help"], capture_output=True, text=True, timeout=15
+        )
 
         # Verify help text contains tool help
         assert help_text is not None
-        assert "Help for pgcli" in help_text
-        assert "PostgreSQL CLI" in help_text
+        assert "Help for bump2version" in help_text
+        assert "Version-bump your software with a single command" in help_text
 
     def test_get_tool_help_invalid_tool(self):
         """Test getting help for an invalid tool name."""
@@ -112,21 +110,21 @@ class TestPipxRunner:
             nonlocal help_text
             help_text = text
 
-        self.pipx_runner.help_received.connect(capture_help)
+        self.uvx_runner.help_received.connect(capture_help)
 
         # Test with empty tool name
-        self.pipx_runner.get_tool_help("")
+        self.uvx_runner.get_tool_help("")
         assert help_text == "Please select a valid tool from the dropdown."
 
         # Test with invalid tool name
-        self.pipx_runner.get_tool_help("invalid-tool")
+        self.uvx_runner.get_tool_help("invalid-tool")
         assert help_text == "Please select a valid tool from the dropdown."
 
     @patch("subprocess.run")
     def test_get_tool_help_timeout(self, mock_subprocess_run):
         """Test handling of timeout when getting tool help."""
         # Mock timeout exception
-        mock_subprocess_run.side_effect = subprocess.TimeoutExpired("pipx", 10)
+        mock_subprocess_run.side_effect = subprocess.TimeoutExpired("uvx", 10)
 
         help_text = None
 
@@ -134,33 +132,15 @@ class TestPipxRunner:
             nonlocal help_text
             help_text = text
 
-        self.pipx_runner.help_received.connect(capture_help)
+        self.uvx_runner.help_received.connect(capture_help)
 
-        # Test getting help for pgcli
-        self.pipx_runner.get_tool_help("pgcli")
+        # Test getting help for bump2version
+        self.uvx_runner.get_tool_help("bump2version")
 
         # Verify error message for timeout
         assert help_text is not None
         assert "Timeout" in help_text
-        assert "pgcli" in help_text
-
-    def test_install_tool_invalid_tool(self):
-        """Test installing an invalid tool."""
-        error_message = None
-
-        def capture_error(message):
-            nonlocal error_message
-            error_message = message
-
-        self.pipx_runner.command_failed.connect(capture_error)
-
-        # Test with empty tool name
-        self.pipx_runner.install_tool("")
-        assert error_message == "Please select a valid tool from the dropdown."
-
-        # Test with invalid tool name
-        self.pipx_runner.install_tool("invalid-tool")
-        assert error_message == "Please select a valid tool from the dropdown."
+        assert "bump2version" in help_text
 
     def test_run_tool_invalid_tool(self):
         """Test running an invalid tool."""
@@ -170,17 +150,17 @@ class TestPipxRunner:
             nonlocal error_message
             error_message = message
 
-        self.pipx_runner.command_failed.connect(capture_error)
+        self.uvx_runner.command_failed.connect(capture_error)
 
         # Test with empty tool name
-        self.pipx_runner.run_tool("", "--help")
+        self.uvx_runner.run_tool("", "--help")
         assert error_message == "Please select a valid tool from the dropdown."
 
         # Test with invalid tool name
-        self.pipx_runner.run_tool("invalid-tool", "--help")
+        self.uvx_runner.run_tool("invalid-tool", "--help")
         assert error_message == "Please select a valid tool from the dropdown."
 
-    @patch("devboost.tools.pipx_runner.QProcess")
+    @patch("devboost.tools.uvx_runner.QProcess")
     def test_run_command_success(self, mock_qprocess_class):
         """Test successful command execution."""
         # Create mock QProcess instance
@@ -195,10 +175,10 @@ class TestPipxRunner:
             nonlocal command_started
             command_started = True
 
-        self.pipx_runner.command_started.connect(capture_started)
+        self.uvx_runner.command_started.connect(capture_started)
 
         # Test running a command
-        self.pipx_runner._run_command(["pgcli", "--help"])
+        self.uvx_runner._run_command(["pgcli", "--help"])
 
         # Verify QProcess was created and configured
         mock_qprocess_class.assert_called_once()
@@ -214,13 +194,13 @@ class TestPipxRunner:
         # Verify command started signal was emitted
         assert command_started
 
-    @patch("devboost.tools.pipx_runner.QProcess")
+    @patch("devboost.tools.uvx_runner.QProcess")
     def test_run_command_already_running(self, mock_qprocess_class):
         """Test running a command when another is already running."""
         # Set up existing process
         existing_process = Mock()
         existing_process.state.return_value = QProcess.ProcessState.Running
-        self.pipx_runner.process = existing_process
+        self.uvx_runner.process = existing_process
 
         error_message = None
 
@@ -228,10 +208,10 @@ class TestPipxRunner:
             nonlocal error_message
             error_message = message
 
-        self.pipx_runner.command_failed.connect(capture_error)
+        self.uvx_runner.command_failed.connect(capture_error)
 
         # Try to run another command
-        self.pipx_runner._run_command(["pgcli", "--help"])
+        self.uvx_runner._run_command(["pgcli", "--help"])
 
         # Verify error message
         assert error_message == "Another command is already running. Please wait for it to finish."
@@ -242,8 +222,8 @@ class TestPipxRunner:
     def test_stop_command_no_process(self):
         """Test stopping command when no process is running."""
         # Should not raise any exception
-        self.pipx_runner.stop_command()
-        assert self.pipx_runner.process is None
+        self.uvx_runner.stop_command()
+        assert self.uvx_runner.process is None
 
     def test_stop_command_with_process(self):
         """Test stopping a running command."""
@@ -251,17 +231,17 @@ class TestPipxRunner:
         mock_process = Mock()
         mock_process.state.return_value = QProcess.ProcessState.Running
         mock_process.waitForFinished.return_value = True
-        self.pipx_runner.process = mock_process
+        self.uvx_runner.process = mock_process
 
         # Stop the command
-        self.pipx_runner.stop_command()
+        self.uvx_runner.stop_command()
 
         # Verify process was killed
         mock_process.kill.assert_called_once()
         mock_process.waitForFinished.assert_called_once_with(3000)
 
         # Verify process was cleared
-        assert self.pipx_runner.process is None
+        assert self.uvx_runner.process is None
 
     def test_handle_stdout(self):
         """Test handling stdout from process."""
@@ -270,7 +250,7 @@ class TestPipxRunner:
         mock_stdout_data = Mock()
         mock_stdout_data.data.return_value = b"Test output\n"
         mock_process.readAllStandardOutput.return_value = mock_stdout_data
-        self.pipx_runner.process = mock_process
+        self.uvx_runner.process = mock_process
 
         output_text = None
 
@@ -278,10 +258,10 @@ class TestPipxRunner:
             nonlocal output_text
             output_text = text
 
-        self.pipx_runner.output_received.connect(capture_output)
+        self.uvx_runner.output_received.connect(capture_output)
 
         # Call the handler
-        self.pipx_runner._handle_stdout()
+        self.uvx_runner._handle_stdout()
 
         # Verify output was captured
         assert output_text == "Test output\n"
@@ -293,7 +273,7 @@ class TestPipxRunner:
         mock_stderr_data = Mock()
         mock_stderr_data.data.return_value = b"Error message\n"
         mock_process.readAllStandardError.return_value = mock_stderr_data
-        self.pipx_runner.process = mock_process
+        self.uvx_runner.process = mock_process
 
         output_text = None
 
@@ -301,10 +281,10 @@ class TestPipxRunner:
             nonlocal output_text
             output_text = text
 
-        self.pipx_runner.output_received.connect(capture_output)
+        self.uvx_runner.output_received.connect(capture_output)
 
         # Call the handler
-        self.pipx_runner._handle_stderr()
+        self.uvx_runner._handle_stderr()
 
         # Verify stderr output was captured with prefix
         assert output_text == "[STDERR] Error message\n"
@@ -317,17 +297,17 @@ class TestPipxRunner:
             nonlocal exit_code
             exit_code = code
 
-        self.pipx_runner.command_finished.connect(capture_finished)
+        self.uvx_runner.command_finished.connect(capture_finished)
 
         # Set up a mock process
-        self.pipx_runner.process = Mock()
+        self.uvx_runner.process = Mock()
 
         # Call the handler
-        self.pipx_runner._handle_finished(0)
+        self.uvx_runner._handle_finished(0)
 
         # Verify exit code was captured and process was cleared
         assert exit_code == 0
-        assert self.pipx_runner.process is None
+        assert self.uvx_runner.process is None
 
     def test_handle_error(self):
         """Test handling process errors."""
@@ -337,23 +317,23 @@ class TestPipxRunner:
             nonlocal error_message
             error_message = message
 
-        self.pipx_runner.command_failed.connect(capture_error)
+        self.uvx_runner.command_failed.connect(capture_error)
 
         # Set up a mock process
-        self.pipx_runner.process = Mock()
+        self.uvx_runner.process = Mock()
 
         # Call the handler with a mock error
         mock_error = QProcess.ProcessError.FailedToStart
-        self.pipx_runner._handle_error(mock_error)
+        self.uvx_runner._handle_error(mock_error)
 
         # Verify error was captured and process was cleared
         assert error_message is not None
         assert "Process error" in error_message
-        assert self.pipx_runner.process is None
+        assert self.uvx_runner.process is None
 
 
-class TestPipxRunnerWidget:
-    """Test cases for pipx runner widget creation and functionality."""
+class TestUvxRunnerWidget:
+    """Test cases for uvx runner widget creation and functionality."""
 
     @pytest.fixture(autouse=True)
     def setup_qapp(self):
@@ -368,13 +348,13 @@ class TestPipxRunnerWidget:
             app = QApplication(sys.argv)
         self.qapp = app
 
-    def test_create_pipx_runner_widget(self):
-        """Test creating the pipx runner widget."""
+    def test_create_uvx_runner_widget(self):
+        """Test creating the uvx runner widget."""
         # Mock style function
         style_func = Mock()
 
         # Create widget
-        widget = create_pipx_runner_widget(style_func)
+        widget = create_uvx_runner_widget(style_func)
 
         # Verify widget was created
         assert widget is not None
@@ -384,15 +364,15 @@ class TestPipxRunnerWidget:
         children = widget.findChildren(object)
         assert len(children) > 0
 
-    def test_create_pipx_runner_widget_with_scratch_pad(self):
-        """Test creating the pipx runner widget with scratch pad integration."""
+    def test_create_uvx_runner_widget_with_scratch_pad(self):
+        """Test creating the uvx runner widget with scratch pad integration."""
         # Mock style function and scratch pad
         style_func = Mock()
         scratch_pad = Mock()
         scratch_pad.append_text = Mock()
 
         # Create widget
-        widget = create_pipx_runner_widget(style_func, scratch_pad)
+        widget = create_uvx_runner_widget(style_func, scratch_pad)
 
         # Verify widget was created
         assert widget is not None
@@ -410,7 +390,7 @@ class TestPipxRunnerWidget:
         style_func = Mock()
 
         # Create widget
-        widget = create_pipx_runner_widget(style_func)
+        widget = create_uvx_runner_widget(style_func)
 
         # Find the tool input and suggestions list
         tool_inputs = widget.findChildren(QLineEdit)
@@ -436,4 +416,4 @@ class TestPipxRunnerWidget:
         assert len(tool_suggestions) > 0
 
         # Verify PIPX_TOOLS constant is accessible (imported from the module)
-        assert len(PIPX_TOOLS) > 0
+        assert len(UVX_TOOLS) > 0

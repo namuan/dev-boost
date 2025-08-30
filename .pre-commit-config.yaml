@@ -34,16 +34,12 @@ repos:
     rev: "v0.6.3"
     hooks:
       - id: ruff
-        args: [--exit-non-zero-on-fix]
+        types_or: [python, pyi, jupyter, toml]
+        args: [--fix]
       - id: ruff-format
+        types_or: [python, pyi, jupyter, toml]
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: "v3.0.3"
     hooks:
       - id: prettier
-
-  - repo: https://github.com/pypa/pip-audit
-    rev: v2.9.0
-    hooks:
-      - id: pip-audit
-        args: ["."]

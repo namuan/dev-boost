@@ -21,7 +21,7 @@ Tools to boost developer productivity and improve workflows
 - **Markdown Viewer**: Render and preview Markdown content in a clean, formatted view.
 - **Image Optimizer**: Compress and optimize images with quality control, format conversion, and resizing options. Supports JPEG, PNG, and WEBP formats.
 - **HTTP Client**: Make HTTP requests with support for all common methods (GET, POST, PUT, DELETE, etc.). Features intelligent header autocomplete, request/response body handling, response timing, and tabbed response view with headers, body, and statistics.
-- **Pipx Runner**: Install and run pipx tools with a GUI interface. Features dropdown selection of predefined tools (pgcli, req2toml, restview, yt-dlp, videogrep), dynamic help display, argument input, real-time output capture, and integration with scratch pad for output management.
+- **Uvx Runner**: Install and run uvx tools with a GUI interface. Features dropdown selection of predefined tools (pgcli, req2toml, restview, yt-dlp, videogrep), dynamic help display, argument input, real-time output capture, and integration with scratch pad for output management.
 
 ## Installation
 
