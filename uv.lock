@@ -131,7 +131,6 @@ dependencies = [
     { name = "pyqt6" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "vulture" },
 ]
 
 [package.dev-dependencies]
@@ -154,7 +153,6 @@ requires-dist = [
     { name = "pyqt6" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "vulture", specifier = ">=2.14" },
 ]
 
 [package.metadata.requires-dev]

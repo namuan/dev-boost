@@ -24,7 +24,6 @@ dependencies = [
     "appdirs",
     "Pillow",
     "requests",
-    "vulture>=2.14",
 ]
 
 [project.urls]
