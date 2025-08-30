@@ -12,6 +12,7 @@ check: ## Run code quality tools.
 	@uv lock --locked
 	@echo "🚀 Linting code: Running pre-commit"
 	@uv run pre-commit run -a
+	@mob next
 
 .PHONY: test
 test: ## Run all unit tests

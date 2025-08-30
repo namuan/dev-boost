@@ -200,62 +200,67 @@ class AutoCompleteLineEdit(QLineEdit):
         # Get the popup widget
         popup = self.completer.popup()
         if popup:
-            # Apply custom stylesheet to the popup
-            popup_style = """
-                QListView {
-                    background-color: #2b2b2b;
-                    color: #ffffff;
-                    border: 1px solid #555555;
+            # Apply custom stylesheet to the popup using application theme
+            from ..styles import COLORS, FONTS
+
+            popup_style = f"""
+                QListView {{
+                    background-color: {COLORS["bg_primary"]};
+                    color: {COLORS["text_primary"]};
+                    border: 1px solid {COLORS["border_primary"]};
                     border-radius: 4px;
-                    selection-background-color: #0078d4;
-                    selection-color: #ffffff;
-                    font-size: 12px;
+                    selection-background-color: {COLORS["border_focus"]};
+                    selection-color: {COLORS["bg_primary"]};
+                    font-size: 13px;
                     padding: 2px;
-                }
-                QListView::item {
+                }}
+                QListView::item {{
                     padding: 4px 8px;
-                    border-bottom: 1px solid #404040;
-                }
-                QListView::item:hover {
-                    background-color: #404040;
-                }
-                QListView::item:selected {
-                    background-color: #0078d4;
-                    color: #ffffff;
-                }
-                QScrollBar:vertical {
-                    background-color: #2b2b2b;
+                    border-bottom: 1px solid {COLORS["border_light"]};
+                }}
+                QListView::item:hover {{
+                    background-color: {COLORS["bg_secondary"]};
+                }}
+                QListView::item:selected {{
+                    background-color: {COLORS["border_focus"]};
+                    color: {COLORS["bg_primary"]};
+                }}
+                QScrollBar:vertical {{
+                    background-color: {COLORS["bg_secondary"]};
                     width: 12px;
                     border-radius: 6px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #555555;
+                }}
+                QScrollBar::handle:vertical {{
+                    background-color: {COLORS["border_primary"]};
                     border-radius: 6px;
                     min-height: 20px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #666666;
-                }
+                    margin: 2px;
+                }}
+                QScrollBar::handle:vertical:hover {{
+                    background-color: {COLORS["text_muted"]};
+                }}
             """
             popup.setStyleSheet(popup_style)
 
-        # Apply styling to the line edit itself
-        line_edit_style = """
-            QLineEdit {
-                background-color: #3c3c3c;
-                color: #ffffff;
-                border: 1px solid #555555;
+        # Apply styling to the line edit itself using application theme
+        from ..styles import COLORS, FONTS
+
+        line_edit_style = f"""
+            QLineEdit {{
+                background-color: {COLORS["bg_primary"]};
+                color: {COLORS["text_primary"]};
+                border: 1px solid {COLORS["border_primary"]};
                 border-radius: 4px;
-                padding: 4px 8px;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border-color: #0078d4;
-                background-color: #404040;
-            }
-            QLineEdit:hover {
-                border-color: #666666;
-            }
+                padding: 5px 8px;
+                font-family: {FONTS["mono"]};
+                font-size: 13px;
+            }}
+            QLineEdit:focus {{
+                border-color: {COLORS["border_focus"]};
+            }}
+            QLineEdit:hover {{
+                background-color: {COLORS["bg_secondary"]};
+            }}
         """
         self.setStyleSheet(line_edit_style)
 
@@ -334,8 +339,6 @@ class AutoCompleteLineEdit(QLineEdit):
                 logger.debug(f"Completion count: {completion_count}")
 
                 if completion_count > 0:
-                    popup = self.completer.popup()
-                    popup.setCurrentIndex(self.completer.completionModel().index(0, 0))
                     self.completer.complete()
                     logger.debug(f"Triggered completer for '{text}' with {completion_count} matches")
                 else:
