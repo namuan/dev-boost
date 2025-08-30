@@ -26,3 +26,9 @@ repos:
     rev: "v3.0.3"
     hooks:
       - id: prettier
+
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0
+    hooks:
+      - id: pip-audit
+        args: ["."]
