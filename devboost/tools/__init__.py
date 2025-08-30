@@ -6,6 +6,7 @@ from .json_format_validate import create_json_formatter_widget
 from .jwt_debugger import create_jwt_debugger_widget
 from .lorem_ipsum_generator import create_lorem_ipsum_tool_widget
 from .markdown_viewer import create_markdown_preview_widget
+from .pipx_runner import create_pipx_runner_widget
 from .random_string_generator import create_random_string_tool_widget
 from .regex_tester import create_regexp_tester_widget
 from .scratch_pad import create_scratch_pad_widget
@@ -25,6 +26,7 @@ __all__ = [
     "create_jwt_debugger_widget",
     "create_lorem_ipsum_tool_widget",
     "create_markdown_preview_widget",
+    "create_pipx_runner_widget",
     "create_random_string_tool_widget",
     "create_regexp_tester_widget",
     "create_scratch_pad_widget",
