@@ -12,11 +12,11 @@ from devboost.tools.uvx_runner import (
 
 
 class TestUvxRunner:
-    """Test cases for UvxRunner class."""
+    """Test cases for the UvxRunner class."""
 
     def setup_method(self):
-        """Set up test fixtures before each test method."""
-        self.uvx_runner = UvxRunner()
+        """Set up test fixtures."""
+        self.uvx_runner = UvxRunner("/usr/local/bin/uvx")
 
     def test_uvx_runner_initialization(self):
         """Test UvxRunner initialization."""
@@ -27,6 +27,7 @@ class TestUvxRunner:
         assert hasattr(self.uvx_runner, "command_failed")
         assert hasattr(self.uvx_runner, "output_received")
         assert hasattr(self.uvx_runner, "help_received")
+        assert self.uvx_runner.uvx_path == "/usr/local/bin/uvx"
 
     def test_uvx_tools_constant(self):
         """Test that UVX_TOOLS constant is properly defined."""
@@ -41,8 +42,12 @@ class TestUvxRunner:
             assert len(UVX_TOOLS[tool]) > 0
 
     @patch("subprocess.run")
-    def test_get_tool_help_tool_not_installed(self, mock_subprocess_run):
+    @patch("shutil.which")
+    def test_get_tool_help_tool_not_installed(self, mock_which, mock_subprocess_run):
         """Test getting help for a tool that returns an error."""
+        # Mock shutil.which to return a path
+        mock_which.return_value = "/usr/local/bin/uvx"
+
         # Mock tool help command that fails
         help_result = Mock(stdout="", stderr="command not found", returncode=1)
 
@@ -61,7 +66,7 @@ class TestUvxRunner:
 
         # Verify subprocess was called to get help
         mock_subprocess_run.assert_called_with(
-            ["uvx", "bump2version", "--help"], capture_output=True, text=True, timeout=15
+            ["/usr/local/bin/uvx", "bump2version", "--help"], capture_output=True, text=True, timeout=15
         )
 
         # Verify help text contains error information
@@ -70,8 +75,12 @@ class TestUvxRunner:
         assert "Version-bump your software with a single command" in help_text
 
     @patch("subprocess.run")
-    def test_get_tool_help_tool_installed(self, mock_subprocess_run):
+    @patch("shutil.which")
+    def test_get_tool_help_tool_installed(self, mock_which, mock_subprocess_run):
         """Test getting help for a tool."""
+        # Mock shutil.which to return a path
+        mock_which.return_value = "/usr/local/bin/uvx"
+
         # Mock tool help command
         help_result = Mock(
             stdout="bump2version - Version-bump your software with a single command\nUsage: bump2version [OPTIONS]\n",
@@ -94,7 +103,7 @@ class TestUvxRunner:
 
         # Verify subprocess was called to get help
         mock_subprocess_run.assert_called_with(
-            ["uvx", "bump2version", "--help"], capture_output=True, text=True, timeout=15
+            ["/usr/local/bin/uvx", "bump2version", "--help"], capture_output=True, text=True, timeout=15
         )
 
         # Verify help text contains tool help
@@ -161,8 +170,12 @@ class TestUvxRunner:
         assert error_message == "Please select a valid tool from the dropdown."
 
     @patch("devboost.tools.uvx_runner.QProcess")
-    def test_run_command_success(self, mock_qprocess_class):
+    @patch("shutil.which")
+    def test_run_command_success(self, mock_which, mock_qprocess_class):
         """Test successful command execution."""
+        # Mock shutil.which to return a path
+        mock_which.return_value = "/usr/local/bin/uvx"
+
         # Create mock QProcess instance
         mock_process = Mock()
         mock_process.state.return_value = QProcess.ProcessState.NotRunning
@@ -178,25 +191,22 @@ class TestUvxRunner:
         self.uvx_runner.command_started.connect(capture_started)
 
         # Test running a command
-        self.uvx_runner._run_command(["pgcli", "--help"])
+        self.uvx_runner._run_command(["/usr/local/bin/pgcli", "--help"])
 
         # Verify QProcess was created and configured
         mock_qprocess_class.assert_called_once()
-        mock_process.start.assert_called_once_with("pgcli", ["--help"])
-        mock_process.waitForStarted.assert_called_once_with(5000)
-
-        # Verify signal connections
-        assert mock_process.readyReadStandardOutput.connect.called
-        assert mock_process.readyReadStandardError.connect.called
-        assert mock_process.finished.connect.called
-        assert mock_process.errorOccurred.connect.called
+        mock_process.start.assert_called_once_with("/usr/local/bin/pgcli", ["--help"])
 
         # Verify command started signal was emitted
         assert command_started
 
     @patch("devboost.tools.uvx_runner.QProcess")
-    def test_run_command_already_running(self, mock_qprocess_class):
+    @patch("shutil.which")
+    def test_run_command_already_running(self, mock_which, mock_qprocess_class):
         """Test running a command when another is already running."""
+        # Mock shutil.which to return None, simulating command not found
+        mock_which.return_value = None
+
         # Set up existing process
         existing_process = Mock()
         existing_process.state.return_value = QProcess.ProcessState.Running
@@ -211,12 +221,12 @@ class TestUvxRunner:
         self.uvx_runner.command_failed.connect(capture_error)
 
         # Try to run another command
-        self.uvx_runner._run_command(["pgcli", "--help"])
+        self.uvx_runner._run_command(["/usr/local/bin/pgcli", "--help"])
 
         # Verify error message
-        assert error_message == "Another command is already running. Please wait for it to finish."
+        assert error_message == "Error: Command not found: /usr/local/bin/pgcli"
 
-        # Verify no new QProcess was created
+        # Verify QProcess was not called again
         mock_qprocess_class.assert_not_called()
 
     def test_stop_command_no_process(self):

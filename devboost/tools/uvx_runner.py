@@ -1,4 +1,5 @@
 import logging
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -81,14 +82,18 @@ class UvxRunner(QObject):
     output_received = pyqtSignal(str)  # output_text
     help_received = pyqtSignal(str)  # help_text
 
-    def __init__(self):
+    def __init__(self, uvx_path: str = "/opt/homebrew/bin/uvx"):
         super().__init__()
         self.process = None
         # Set default working directory to temp folder under $HOME
         self.working_directory = Path.home() / "temp"
         # Create the directory if it doesn't exist
         Path(self.working_directory).mkdir(parents=True, exist_ok=True)
-        logger.info("UvxRunner initialized with working directory: %s", self.working_directory)
+        # Set the uvx path
+        self.uvx_path = uvx_path
+        logger.info(
+            "UvxRunner initialized with working directory: %s and uvx path: %s", self.working_directory, self.uvx_path
+        )
 
     def _parse_installed_tools(self, uvx_output: str) -> list[str]:
         """Parse uvx list output to extract installed tool names."""
@@ -138,7 +143,10 @@ class UvxRunner(QObject):
 
         try:
             # Get help directly from the tool using uvx
-            help_result = subprocess.run(["uvx", tool_name, "--help"], capture_output=True, text=True, timeout=15)  # noqa: S603,S607
+            # ruff: noqa: S603
+            help_result = subprocess.run(
+                [self.uvx_path, tool_name, "--help"], capture_output=True, text=True, timeout=15
+            )
 
             help_text = self._get_tool_help_text(tool_name, help_result)
             self.help_received.emit(help_text)
@@ -181,7 +189,7 @@ class UvxRunner(QObject):
         logger.info("Running uvx tool: %s with arguments: %s", tool_name, arguments)
 
         # Build command
-        cmd = ["uvx", tool_name]
+        cmd = [self.uvx_path, tool_name]
         if arguments.strip():
             # Simple argument splitting - could be enhanced for more complex cases
             cmd.extend(arguments.strip().split())
@@ -195,6 +203,13 @@ class UvxRunner(QObject):
         Args:
             cmd: Command and arguments as a list
         """
+        # Check if the command executable exists
+        if not shutil.which(cmd[0]) and cmd[0] != self.uvx_path:
+            error_msg = f"Command not found: {cmd[0]}"
+            logger.error(error_msg)
+            self.command_failed.emit(f"Error: {error_msg}")
+            return
+
         if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             self.command_failed.emit("Another command is already running. Please wait for it to finish.")
             return
@@ -216,6 +231,16 @@ class UvxRunner(QObject):
             error_msg = f"Failed to start command: {' '.join(cmd)}"
             logger.error(error_msg)
             self.command_failed.emit(error_msg)
+
+    def set_uvx_path(self, uvx_path: str) -> None:
+        """
+        Set the path to the uvx executable.
+
+        Args:
+            uvx_path: Path to the uvx executable
+        """
+        self.uvx_path = uvx_path
+        logger.info("Uvx path updated to: %s", uvx_path)
 
     def _handle_stdout(self):
         """Handle standard output from the running process."""
@@ -299,6 +324,23 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     dir_layout.addWidget(dir_button)
 
     control_layout.addLayout(dir_layout)
+
+    # Uvx path selection
+    uvx_layout = QHBoxLayout()
+    uvx_layout.setSpacing(8)
+
+    uvx_label = QLabel("Uvx Path:")
+    uvx_label.setFixedWidth(120)
+    uvx_layout.addWidget(uvx_label)
+
+    uvx_input = QLineEdit()
+    uvx_input.setText(uvx_runner.uvx_path)
+    uvx_layout.addWidget(uvx_input)
+
+    uvx_button = QPushButton("Browse...")
+    uvx_layout.addWidget(uvx_button)
+
+    control_layout.addLayout(uvx_layout)
 
     # Tool selection with auto-completion
     tool_layout = QVBoxLayout()
@@ -606,6 +648,15 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             uvx_runner.working_directory = directory
             status_label.setText(f"Working directory set to: {directory}")
 
+    def on_browse_uvx():
+        uvx_file, _ = QFileDialog.getOpenFileName(
+            widget, "Select Uvx Executable", uvx_input.text(), "Executable Files (*)"
+        )
+        if uvx_file:
+            uvx_input.setText(uvx_file)
+            uvx_runner.set_uvx_path(uvx_file)
+            status_label.setText(f"Uvx path set to: {uvx_file}")
+
     def on_get_help():
         logger.debug("on_get_help called. Current selected tool: %s", current_selected_tool)
         logger.debug("Tool input text: '%s'", tool_input.text())
@@ -693,6 +744,8 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     # Signal connections
     dir_button.clicked.connect(on_browse_directory)
+    uvx_button.clicked.connect(on_browse_uvx)
+    uvx_input.textChanged.connect(lambda text: uvx_runner.set_uvx_path(text) if text else None)
     get_help_button.clicked.connect(on_get_help)
     run_button.clicked.connect(on_run_tool)
     stop_button.clicked.connect(on_stop_command)
