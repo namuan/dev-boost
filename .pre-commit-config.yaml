@@ -43,8 +43,3 @@ repos:
     rev: "v3.0.3"
     hooks:
       - id: prettier
-
-  - repo: https://github.com/jendrikseipp/vulture
-    rev: "v2.14"
-    hooks:
-      - id: vulture

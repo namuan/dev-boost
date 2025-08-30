@@ -107,10 +107,5 @@ ignore = [
 [tool.ruff.format]
 preview = true
 
-[tool.vulture]
-min_confidence = 80
-paths = ["devboost"]
-sort_by_size = true
-
 [project.scripts]
 devboost = "devboost:main"
