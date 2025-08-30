@@ -1,10 +1,12 @@
 import logging
+import os
 import subprocess
 
 from PyQt6.QtCore import QObject, QProcess, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -117,7 +119,11 @@ class PipxRunner(QObject):
     def __init__(self):
         super().__init__()
         self.process = None
-        logger.info("PipxRunner initialized")
+        # Set default working directory to temp folder under $HOME
+        self.working_directory = os.path.join(os.path.expanduser("~"), "temp")
+        # Create the directory if it doesn't exist
+        os.makedirs(self.working_directory, exist_ok=True)
+        logger.info(f"PipxRunner initialized with working directory: {self.working_directory}")
 
     def get_tool_help(self, tool_name: str) -> None:
         """
@@ -219,12 +225,14 @@ class PipxRunner(QObject):
             return
 
         self.process = QProcess()
+        # Set the working directory
+        self.process.setWorkingDirectory(self.working_directory)
         self.process.readyReadStandardOutput.connect(self._handle_stdout)
         self.process.readyReadStandardError.connect(self._handle_stderr)
         self.process.finished.connect(self._handle_finished)
         self.process.errorOccurred.connect(self._handle_error)
 
-        logger.info(f"Starting command: {' '.join(cmd)}")
+        logger.info(f"Starting command: {' '.join(cmd)} in directory: {self.working_directory}")
         self.command_started.emit()
 
         self.process.start(cmd[0], cmd[1:])
@@ -299,6 +307,23 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     control_layout = QVBoxLayout(control_frame)
     control_layout.setContentsMargins(10, 10, 10, 10)
     control_layout.setSpacing(8)
+
+    # Working directory selection
+    dir_layout = QHBoxLayout()
+    dir_layout.setSpacing(8)
+
+    dir_label = QLabel("Working Directory:")
+    dir_label.setFixedWidth(120)
+    dir_layout.addWidget(dir_label)
+
+    dir_input = QLineEdit()
+    dir_input.setText(pipx_runner.working_directory)
+    dir_layout.addWidget(dir_input)
+
+    dir_button = QPushButton("Browse...")
+    dir_layout.addWidget(dir_button)
+
+    control_layout.addLayout(dir_layout)
 
     # Tool selection
     tool_layout = QHBoxLayout()
@@ -394,6 +419,13 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     main_layout.addWidget(output_frame)
 
     # Event handlers
+    def on_browse_directory():
+        directory = QFileDialog.getExistingDirectory(widget, "Select Working Directory", dir_input.text())
+        if directory:
+            dir_input.setText(directory)
+            pipx_runner.working_directory = directory
+            status_label.setText(f"Working directory set to: {directory}")
+
     def on_get_help():
         tool_name = tool_combo.currentData()
         if tool_name:
@@ -413,11 +445,16 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             QMessageBox.warning(widget, "Warning", "Please select a tool first.")
 
     def on_run_tool():
+        # Update working directory from input field
+        pipx_runner.working_directory = dir_input.text()
+
         tool_name = tool_combo.currentData()
         if tool_name:
             arguments = args_input.text().strip()
-            logger.info(f"Running tool: {tool_name} with args: {arguments}")
-            status_label.setText(f"Running {tool_name}...")
+            logger.info(
+                f"Running tool: {tool_name} with args: {arguments} in directory: {pipx_runner.working_directory}"
+            )
+            status_label.setText(f"Running {tool_name} in {pipx_runner.working_directory}...")
             pipx_runner.run_tool(tool_name, arguments)
         else:
             QMessageBox.warning(widget, "Warning", "Please select a tool first.")
@@ -454,6 +491,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
                 QMessageBox.information(widget, "Info", "No output to send.")
 
     # Signal connections
+    dir_button.clicked.connect(on_browse_directory)
     get_help_button.clicked.connect(on_get_help)
     install_button.clicked.connect(on_install_tool)
     run_button.clicked.connect(on_run_tool)
@@ -470,7 +508,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         run_button.setEnabled(False)
         install_button.setEnabled(False)
         stop_button.setEnabled(True)
-        status_label.setText("Command running...")
+        status_label.setText(f"Command running in {pipx_runner.working_directory}...")
 
     def on_command_finished(exit_code):
         logger.debug(f"Command finished with exit code {exit_code} - updating UI")
@@ -479,9 +517,9 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         install_button.setEnabled(True)
         stop_button.setEnabled(False)
         if exit_code == 0:
-            status_label.setText("Command completed successfully")
+            status_label.setText(f"Command completed successfully in {pipx_runner.working_directory}")
         else:
-            status_label.setText(f"Command failed with exit code {exit_code}")
+            status_label.setText(f"Command failed with exit code {exit_code} in {pipx_runner.working_directory}")
 
     def on_command_failed(error_message):
         logger.error(f"Command failed: {error_message}")
