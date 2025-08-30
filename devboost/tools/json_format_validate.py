@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import COLORS, get_status_style, get_tool_style
+from devboost.styles import COLORS, get_status_style, get_tool_style
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)

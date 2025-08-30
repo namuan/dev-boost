@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 
 import appdirs
 from PyQt6.QtWidgets import (
@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style
+from devboost.styles import get_tool_style
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class ScratchPadWidget(QWidget):
         self.app_name = "DevBoost"
         self.app_author = "DeskRiders"
         self.data_dir = appdirs.user_data_dir(self.app_name, self.app_author)
-        self.scratch_pad_file = os.path.join(self.data_dir, "scratch_pad.txt")
+        self.scratch_pad_file = Path(self.data_dir) / "scratch_pad.txt"
         self.init_ui()
         self.load_content()
 
@@ -109,10 +109,10 @@ class ScratchPadWidget(QWidget):
         """
         try:
             # Ensure the data directory exists
-            os.makedirs(self.data_dir, exist_ok=True)
+            Path(self.data_dir).mkdir(parents=True, exist_ok=True)
 
             # Save content to file
-            with open(self.scratch_pad_file, "w", encoding="utf-8") as f:
+            with Path(self.scratch_pad_file).open("w", encoding="utf-8") as f:
                 f.write(self.text_edit.toPlainText())
         except Exception:
             logger.exception("Failed to save scratch pad content")
@@ -123,8 +123,8 @@ class ScratchPadWidget(QWidget):
         """
         try:
             # Check if the file exists
-            if os.path.exists(self.scratch_pad_file):
-                with open(self.scratch_pad_file, encoding="utf-8") as f:
+            if Path(self.scratch_pad_file).exists():
+                with Path(self.scratch_pad_file).open(encoding="utf-8") as f:
                     content = f.read()
                     self.text_edit.setPlainText(content)
         except Exception:
@@ -141,8 +141,7 @@ def create_scratch_pad_widget(style_func):
     Returns:
         QWidget: The main widget for the tool.
     """
-    widget = ScratchPadWidget()
-    return widget
+    return ScratchPadWidget()
 
 
 if __name__ == "__main__":

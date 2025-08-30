@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style
+from devboost.styles import get_tool_style
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
@@ -147,9 +147,8 @@ class StringCaseConverter:
         method = case_methods.get(case_type)
         if method:
             return method(text)
-        else:
-            logger.warning(f"Unknown case type: {case_type}")
-            return text
+        logger.warning(f"Unknown case type: {case_type}")
+        return text
 
 
 # ruff: noqa: C901

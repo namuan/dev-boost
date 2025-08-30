@@ -124,18 +124,17 @@ class UnixTimeConverter:
 
         if abs(diff) < 60:
             return "Just now"
-        elif abs(diff) < 3600:
+        if abs(diff) < 3600:
             minutes = int(abs(diff) / 60)
             suffix = "ago" if diff > 0 else "from now"
             return f"{minutes} minute{'s' if minutes != 1 else ''} {suffix}"
-        elif abs(diff) < 86400:
+        if abs(diff) < 86400:
             hours = int(abs(diff) / 3600)
             suffix = "ago" if diff > 0 else "from now"
             return f"{hours} hour{'s' if hours != 1 else ''} {suffix}"
-        else:
-            days = int(abs(diff) / 86400)
-            suffix = "ago" if diff > 0 else "from now"
-            return f"{days} day{'s' if days != 1 else ''} {suffix}"
+        days = int(abs(diff) / 86400)
+        suffix = "ago" if diff > 0 else "from now"
+        return f"{days} day{'s' if days != 1 else ''} {suffix}"
 
     @staticmethod
     def get_day_of_year(dt: datetime.datetime) -> int:

@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import webbrowser
+from pathlib import Path
 
 import markdown
 from PyQt6.QtCore import Qt, QTimer
@@ -20,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style
+from devboost.styles import get_tool_style
 
 # It's good practice to have a logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -210,7 +211,7 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
         )
         if file_path:
             try:
-                with open(file_path, encoding="utf-8") as f:
+                with Path(file_path).open(encoding="utf-8") as f:
                     input_text_edit.setPlainText(f.read())
                     update_preview()
             except Exception as e:

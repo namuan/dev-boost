@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import clear_input_style, get_error_input_style, get_tool_style, get_warning_input_style
+from devboost.styles import clear_input_style, get_error_input_style, get_tool_style, get_warning_input_style
 
 logger = logging.getLogger(__name__)
 
@@ -177,14 +177,13 @@ class UUIDULIDProcessor:
         """Get human-readable variant name."""
         if variant == uuid.RFC_4122:
             return "RFC 4122"
-        elif variant == uuid.RESERVED_NCS:
+        if variant == uuid.RESERVED_NCS:
             return "Reserved NCS"
-        elif variant == uuid.RESERVED_MICROSOFT:
+        if variant == uuid.RESERVED_MICROSOFT:
             return "Reserved Microsoft"
-        elif variant == uuid.RESERVED_FUTURE:
+        if variant == uuid.RESERVED_FUTURE:
             return "Reserved Future"
-        else:
-            return f"Unknown ({variant})"
+        return f"Unknown ({variant})"
 
     @staticmethod
     def detect_and_decode(input_str: str) -> dict[str, Any]:

@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_error_input_style, get_status_style, get_tool_style
+from devboost.styles import get_error_input_style, get_status_style, get_tool_style
 
 # It's good practice to have a logger
 logger = logging.getLogger(__name__)
@@ -132,9 +132,9 @@ class ColorConverter:
 
         if len(hex_value) == 3:  # #RGB -> #RRGGBB
             return f"#{hex_value[0] * 2}{hex_value[1] * 2}{hex_value[2] * 2}"
-        elif len(hex_value) == 4:  # #RGBA -> #RRGGBBAA
+        if len(hex_value) == 4:  # #RGBA -> #RRGGBBAA
             return f"#{hex_value[0] * 2}{hex_value[1] * 2}{hex_value[2] * 2}{hex_value[3] * 2}"
-        elif len(hex_value) == 6 or len(hex_value) == 8:  # #RRGGBB
+        if len(hex_value) == 6 or len(hex_value) == 8:  # #RRGGBB
             return hex_input
 
         return None
@@ -260,9 +260,8 @@ class ColorConverter:
             if component.endswith("%"):
                 value = float(component[:-1])
                 return 0 <= value <= 100
-            else:
-                value = float(component)
-                return 0 <= value <= 255
+            value = float(component)
+            return 0 <= value <= 255
         except ValueError:
             return False
 
@@ -273,9 +272,8 @@ class ColorConverter:
             if component.endswith("%"):
                 value = float(component[:-1])
                 return 0 <= value <= 100
-            else:
-                value = float(component)
-                return 0 <= value <= 1
+            value = float(component)
+            return 0 <= value <= 1
         except ValueError:
             return False
 
@@ -429,10 +427,9 @@ class ColorConverter:
             if component.endswith("%"):
                 value = float(component[:-1])
                 return 0 <= value <= 100
-            else:
-                # Allow numeric values that will be treated as percentages
-                value = float(component)
-                return 0 <= value <= 100
+            # Allow numeric values that will be treated as percentages
+            value = float(component)
+            return 0 <= value <= 100
         except ValueError:
             return False
 
@@ -747,11 +744,10 @@ class ColorConverter:
                 # Clamp percentage values
                 percent_value = max(0.0, min(100.0, percent_value))
                 return percent_value / 100.0
-            else:
-                numeric_value = float(value)
-                # Clamp numeric values
-                numeric_value = max(0.0, min(max_value, numeric_value))
-                return numeric_value / max_value
+            numeric_value = float(value)
+            # Clamp numeric values
+            numeric_value = max(0.0, min(max_value, numeric_value))
+            return numeric_value / max_value
         except ValueError:
             return None
 
@@ -771,11 +767,10 @@ class ColorConverter:
                 # Clamp percentage values
                 percent_value = max(0.0, min(100.0, percent_value))
                 return percent_value / 100.0
-            else:
-                # Treat as percentage value without % sign
-                percent_value = float(value)
-                percent_value = max(0.0, min(100.0, percent_value))
-                return percent_value / 100.0
+            # Treat as percentage value without % sign
+            percent_value = float(value)
+            percent_value = max(0.0, min(100.0, percent_value))
+            return percent_value / 100.0
         except ValueError:
             return None
 
@@ -826,8 +821,7 @@ class ColorConverter:
         if include_alpha:
             a_int = round(a * 255)
             return f"#{r_int:02X}{g_int:02X}{b_int:02X}{a_int:02X}"
-        else:
-            return f"#{r_int:02X}{g_int:02X}{b_int:02X}"
+        return f"#{r_int:02X}{g_int:02X}{b_int:02X}"
 
     def to_hex_short(self, r: float, g: float, b: float, a: float = 1.0) -> str | None:
         """Convert RGBA to short hex format if possible (e.g., #F0A instead of #FF00AA).
@@ -868,8 +862,7 @@ class ColorConverter:
                 return None
             a_short = a_int // 17
             return f"#{r_short:X}{g_short:X}{b_short:X}{a_short:X}"
-        else:
-            return f"#{r_short:X}{g_short:X}{b_short:X}"
+        return f"#{r_short:X}{g_short:X}{b_short:X}"
 
     def to_rgb(self, r: float, g: float, b: float, a: float = 1.0, use_percentages: bool = False) -> str:
         """Convert RGBA to RGB format with enhanced options.
@@ -894,11 +887,10 @@ class ColorConverter:
             g_val = round(g * 100, 1)
             b_val = round(b * 100, 1)
             return f"rgb({r_val}%, {g_val}%, {b_val}%)"
-        else:
-            r_int = round(r * 255)
-            g_int = round(g * 255)
-            b_int = round(b * 255)
-            return f"rgb({r_int}, {g_int}, {b_int})"
+        r_int = round(r * 255)
+        g_int = round(g * 255)
+        b_int = round(b * 255)
+        return f"rgb({r_int}, {g_int}, {b_int})"
 
     def to_rgba(
         self,
@@ -942,8 +934,7 @@ class ColorConverter:
         if alpha_as_percentage:
             a_val = round(a * 100, 1)
             return f"rgba({rgb_part}, {a_val}%)"
-        else:
-            return f"rgba({rgb_part}, {a})"
+        return f"rgba({rgb_part}, {a})"
 
     def to_hsl(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HSL format with enhanced options.
@@ -970,8 +961,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hsl({int(h_deg)}, {int(s_pct)}%, {int(l_pct)}%)"
-        else:
-            return f"hsl({h_deg}, {s_pct}%, {l_pct}%)"
+        return f"hsl({h_deg}, {s_pct}%, {l_pct}%)"
 
     def to_hsl_with_deg(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HSL format with explicit 'deg' suffix for hue.
@@ -998,8 +988,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hsl({int(h_deg)}deg, {int(s_pct)}%, {int(l_pct)}%)"
-        else:
-            return f"hsl({h_deg}deg, {s_pct}%, {l_pct}%)"
+        return f"hsl({h_deg}deg, {s_pct}%, {l_pct}%)"
 
     def to_hsla(
         self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0, alpha_as_percentage: bool = True
@@ -1032,14 +1021,11 @@ class ColorConverter:
             a_val = round(a * 100, precision)
             if precision == 0:
                 return f"hsla({int(h_deg)}, {int(s_pct)}%, {int(l_pct)}%, {int(a_val)}%)"
-            else:
-                return f"hsla({h_deg}, {s_pct}%, {l_pct}%, {a_val}%)"
-        else:
-            a_val = round(a, max(1, precision))
-            if precision == 0:
-                return f"hsla({int(h_deg)}, {int(s_pct)}%, {int(l_pct)}%, {a_val})"
-            else:
-                return f"hsla({h_deg}, {s_pct}%, {l_pct}%, {a_val})"
+            return f"hsla({h_deg}, {s_pct}%, {l_pct}%, {a_val}%)"
+        a_val = round(a, max(1, precision))
+        if precision == 0:
+            return f"hsla({int(h_deg)}, {int(s_pct)}%, {int(l_pct)}%, {a_val})"
+        return f"hsla({h_deg}, {s_pct}%, {l_pct}%, {a_val})"
 
     def to_hsla_with_deg(
         self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0, alpha_as_percentage: bool = True
@@ -1072,14 +1058,11 @@ class ColorConverter:
             a_val = round(a * 100, precision)
             if precision == 0:
                 return f"hsla({int(h_deg)}deg, {int(s_pct)}%, {int(l_pct)}%, {int(a_val)}%)"
-            else:
-                return f"hsla({h_deg}deg, {s_pct}%, {l_pct}%, {a_val}%)"
-        else:
-            a_val = round(a, max(1, precision))
-            if precision == 0:
-                return f"hsla({int(h_deg)}deg, {int(s_pct)}%, {int(l_pct)}%, {a_val})"
-            else:
-                return f"hsla({h_deg}deg, {s_pct}%, {l_pct}%, {a_val})"
+            return f"hsla({h_deg}deg, {s_pct}%, {l_pct}%, {a_val}%)"
+        a_val = round(a, max(1, precision))
+        if precision == 0:
+            return f"hsla({int(h_deg)}deg, {int(s_pct)}%, {int(l_pct)}%, {a_val})"
+        return f"hsla({h_deg}deg, {s_pct}%, {l_pct}%, {a_val})"
 
     def to_hsb(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HSB format with enhanced options.
@@ -1106,8 +1089,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hsb({int(h_deg)}, {int(s_pct)}%, {int(v_pct)}%)"
-        else:
-            return f"hsb({h_deg}, {s_pct}%, {v_pct}%)"
+        return f"hsb({h_deg}, {s_pct}%, {v_pct}%)"
 
     def to_hsv(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HSV format (alias for HSB).
@@ -1134,8 +1116,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hsv({int(h_deg)}, {int(s_pct)}%, {int(v_pct)}%)"
-        else:
-            return f"hsv({h_deg}, {s_pct}%, {v_pct}%)"
+        return f"hsv({h_deg}, {s_pct}%, {v_pct}%)"
 
     def to_hsb_with_deg(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HSB format with explicit 'deg' suffix for hue.
@@ -1162,8 +1143,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hsb({int(h_deg)}deg, {int(s_pct)}%, {int(v_pct)}%)"
-        else:
-            return f"hsb({h_deg}deg, {s_pct}%, {v_pct}%)"
+        return f"hsb({h_deg}deg, {s_pct}%, {v_pct}%)"
 
     def to_hsv_with_deg(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HSV format with explicit 'deg' suffix for hue.
@@ -1190,8 +1170,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hsv({int(h_deg)}deg, {int(s_pct)}%, {int(v_pct)}%)"
-        else:
-            return f"hsv({h_deg}deg, {s_pct}%, {v_pct}%)"
+        return f"hsv({h_deg}deg, {s_pct}%, {v_pct}%)"
 
     def to_hwb(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HWB format.
@@ -1220,8 +1199,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hwb({int(h_deg)}, {int(w_pct)}%, {int(b_pct)}%)"
-        else:
-            return f"hwb({h_deg:.{precision}f}, {w_pct:.{precision}f}%, {b_pct:.{precision}f}%)"
+        return f"hwb({h_deg:.{precision}f}, {w_pct:.{precision}f}%, {b_pct:.{precision}f}%)"
 
     def to_hwb_with_deg(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to HWB format with explicit 'deg' suffix for hue.
@@ -1250,8 +1228,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"hwb({int(h_deg)}deg, {int(w_pct)}%, {int(b_pct)}%)"
-        else:
-            return f"hwb({h_deg:.{precision}f}deg, {w_pct:.{precision}f}%, {b_pct:.{precision}f}%)"
+        return f"hwb({h_deg:.{precision}f}deg, {w_pct:.{precision}f}%, {b_pct:.{precision}f}%)"
 
     def to_cmyk(self, r: float, g: float, b: float, a: float = 1.0, precision: int = 0) -> str:
         """Convert RGBA to CMYK format.
@@ -1290,10 +1267,7 @@ class ColorConverter:
 
         if precision == 0:
             return f"cmyk({int(c_pct)}%, {int(m_pct)}%, {int(y_pct)}%, {int(k_pct)}%)"
-        else:
-            return (
-                f"cmyk({c_pct:.{precision}f}%, {m_pct:.{precision}f}%, {y_pct:.{precision}f}%, {k_pct:.{precision}f}%)"
-            )
+        return f"cmyk({c_pct:.{precision}f}%, {m_pct:.{precision}f}%, {y_pct:.{precision}f}%, {k_pct:.{precision}f}%)"
 
     def convert_all_formats(self, color_input: str) -> dict[str, str]:
         """Convert input color to all supported formats.

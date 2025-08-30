@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import clear_input_style, get_dialog_style, get_error_input_style, get_tool_style
+from devboost.styles import clear_input_style, get_dialog_style, get_error_input_style, get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -472,9 +472,8 @@ def create_regexp_tester_widget(style_func, scratch_pad=None):
             matches_text_edit.clear()
             current_matches = []
             return
-        else:
-            # Valid pattern - reset styling
-            regexp_input.setStyleSheet(clear_input_style())
+        # Valid pattern - reset styling
+        regexp_input.setStyleSheet(clear_input_style())
 
         # Update match count
         match_count = regex_tester.get_match_count()

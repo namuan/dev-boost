@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style
+from devboost.styles import get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +56,10 @@ class URLCodec:
             if self.settings.encoding_type == "component":
                 # Use quote for component encoding (spaces become %20)
                 return urllib.parse.quote(text, safe=safe_chars)
-            else:
-                # Use quote_plus for standard URL encoding (spaces become +)
-                if self.settings.plus_for_space:
-                    return urllib.parse.quote_plus(text, safe=safe_chars)
-                else:
-                    return urllib.parse.quote(text, safe=safe_chars)
+            # Use quote_plus for standard URL encoding (spaces become +)
+            if self.settings.plus_for_space:
+                return urllib.parse.quote_plus(text, safe=safe_chars)
+            return urllib.parse.quote(text, safe=safe_chars)
         except Exception as e:
             logger.exception("Error encoding URL")
             return f"Error: {e!s}"
@@ -82,9 +80,8 @@ class URLCodec:
             if self.settings.plus_for_space:
                 # Use unquote_plus to handle both %20 and + for spaces
                 return urllib.parse.unquote_plus(text)
-            else:
-                # Use unquote for standard decoding
-                return urllib.parse.unquote(text)
+            # Use unquote for standard decoding
+            return urllib.parse.unquote(text)
         except Exception as e:
             logger.exception("Error decoding URL")
             return f"Error: {e!s}"

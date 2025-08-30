@@ -1,6 +1,7 @@
 import base64
 import logging
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -19,7 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_tool_style
+from devboost.styles import get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,7 @@ def create_base64_string_encodec_widget(style_func, scratch_pad=None):
         file_path, _ = QFileDialog.getOpenFileName(widget, "Load from File", "", "Text Files (*.txt);;All Files (*)")
         if file_path:
             try:
-                with open(file_path, encoding="utf-8") as file:
+                with Path(file_path).open(encoding="utf-8") as file:
                     content = file.read()
                     input_text_edit.setPlainText(content)
                     logger.info(f"File loaded: {file_path}")

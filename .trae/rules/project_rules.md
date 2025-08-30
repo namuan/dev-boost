@@ -9,6 +9,7 @@ General Rules:
 - MUST Whenever you’re about to complete a user request, call the MCP interactive_feedback instead of simply ending the process. Keep calling MCP until the user’s feedback is empty, then end the request.
 
 Coding Rules:
+Always add import at the top of the file
 Keep functions small and concise - Minimize line count, operators, and variables to improve readability.
 Use consistent patterns - Avoid novelty in function structure; standardize how similar logic is implemented across the codebase.
 Break up complex chains - Split long function chains, iterators, or comprehensions into logical groups using helper functions or intermediate variables.

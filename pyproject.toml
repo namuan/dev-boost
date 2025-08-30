@@ -89,6 +89,14 @@ select = [
     "RUF",
     # tryceratops
     "TRY",
+    # Use pathlib instead of os.path
+    "PTH",
+    # Use common import conventions
+    "ICN",
+    # Good return practices
+    "RET",
+    # Some good import practices
+    "TID",
 ]
 ignore = [
     # LineTooLong

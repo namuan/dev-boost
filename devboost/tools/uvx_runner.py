@@ -1,6 +1,6 @@
 import logging
-import os
 import subprocess
+from pathlib import Path
 
 from PyQt6.QtCore import QObject, QProcess, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_autocomplete_dropdown_style, get_status_style, get_tool_style
+from devboost.styles import get_autocomplete_dropdown_style, get_status_style, get_tool_style
 
 # Logger for debugging
 logger = logging.getLogger(__name__)
@@ -85,9 +85,9 @@ class UvxRunner(QObject):
         super().__init__()
         self.process = None
         # Set default working directory to temp folder under $HOME
-        self.working_directory = os.path.join(os.path.expanduser("~"), "temp")
+        self.working_directory = Path.home() / "temp"
         # Create the directory if it doesn't exist
-        os.makedirs(self.working_directory, exist_ok=True)
+        Path(self.working_directory).mkdir(parents=True, exist_ok=True)
         logger.info(f"UvxRunner initialized with working directory: {self.working_directory}")
 
     def _parse_installed_tools(self, uvx_output: str) -> list[str]:
@@ -292,7 +292,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     dir_layout.addWidget(dir_label)
 
     dir_input = QLineEdit()
-    dir_input.setText(uvx_runner.working_directory)
+    dir_input.setText(str(uvx_runner.working_directory))
     dir_layout.addWidget(dir_input)
 
     dir_button = QPushButton("Browse...")
@@ -446,7 +446,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
                     tool_suggestions.setCurrentRow(current_row + 1)
                     logger.debug(f"Set current row to: {current_row + 1}")
                 return
-            elif event.key() == Qt.Key.Key_Up:
+            if event.key() == Qt.Key.Key_Up:
                 logger.debug("Up arrow key pressed")
                 current_row = tool_suggestions.currentRow()
                 logger.debug(f"Current row: {current_row}")
@@ -454,11 +454,11 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
                     tool_suggestions.setCurrentRow(current_row - 1)
                     logger.debug(f"Set current row to: {current_row - 1}")
                 return
-            elif event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
+            if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
                 logger.debug("Enter key pressed")
                 on_suggestion_selected()
                 return
-            elif event.key() == Qt.Key.Key_Escape:
+            if event.key() == Qt.Key.Key_Escape:
                 logger.debug("Escape key pressed - executing reset logic")
                 logger.debug("Hiding tool suggestions")
                 tool_suggestions.setVisible(False)
@@ -469,8 +469,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
                 current_selected_tool["display"] = ""
                 logger.debug("ESC key handling completed")
                 return
-            else:
-                logger.debug(f"Other key pressed while suggestions visible: {event.key()}")
+            logger.debug(f"Other key pressed while suggestions visible: {event.key()}")
         else:
             logger.debug("Tool suggestions are NOT visible")
             if event.key() == Qt.Key.Key_Escape:

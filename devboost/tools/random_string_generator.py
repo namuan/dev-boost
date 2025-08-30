@@ -105,8 +105,7 @@ class RandomStringProcessor:
 
         if use_colors:
             return "<br>".join(output_lines), True
-        else:
-            return "\n".join(output_lines), False
+        return "\n".join(output_lines), False
 
     def generate_new_seed(self):
         """Generates a new seed based on current time."""

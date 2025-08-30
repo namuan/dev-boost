@@ -1,6 +1,6 @@
-import os
 import tempfile
 import unittest
+from pathlib import Path
 
 from PIL import Image
 
@@ -23,8 +23,9 @@ class TestImageOptimizer(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         # Clean up temporary files
-        if os.path.exists(self.temp_input.name):
-            os.unlink(self.temp_input.name)
+        temp_path = Path(self.temp_input.name)
+        if temp_path.exists():
+            temp_path.unlink()
 
     def test_optimize_image_basic(self):
         """Test basic image optimization."""
@@ -33,14 +34,14 @@ class TestImageOptimizer(unittest.TestCase):
         )
 
         self.assertTrue(success)
-        self.assertTrue(os.path.exists(output_path))
+        self.assertTrue(Path(output_path).exists())
         self.assertIsInstance(stats, dict)
         self.assertIn("original_size", stats)
         self.assertIn("optimized_size", stats)
         self.assertIn("compression_ratio", stats)
 
         # Clean up
-        os.unlink(output_path)
+        Path(output_path).unlink()
 
     def test_optimize_image_with_resize(self):
         """Test image optimization with resizing."""
@@ -49,7 +50,7 @@ class TestImageOptimizer(unittest.TestCase):
         )
 
         self.assertTrue(success)
-        self.assertTrue(os.path.exists(output_path))
+        self.assertTrue(Path(output_path).exists())
 
         # Check that image was resized
         with Image.open(output_path) as img:
@@ -57,7 +58,7 @@ class TestImageOptimizer(unittest.TestCase):
             self.assertLessEqual(img.height, 300)
 
         # Clean up
-        os.unlink(output_path)
+        Path(output_path).unlink()
 
     def test_optimize_image_different_formats(self):
         """Test optimization with different output formats."""
@@ -70,11 +71,11 @@ class TestImageOptimizer(unittest.TestCase):
                 )
 
                 self.assertTrue(success)
-                self.assertTrue(os.path.exists(output_path))
+                self.assertTrue(Path(output_path).exists())
                 self.assertEqual(stats["output_format"], format_type)
 
                 # Clean up
-                os.unlink(output_path)
+                Path(output_path).unlink()
 
     def test_optimize_image_invalid_input(self):
         """Test optimization with invalid input file."""

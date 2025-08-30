@@ -26,7 +26,6 @@ __all__ = [
     "create_jwt_debugger_widget",
     "create_lorem_ipsum_tool_widget",
     "create_markdown_preview_widget",
-    "create_uvx_runner_widget",
     "create_random_string_tool_widget",
     "create_regexp_tester_widget",
     "create_scratch_pad_widget",
@@ -34,6 +33,7 @@ __all__ = [
     "create_unix_time_converter_widget",
     "create_url_codec_widget",
     "create_uuid_ulid_tool_widget",
+    "create_uvx_runner_widget",
     "create_xml_formatter_widget",
     "create_yaml_to_json_widget",
 ]

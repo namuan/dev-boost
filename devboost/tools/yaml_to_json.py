@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import clear_input_style, get_error_input_style, get_tool_style
+from devboost.styles import clear_input_style, get_error_input_style, get_tool_style
 
 
 class YAMLToJSONConverter:
@@ -50,9 +50,7 @@ class YAMLToJSONConverter:
             yaml_data = yaml.safe_load(yaml_text)
 
             # Convert to JSON with specified indentation
-            json_output = json.dumps(yaml_data, indent=indent, ensure_ascii=False)
-
-            return json_output
+            return json.dumps(yaml_data, indent=indent, ensure_ascii=False)
 
         except yaml.YAMLError as e:
             error_msg = f"YAML parsing error: {e!s}"
@@ -206,7 +204,7 @@ def create_yaml_to_json_widget(style_func, scratch_pad=None):
 
     output_text_edit = QTextEdit()
     output_text_edit.setReadOnly(True)
-    placeholder_text_output = "Tips:\n" "- Right Click → Show Line Numbers\n" "- Right Click → Line Wrapping"
+    placeholder_text_output = "Tips:\n- Right Click → Show Line Numbers\n- Right Click → Line Wrapping"
     output_text_edit.setPlaceholderText(placeholder_text_output)
 
     # Enable custom context menu for output text edit

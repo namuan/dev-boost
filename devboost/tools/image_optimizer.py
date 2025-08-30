@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageFile, ImageOps
@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import COLORS, get_status_style, get_tool_style
+from devboost.styles import COLORS, get_status_style, get_tool_style
 
 # Enable loading of truncated images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -69,11 +69,11 @@ class ImageOptimizer(QObject):
             Tuple of (success, output_path, error_message, stats_dict)
         """
         try:
-            if not os.path.exists(input_path):
+            if not Path(input_path).exists():
                 return False, "", "Input file does not exist", {}
 
             # Get original file stats
-            original_size = os.path.getsize(input_path)
+            original_size = Path(input_path).stat().st_size
 
             # Load image
             with Image.open(input_path) as img:
@@ -88,10 +88,10 @@ class ImageOptimizer(QObject):
 
                 # Prepare output path
                 if output_path is None:
-                    base, ext = os.path.splitext(input_path)
+                    input_path_obj = Path(input_path)
                     ext_map = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
-                    new_ext = ext_map.get(format_type, ext)
-                    output_path = f"{base}_optimized{new_ext}"
+                    new_ext = ext_map.get(format_type, input_path_obj.suffix)
+                    output_path = str(input_path_obj.with_name(f"{input_path_obj.stem}_optimized{new_ext}"))
 
                 # Save with optimization
                 save_kwargs = {
@@ -124,7 +124,7 @@ class ImageOptimizer(QObject):
                 img.save(output_path, format=format_type, **save_kwargs)
 
                 # Get optimization stats
-                optimized_size = os.path.getsize(output_path)
+                optimized_size = Path(output_path).stat().st_size
                 compression_ratio = ((original_size - optimized_size) / original_size) * 100
 
                 stats = {
@@ -401,7 +401,7 @@ def create_image_optimizer_widget(style_func, scratch_pad=None):
 
                 preview_label.setPixmap(QPixmap.fromImage(qimage))
                 current_image_path = image_path
-                update_status(f"Loaded: {os.path.basename(image_path)}")
+                update_status(f"Loaded: {Path(image_path).name}")
         except Exception as e:
             update_status(f"Error loading image: {e!s}", True)
 
@@ -431,7 +431,7 @@ def create_image_optimizer_widget(style_func, scratch_pad=None):
             if success:
                 optimized_image_path = output_path
                 compression = stats["compression_ratio"]
-                update_status(f"Optimized {os.path.basename(output_path)}! Size reduced by {compression:.1f}%")
+                update_status(f"Optimized {Path(output_path).name}! Size reduced by {compression:.1f}%")
             else:
                 update_status(error_msg, True)
 
@@ -456,7 +456,7 @@ def create_image_optimizer_widget(style_func, scratch_pad=None):
                     import shutil
 
                     shutil.copy2(optimized_image_path, selected_files[0])
-                    update_status(f"Saved: {os.path.basename(selected_files[0])}")
+                    update_status(f"Saved: {Path(selected_files[0]).name}")
                 except Exception as e:
                     update_status(f"Save error: {e!s}", True)
 

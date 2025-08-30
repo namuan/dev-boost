@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_status_style, get_tool_style
+from devboost.styles import get_status_style, get_tool_style
 
 # Logger for debugging
 logger = logging.getLogger(__name__)
@@ -201,12 +201,12 @@ class AutoCompleteLineEdit(QLineEdit):
         popup = self.completer.popup()
         if popup:
             # Apply custom stylesheet to the popup using our shared style
-            from ..styles import get_autocomplete_dropdown_style
+            from devboost.styles import get_autocomplete_dropdown_style
 
             popup.setStyleSheet(get_autocomplete_dropdown_style())
 
         # Apply styling to the line edit itself using application theme
-        from ..styles import COLORS, FONTS
+        from devboost.styles import COLORS, FONTS
 
         line_edit_style = f"""
             QLineEdit {{

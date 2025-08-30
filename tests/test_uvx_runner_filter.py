@@ -1,9 +1,9 @@
-import os
 import sys
 import unittest
+from pathlib import Path
 
 # Add the project root to the path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from devboost.tools.uvx_runner import UVX_TOOLS
 

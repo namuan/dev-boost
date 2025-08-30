@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_status_style, get_tool_style
+from devboost.styles import get_status_style, get_tool_style
 
 
 class JWTDebugger:
@@ -156,9 +156,8 @@ class JWTDebugger:
             if hmac.compare_digest(signature_b64, expected_signature_b64):
                 self.is_valid = True
                 return True, "Signature verified successfully"
-            else:
-                self.is_valid = False
-                return False, "Invalid signature"
+            self.is_valid = False
+            return False, "Invalid signature"
 
         except Exception as e:
             self.is_valid = False
@@ -207,9 +206,8 @@ class JWTDebugger:
             if current_timestamp > exp_timestamp:
                 exp_time = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(exp_timestamp))
                 return True, f"Token expired on {exp_time}"
-            else:
-                exp_time = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(exp_timestamp))
-                return False, f"Token valid until {exp_time}"
+            exp_time = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(exp_timestamp))
+            return False, f"Token valid until {exp_time}"
 
         except (ValueError, TypeError):
             return False, "Invalid expiration claim format"

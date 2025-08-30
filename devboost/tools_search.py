@@ -311,9 +311,7 @@ class ToolsSearch:
             """)
         else:
             # Some tools filtered
-            self.search_results_label.setText(
-                f"{visible_count}/{total_tools} tools" f" [ENTER to select / ↑↓ to navigate]"
-            )
+            self.search_results_label.setText(f"{visible_count}/{total_tools} tools [ENTER to select / ↑↓ to navigate]")
             self.search_results_label.setStyleSheet("""
                 QLabel {
                     color: #339af0;
