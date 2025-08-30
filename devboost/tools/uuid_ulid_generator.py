@@ -394,7 +394,7 @@ def create_uuid_ulid_tool_widget(style_func, scratch_pad=None) -> QWidget:
     # Connect copy buttons for each field
     for name, copy_button in field_copy_buttons.items():
         line_edit = field_line_edits[name]
-        copy_button.clicked.connect(lambda checked, le=line_edit: QApplication.clipboard().setText(le.text()))
+        copy_button.clicked.connect(lambda le=line_edit: QApplication.clipboard().setText(le.text()))
 
     # Initial decode
     update_decoded_fields()

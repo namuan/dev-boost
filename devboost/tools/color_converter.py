@@ -1419,7 +1419,7 @@ def create_color_converter_widget(style_func, scratch_pad=None):
         format_line_edits[format_key] = line_edit
 
         # Connect copy button
-        copy_button.clicked.connect(lambda checked, text=line_edit: widget.copy_to_clipboard(text.text()))
+        copy_button.clicked.connect(lambda _=None, le=line_edit: widget.copy_to_clipboard(le.text()))
 
         formats_layout.addWidget(label, index, 0)
         formats_layout.addWidget(line_edit, index, 1)
