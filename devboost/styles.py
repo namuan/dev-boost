@@ -33,6 +33,44 @@ COLORS = {
     "info": "#4a637b",
 }
 
+# Autocomplete dropdown style
+AUTOCOMPLETE_DROPDOWN_STYLE = f"""
+    QListView {{
+        background-color: {COLORS["bg_primary"]};
+        border: 1px solid {COLORS["border_focus"]};
+        border-radius: 6px;
+        selection-background-color: #e6f0ff;
+        selection-color: {COLORS["text_primary"]};
+        font-size: 13px;
+        padding: 2px;
+    }}
+    QListView::item {{
+        padding: 6px 8px;
+        border-radius: 4px;
+    }}
+    QListView::item:hover {{
+        background-color: #f0f8ff;
+    }}
+    QListView::item:selected {{
+        background-color: #d0e1ff;
+        font-weight: 500;
+    }}
+    QScrollBar:vertical {{
+        background-color: {COLORS["bg_secondary"]};
+        width: 12px;
+        border-radius: 6px;
+    }}
+    QScrollBar::handle:vertical {{
+        background-color: {COLORS["border_primary"]};
+        border-radius: 6px;
+        min-height: 20px;
+        margin: 2px;
+    }}
+    QScrollBar::handle:vertical:hover {{
+        background-color: {COLORS["text_muted"]};
+    }}
+"""
+
 # Font families - using simple system fonts to avoid loading delays
 FONTS = {
     "ui": "Arial, sans-serif",
@@ -526,3 +564,12 @@ def clear_input_style():
         str: Empty string to clear custom styles.
     """
     return ""
+
+
+def get_autocomplete_dropdown_style():
+    """Get the standard style for autocomplete dropdowns.
+
+    Returns:
+        str: Complete QSS stylesheet for autocomplete dropdowns.
+    """
+    return AUTOCOMPLETE_DROPDOWN_STYLE

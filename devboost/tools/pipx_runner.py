@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import get_status_style, get_tool_style
+from ..styles import get_autocomplete_dropdown_style, get_status_style, get_tool_style
 
 # Logger for debugging
 logger = logging.getLogger(__name__)
@@ -343,30 +343,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     tool_suggestions.setVisible(False)
     tool_suggestions.setMaximumHeight(150)  # Limit height to prevent overwhelming UI
     # Add custom styling to make the dropdown more visible
-    tool_suggestions.setStyleSheet("""
-        QListWidget {
-            background-color: #ffffff;
-            border: 1px solid #80bdff;
-            border-radius: 6px;
-            padding: 4px;
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-            color: #333333;
-            selection-background-color: #e6f0ff;
-            selection-color: #333333;
-        }
-        QListWidget::item {
-            padding: 6px 8px;
-            border-radius: 4px;
-        }
-        QListWidget::item:hover {
-            background-color: #f0f8ff;
-        }
-        QListWidget::item:selected {
-            background-color: #d0e1ff;
-            font-weight: 500;
-        }
-    """)
+    tool_suggestions.setStyleSheet(get_autocomplete_dropdown_style())
     tool_layout.addWidget(tool_suggestions)
 
     # Focus event handlers

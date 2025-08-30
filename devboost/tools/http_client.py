@@ -200,47 +200,10 @@ class AutoCompleteLineEdit(QLineEdit):
         # Get the popup widget
         popup = self.completer.popup()
         if popup:
-            # Apply custom stylesheet to the popup using application theme
-            from ..styles import COLORS, FONTS
+            # Apply custom stylesheet to the popup using our shared style
+            from ..styles import get_autocomplete_dropdown_style
 
-            popup_style = f"""
-                QListView {{
-                    background-color: {COLORS["bg_primary"]};
-                    color: {COLORS["text_primary"]};
-                    border: 1px solid {COLORS["border_primary"]};
-                    border-radius: 4px;
-                    selection-background-color: {COLORS["border_focus"]};
-                    selection-color: {COLORS["bg_primary"]};
-                    font-size: 13px;
-                    padding: 2px;
-                }}
-                QListView::item {{
-                    padding: 4px 8px;
-                    border-bottom: 1px solid {COLORS["border_light"]};
-                }}
-                QListView::item:hover {{
-                    background-color: {COLORS["bg_secondary"]};
-                }}
-                QListView::item:selected {{
-                    background-color: {COLORS["border_focus"]};
-                    color: {COLORS["bg_primary"]};
-                }}
-                QScrollBar:vertical {{
-                    background-color: {COLORS["bg_secondary"]};
-                    width: 12px;
-                    border-radius: 6px;
-                }}
-                QScrollBar::handle:vertical {{
-                    background-color: {COLORS["border_primary"]};
-                    border-radius: 6px;
-                    min-height: 20px;
-                    margin: 2px;
-                }}
-                QScrollBar::handle:vertical:hover {{
-                    background-color: {COLORS["text_muted"]};
-                }}
-            """
-            popup.setStyleSheet(popup_style)
+            popup.setStyleSheet(get_autocomplete_dropdown_style())
 
         # Apply styling to the line edit itself using application theme
         from ..styles import COLORS, FONTS
