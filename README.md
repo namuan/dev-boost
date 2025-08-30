@@ -20,10 +20,11 @@ Tools to boost developer productivity and improve workflows
 - **Lorem Ipsum Generator**: Generate placeholder text (Lorem Ipsum) for design and testing purposes.
 - **Markdown Viewer**: Render and preview Markdown content in a clean, formatted view.
 - **Image Optimizer**: Compress and optimize images with quality control, format conversion, and resizing options. Supports JPEG, PNG, and WEBP formats.
+- **HTTP Client**: Make HTTP requests with support for all common methods (GET, POST, PUT, DELETE, etc.). Features intelligent header autocomplete, request/response body handling, response timing, and tabbed response view with headers, body, and statistics.
 
 ## Installation
 
-DevBoost requires Python 3.12+ and PyQt6.
+DevBoost requires Python 3.11+ and PyQt6.
 
 ### Prerequisites
 
@@ -50,7 +51,7 @@ DevBoost requires Python 3.12+ and PyQt6.
    make run
    ```
 
-4. Install as an application
+4. Install as an application (macOS only)
    ```
    make install-macosx
    ```
