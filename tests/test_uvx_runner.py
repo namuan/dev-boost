@@ -28,7 +28,7 @@ class TestUvxRunner:
         assert hasattr(self.uvx_runner, "output_received")
         assert hasattr(self.uvx_runner, "help_received")
 
-    def test_pipx_tools_constant(self):
+    def test_uvx_tools_constant(self):
         """Test that UVX_TOOLS constant is properly defined."""
         assert isinstance(UVX_TOOLS, dict)
         assert len(UVX_TOOLS) > 0
@@ -382,7 +382,7 @@ class TestUvxRunnerWidget:
         children = widget.findChildren(object)
         assert len(children) > 0
 
-    def test_pipx_tools_in_widget(self):
+    def test_uvx_tools_in_widget(self):
         """Test that the widget is created with proper tool selection components."""
         from PyQt6.QtWidgets import QLineEdit, QListWidget
 
@@ -415,5 +415,5 @@ class TestUvxRunnerWidget:
         # Verify the suggestions list exists
         assert len(tool_suggestions) > 0
 
-        # Verify PIPX_TOOLS constant is accessible (imported from the module)
+        # Verify UVX_TOOLS constant is accessible (imported from the module)
         assert len(UVX_TOOLS) > 0

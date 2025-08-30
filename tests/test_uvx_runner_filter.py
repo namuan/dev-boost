@@ -9,7 +9,7 @@ from devboost.tools.uvx_runner import UVX_TOOLS
 
 
 class TestUvxRunnerFilter(unittest.TestCase):
-    def test_pipx_tools_constant(self):
+    def test_uvx_tools_constant(self):
         """Test that UVX_TOOLS constant is properly defined"""
         # Check that UVX_TOOLS is a dictionary
         self.assertIsInstance(UVX_TOOLS, dict)

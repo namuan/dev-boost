@@ -682,7 +682,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             text = output_text.toPlainText()
             if text:
                 current_content = scratch_pad.get_content()
-                new_content = f"{current_content}\n=== Pipx Runner Output ===\n{text}\n"
+                new_content = f"{current_content}\n=== Uvx Runner Output ===\n{text}\n"
                 scratch_pad.set_content(new_content)
                 status_label.setText("Output sent to scratch pad")
                 logger.debug("Output sent to scratch pad")
