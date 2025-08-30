@@ -325,19 +325,71 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     control_layout.addLayout(dir_layout)
 
-    # Tool selection
-    tool_layout = QHBoxLayout()
-    tool_layout.setSpacing(8)
+    # Tool selection with filtering
+    tool_layout = QVBoxLayout()
+    tool_layout.setSpacing(4)
 
+    # Tool label
     tool_label = QLabel("Tool:")
-    tool_label.setFixedWidth(80)
     tool_layout.addWidget(tool_label)
 
+    # Filter input
+    filter_input = QLineEdit()
+    filter_input.setPlaceholderText("Type to filter tools...")
+    tool_layout.addWidget(filter_input)
+
+    # Tool combo box
     tool_combo = QComboBox()
     tool_combo.addItem("Select a tool...", "")
+    # Store items with name and description for better filtering
+    tool_items = []
     for tool_name, description in PIPX_TOOLS.items():
-        tool_combo.addItem(f"{tool_name} - {description}", tool_name)
+        display_text = f"{tool_name} - {description}"
+        tool_items.append((tool_name, display_text))
+        tool_combo.addItem(display_text, tool_name)
     tool_layout.addWidget(tool_combo)
+
+    # Filter function
+    def filter_tools(text):
+        # Store current selection if any
+        current_data = tool_combo.currentData()
+
+        # Clear current items
+        tool_combo.clear()
+        tool_combo.addItem("Select a tool...", "")
+
+        # Add items that match the filter
+        filter_text = text.lower().strip()
+        matched_items = []
+
+        # Collect all matching items first
+        for tool_name, display_text in tool_items:
+            if not filter_text or filter_text in tool_name.lower() or filter_text in display_text.lower():
+                matched_items.append((tool_name, display_text))
+
+        # Add matched items to combo box
+        for tool_name, display_text in matched_items:
+            tool_combo.addItem(display_text, tool_name)
+
+        # Add a "no results" item if nothing matches
+        if len(matched_items) == 0 and filter_text:
+            tool_combo.addItem("No matching tools found", "")
+
+        # Try to restore previous selection if it's still in the list
+        if current_data:
+            for i in range(tool_combo.count()):
+                if tool_combo.itemData(i) == current_data:
+                    tool_combo.setCurrentIndex(i)
+                    break
+        else:
+            # Select the first item if only one match (and it's not the "no results" item)
+            if tool_combo.count() == 2 and "No matching tools found" not in tool_combo.itemText(1):
+                tool_combo.setCurrentIndex(1)
+            else:
+                tool_combo.setCurrentIndex(0)
+
+    # Connect filter input to filter function
+    filter_input.textChanged.connect(filter_tools)
 
     control_layout.addLayout(tool_layout)
 

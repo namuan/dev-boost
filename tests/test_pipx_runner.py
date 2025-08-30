@@ -356,9 +356,17 @@ class TestPipxRunnerWidget:
     """Test cases for pipx runner widget creation and functionality."""
 
     @pytest.fixture(autouse=True)
-    def setup_qapp(self, qapp):
+    def setup_qapp(self):
         """Ensure QApplication is available for widget tests."""
-        self.qapp = qapp
+        import sys
+
+        from PyQt6.QtWidgets import QApplication
+
+        # Create QApplication if it doesn't exist
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(sys.argv)
+        self.qapp = app
 
     def test_create_pipx_runner_widget(self):
         """Test creating the pipx runner widget."""
