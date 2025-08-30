@@ -179,7 +179,7 @@ def create_lorem_ipsum_tool_widget(style_func, scratch_pad=None) -> QWidget:
 
     for btn_type in button_types:
         button = QPushButton(btn_type)
-        button.clicked.connect(lambda t=btn_type: handle_generation(t))
+        button.clicked.connect(lambda checked, t=btn_type: handle_generation(t))
         left_layout.addWidget(button)
 
     left_layout.addStretch()
