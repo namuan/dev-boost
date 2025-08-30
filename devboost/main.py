@@ -251,7 +251,7 @@ class DevDriverWindow(QMainWindow):
             ("🌐", "HTTP Client", "http client request api rest get post put delete"),
             ("📦", "Uvx Runner", "uvx tools runner install execute command line utilities"),
         ]
-        logger.info(f"Defined {len(self.tools)} tools for the sidebar")
+        logger.info("Defined %d tools for the sidebar", len(self.tools))
 
         for icon_text, tool_name, _keywords in self.tools:
             item = QListWidgetItem()
@@ -260,7 +260,7 @@ class DevDriverWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, tool_name)
             self.tool_list.addItem(item)
             self.tool_list.setItemWidget(item, item_widget)
-        logger.info(f"Populated tool list with {len(self.tools)} items")
+        logger.info("Populated tool list with %d items", len(self.tools))
 
         sidebar_layout.addWidget(search_container)
         sidebar_layout.addWidget(self.tool_list)
@@ -422,7 +422,7 @@ class DevDriverWindow(QMainWindow):
     # ruff: noqa: C901
     def _on_tool_selected(self, item):
         tool_name = item.data(Qt.ItemDataRole.UserRole)
-        logger.info(f"Tool selected: {tool_name}")
+        logger.info("Tool selected: %s", tool_name)
         if tool_name == "Unix Time Converter":
             self.top_bar_title.setText("Unix Time Converter")
             self.stacked_widget.setCurrentWidget(self.unix_time_converter_screen)

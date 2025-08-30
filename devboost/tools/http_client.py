@@ -144,7 +144,7 @@ class AutoCompleteLineEdit(QLineEdit):
         self.is_header_key = is_header_key
         self.completer = None
         self.setup_completer()
-        logger.debug(f"AutoCompleteLineEdit initialized (is_header_key={is_header_key})")
+        logger.debug("AutoCompleteLineEdit initialized (is_header_key=%s)", is_header_key)
 
     def setup_completer(self):
         """
@@ -154,7 +154,7 @@ class AutoCompleteLineEdit(QLineEdit):
             # For header keys, use the list of common header names
             model = QStringListModel(COMMON_HEADER_NAMES)
             self.completer = QCompleter(model, self)
-            logger.debug(f"Created completer model with {model.rowCount()} items: {COMMON_HEADER_NAMES[:3]}...")
+            logger.debug("Created completer model with %d items: %s...", model.rowCount(), COMMON_HEADER_NAMES[:3])
         else:
             # For header values, start with empty completer
             # Will be populated dynamically based on the selected header key
@@ -168,7 +168,9 @@ class AutoCompleteLineEdit(QLineEdit):
         self.completer.setMaxVisibleItems(10)  # Limit visible suggestions
 
         logger.debug(
-            f"Configured completer: case_sensitive={self.completer.caseSensitivity()}, filter_mode={self.completer.filterMode()}"
+            "Configured completer: case_sensitive=%s, filter_mode=%s",
+            self.completer.caseSensitivity(),
+            self.completer.filterMode(),
         )
 
         # Set the completer for this line edit
@@ -181,13 +183,15 @@ class AutoCompleteLineEdit(QLineEdit):
         if self.is_header_key:
             self.completer.setCompletionPrefix("Acc")
             test_count = self.completer.completionCount()
-            logger.debug(f"Test completion for 'Acc': {test_count} matches")
+            logger.debug("Test completion for 'Acc': %d matches", test_count)
 
         # Apply custom styling to the completer popup
         self.apply_completer_styling()
 
         logger.debug(
-            f"Completer setup complete for {'key' if self.is_header_key else 'value'} field with {self.completer.model().rowCount() if self.completer.model() else 0} suggestions"
+            "Completer setup complete for %s field with %d suggestions",
+            "key" if self.is_header_key else "value",
+            self.completer.model().rowCount() if self.completer.model() else 0,
         )
 
     def apply_completer_styling(self):
@@ -247,7 +251,11 @@ class AutoCompleteLineEdit(QLineEdit):
             model = QStringListModel(suggestions)
             self.completer.setModel(model)
             logger.debug(
-                f"Updated value suggestions for '{header_key}': {len(suggestions)} items - {suggestions[:3]}{'...' if len(suggestions) > 3 else ''}"
+                "Updated value suggestions for '%s': %d items - %s%s",
+                header_key,
+                len(suggestions),
+                suggestions[:3],
+                "..." if len(suggestions) > 3 else "",
             )
 
     def get_suggestions_for_key(self, header_key: str) -> list[str]:
@@ -266,23 +274,25 @@ class AutoCompleteLineEdit(QLineEdit):
         """
         Override key press event to ensure completer is triggered.
         """
-        logger.debug(f"KeyPress event: key={event.key()}, text='{event.text()}', is_header_key={self.is_header_key}")
+        logger.debug(
+            "KeyPress event: key=%d, text='%s', is_header_key=%s", event.key(), event.text(), self.is_header_key
+        )
 
         super().keyPressEvent(event)
 
         # Log current state after key press
         current_text = self.text()
-        logger.debug(f"After keyPress: current_text='{current_text}', has_completer={self.completer is not None}")
+        logger.debug("After keyPress: current_text='%s', has_completer=%s", current_text, self.completer is not None)
 
         # Trigger completer for header keys when typing
         if self.is_header_key and self.completer:
             logger.debug("Processing autocomplete for header key widget")
             # Only show completer if we have text and it's not just whitespace
             text = current_text.strip()
-            logger.debug(f"Stripped text: '{text}', length: {len(text)}")
+            logger.debug("Stripped text: '%s', length: %d", text, len(text))
 
             if len(text) >= 1:  # Show after 1 character
-                logger.debug(f"Setting completion prefix to: '{text}'")
+                logger.debug("Setting completion prefix to: '%s'", text)
 
                 # Check if completer model is empty and recreate if needed
                 model = self.completer.model()
@@ -295,19 +305,19 @@ class AutoCompleteLineEdit(QLineEdit):
                     self.completer.setModel(new_model)
                     model = self.completer.model()
                     model_row_count = model.rowCount() if model else 0
-                    logger.debug(f"Recreated model with {model_row_count} items")
+                    logger.debug("Recreated model with %d items", model_row_count)
 
                 self.completer.setCompletionPrefix(text)
                 completion_count = self.completer.completionCount()
-                logger.debug(f"Completion count: {completion_count}")
+                logger.debug("Completion count: %d", completion_count)
 
                 if completion_count > 0:
                     self.completer.complete()
-                    logger.debug(f"Triggered completer for '{text}' with {completion_count} matches")
+                    logger.debug("Triggered completer for '%s' with %d matches", text, completion_count)
                 else:
-                    logger.debug(f"No completions found for '{text}'")
+                    logger.debug("No completions found for '%s'", text)
             else:
-                logger.debug(f"Text too short for completion: '{text}'")
+                logger.debug("Text too short for completion: '%s'", text)
         else:
             if not self.is_header_key:
                 logger.debug("Not a header key widget, skipping autocomplete")
@@ -334,12 +344,14 @@ class HeaderKeyLineEdit(AutoCompleteLineEdit):
         super().__init__(is_header_key=True, parent=parent)
         self.setPlaceholderText("Enter header name...")
         logger.debug(
-            f"HeaderKeyLineEdit initialized with completer: {self.completer is not None}, suggestions: {len(COMMON_HEADER_NAMES)}"
+            "HeaderKeyLineEdit initialized with completer: %s, suggestions: %d",
+            self.completer is not None,
+            len(COMMON_HEADER_NAMES),
         )
 
         # Log some sample suggestions for debugging
         sample_suggestions = COMMON_HEADER_NAMES[:5]
-        logger.debug(f"Sample header suggestions: {sample_suggestions}")
+        logger.debug("Sample header suggestions: %s", sample_suggestions)
 
     def get_current_suggestions(self) -> list[str]:
         """
@@ -416,7 +428,10 @@ class HeaderValueLineEdit(AutoCompleteLineEdit):
         self.setPlaceholderText(placeholder)
         suggestion_count = len(self.get_suggestions_for_key(self.current_header_key))
         logger.debug(
-            f"HeaderValueLineEdit updated for key: '{self.current_header_key}' with {suggestion_count} suggestions, placeholder: '{placeholder}'"
+            "HeaderValueLineEdit updated for key: '%s' with %d suggestions, placeholder: '%s'",
+            self.current_header_key,
+            suggestion_count,
+            placeholder,
         )
 
     def get_current_suggestions(self) -> list[str]:
@@ -505,10 +520,10 @@ class AutoCompleteTableWidget(QTableWidget):
         self.insertRow(row_count)
 
         # Create autocomplete widgets
-        logger.debug(f"Creating autocomplete widgets for row {row_count}")
+        logger.debug("Creating autocomplete widgets for row %d", row_count)
         key_widget = HeaderKeyLineEdit(self)
         value_widget = HeaderValueLineEdit(self)
-        logger.debug(f"Created key_widget: {type(key_widget).__name__}, value_widget: {type(value_widget).__name__}")
+        logger.debug("Created key_widget: %s, value_widget: %s", type(key_widget).__name__, type(value_widget).__name__)
 
         # Set initial values if provided
         if key:
@@ -519,7 +534,7 @@ class AutoCompleteTableWidget(QTableWidget):
 
         # Connect key changes to update value suggestions
         def on_key_changed(text, value_widget=value_widget, row=row_count):
-            logger.debug(f"Header key changed in row {row}: '{text}' - updating value suggestions")
+            logger.debug("Header key changed in row %d: '%s' - updating value suggestions", row, text)
             value_widget.set_header_key(text)
 
         key_widget.textChanged.connect(on_key_changed)
@@ -528,7 +543,7 @@ class AutoCompleteTableWidget(QTableWidget):
         self.setCellWidget(row_count, 0, key_widget)
         self.setCellWidget(row_count, 1, value_widget)
 
-        logger.debug(f"Added autocomplete header row {row_count} (key='{key}', value='{value}')")
+        logger.debug("Added autocomplete header row %d (key='%s', value='%s')", row_count, key, value)
 
         return row_count
 
@@ -552,7 +567,7 @@ class AutoCompleteTableWidget(QTableWidget):
                 if key and value:
                     headers[key] = value
 
-        logger.debug(f"Extracted headers from autocomplete table: {headers}")
+        logger.debug("Extracted headers from autocomplete table: %s", headers)
         return headers
 
     def clear_headers(self):
@@ -574,7 +589,7 @@ class AutoCompleteTableWidget(QTableWidget):
         for key, value in headers.items():
             self.add_header_row(key, value)
 
-        logger.debug(f"Set {len(headers)} headers in autocomplete table")
+        logger.debug("Set %d headers in autocomplete table", len(headers))
 
     def delete_selected_rows(self):
         """
@@ -596,7 +611,7 @@ class AutoCompleteTableWidget(QTableWidget):
         for row in sorted(selected_rows, reverse=True):
             self.removeRow(row)
 
-        logger.debug(f"Deleted selected header rows: {selected_rows}")
+        logger.debug("Deleted selected header rows: %s", selected_rows)
         return len(selected_rows)
 
 
@@ -632,7 +647,7 @@ class HTTPClient(QObject):
             body: Optional request body as string
             timeout: Request timeout in seconds
         """
-        logger.info(f"Making {method} request to {url}")
+        logger.info("Making %s request to %s", method, url)
         self.request_started.emit()
 
         try:
@@ -675,7 +690,7 @@ class HTTPClient(QObject):
 
             # Process response
             response_data = self._process_response(response, response_time)
-            logger.info(f"Request completed with status {response.status_code}")
+            logger.info("Request completed with status %d", response.status_code)
             self.request_completed.emit(response_data)
 
         except requests.exceptions.Timeout:
@@ -875,17 +890,17 @@ def create_http_client_widget(style_func, scratch_pad=None):
     def add_header_row():
         """Add a new header row to the table."""
         row_index = headers_table.add_header_row()
-        logger.debug(f"Added autocomplete header row {row_index}")
+        logger.debug("Added autocomplete header row %d", row_index)
 
     def delete_header_row():
         """Delete selected header row(s) from the table."""
         deleted_count = headers_table.delete_selected_rows()
-        logger.debug(f"Deleted {deleted_count} header row(s)")
+        logger.debug("Deleted %d header row(s)", deleted_count)
 
     def get_headers() -> dict[str, str]:
         """Extract headers from the table."""
         headers = headers_table.get_headers()
-        logger.debug(f"Extracted headers: {headers}")
+        logger.debug("Extracted headers: %s", headers)
         return headers
 
     def make_request():
@@ -899,7 +914,7 @@ def create_http_client_widget(style_func, scratch_pad=None):
             QMessageBox.warning(widget, "Warning", "Please enter a URL")
             return
 
-        logger.info(f"Initiating {method} request to {url}")
+        logger.info("Initiating %s request to %s", method, url)
         http_client.make_request(method, url, headers, body)
 
     def on_request_started():
@@ -943,7 +958,7 @@ Content Type: {response_data["content_type"]}"""
         else:
             response_body_edit.setStyleSheet(get_status_style("error"))
 
-        logger.info(f"Request completed successfully with status {response_data['status_code']}")
+        logger.info("Request completed successfully with status %d", response_data["status_code"])
 
     def on_request_failed(error_message):
         """Handle request failure."""
@@ -959,7 +974,7 @@ Content Type: {response_data["content_type"]}"""
         response_headers_table.setRowCount(0)
         stats_text.setPlainText(f"Request failed: {error_message}")
 
-        logger.error(f"Request failed: {error_message}")
+        logger.error("Request failed: %s", error_message)
 
     def clear_all():
         """Clear all form data and responses."""

@@ -141,7 +141,7 @@ class ImageOptimizer(QObject):
 
         except Exception as e:
             error_msg = f"Optimization failed: {e!s}"
-            logger.exception(f"Image optimization failed: {error_msg}")
+            logger.exception("Image optimization failed: %s", error_msg)
             return False, "", error_msg, {}
 
     def _resize_image(self, img: Image.Image, max_width: int | None, max_height: int | None) -> Image.Image:

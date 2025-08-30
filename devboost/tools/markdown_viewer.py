@@ -194,7 +194,7 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
                 with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
                     f.write(html)
                     webbrowser.open("file://" + os.path.realpath(f.name))
-                    logger.info(f"Opened preview in browser: {f.name}")
+                    logger.info("Opened preview in browser: %s", f.name)
             except Exception as e:
                 logger.exception("Failed to save or open temporary file", exc_info=e)
 

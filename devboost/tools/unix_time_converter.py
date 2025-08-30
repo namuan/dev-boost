@@ -457,7 +457,7 @@ def create_unix_time_converter_widget(style_func, scratch_pad=None):
             update_timezone_displays(timestamp)
 
         except (ValueError, OSError):
-            logger.exception(f"Error converting timestamp {timestamp}")
+            logger.exception("Error converting timestamp %f", timestamp)
             # Clear fields on error
             for output in [
                 local_output,

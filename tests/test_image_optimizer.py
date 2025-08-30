@@ -16,21 +16,21 @@ class TestImageOptimizer(unittest.TestCase):
 
         # Create a test image
         self.test_image = Image.new("RGB", (800, 600), color="red")
-        self.temp_input = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        self.test_image.save(self.temp_input.name, "JPEG")
-        self.temp_input.close()
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp_file:
+            self.temp_input_name = tmp_file.name
+        self.test_image.save(self.temp_input_name, "JPEG")
 
     def tearDown(self):
         """Clean up test fixtures."""
         # Clean up temporary files
-        temp_path = Path(self.temp_input.name)
+        temp_path = Path(self.temp_input_name)
         if temp_path.exists():
             temp_path.unlink()
 
     def test_optimize_image_basic(self):
         """Test basic image optimization."""
         success, output_path, error_msg, stats = self.optimizer.optimize_image(
-            input_path=self.temp_input.name, quality=85
+            input_path=self.temp_input_name, quality=85
         )
 
         self.assertTrue(success)
@@ -46,7 +46,7 @@ class TestImageOptimizer(unittest.TestCase):
     def test_optimize_image_with_resize(self):
         """Test image optimization with resizing."""
         success, output_path, error_msg, stats = self.optimizer.optimize_image(
-            input_path=self.temp_input.name, quality=85, max_width=400, max_height=300
+            input_path=self.temp_input_name, quality=85, max_width=400, max_height=300
         )
 
         self.assertTrue(success)
@@ -67,7 +67,7 @@ class TestImageOptimizer(unittest.TestCase):
         for format_type in formats_to_test:
             with self.subTest(format=format_type):
                 success, output_path, error_msg, stats = self.optimizer.optimize_image(
-                    input_path=self.temp_input.name, quality=85, format_type=format_type
+                    input_path=self.temp_input_name, quality=85, format_type=format_type
                 )
 
                 self.assertTrue(success)

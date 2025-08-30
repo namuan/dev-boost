@@ -188,9 +188,9 @@ def create_base64_string_encodec_widget(style_func, scratch_pad=None):
                 with Path(file_path).open(encoding="utf-8") as file:
                     content = file.read()
                     input_text_edit.setPlainText(content)
-                    logger.info(f"File loaded: {file_path}")
+                    logger.info("File loaded: %s", file_path)
             except Exception as e:
-                logger.exception(f"Failed to load file {file_path}")
+                logger.exception("Failed to load file %s", file_path)
                 input_text_edit.setPlainText(f"Error loading file: {e!s}")
 
     def show_input_context_menu(position):

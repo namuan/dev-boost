@@ -147,7 +147,7 @@ class StringCaseConverter:
         method = case_methods.get(case_type)
         if method:
             return method(text)
-        logger.warning(f"Unknown case type: {case_type}")
+        logger.warning("Unknown case type: %s", case_type)
         return text
 
 

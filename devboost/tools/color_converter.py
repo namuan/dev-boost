@@ -1407,7 +1407,7 @@ def create_color_converter_widget(style_func, scratch_pad=None):
 
     def update_color_formats(color_input: str):
         """Update all color format fields based on input."""
-        logger.info(f"update_color_formats called with input: '{color_input}'")
+        logger.info("update_color_formats called with input: '%s'", color_input)
 
         if not color_input.strip():
             # Clear all fields if input is empty
@@ -1420,11 +1420,11 @@ def create_color_converter_widget(style_func, scratch_pad=None):
             return
 
         # Parse the color
-        logger.info(f"Parsing color input: '{color_input}'")
+        logger.info("Parsing color input: '%s'", color_input)
         rgba = converter.parse_color(color_input)
         if rgba is None:
             # Invalid color - show error state
-            logger.warning(f"Invalid color format: '{color_input}'")
+            logger.warning("Invalid color format: '%s'", color_input)
             for line_edit in format_line_edits.values():
                 line_edit.setText("Invalid color format")
                 line_edit.setStyleSheet(get_status_style("error"))
@@ -1435,7 +1435,7 @@ def create_color_converter_widget(style_func, scratch_pad=None):
 
         # Valid color - update all formats
         r, g, b, a = rgba
-        logger.info(f"Valid color parsed: RGBA({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
+        logger.info("Valid color parsed: RGBA(%.3f, %.3f, %.3f, %.3f)", r, g, b, a)
 
         try:
             # Convert to all formats
@@ -1507,16 +1507,16 @@ def create_color_converter_widget(style_func, scratch_pad=None):
         # Get current color from input field if valid
         current_color = QColor(255, 255, 255)  # Default to white
         current_input = input_field.text().strip()
-        logger.info(f"Current input field value: '{current_input}'")
+        logger.info("Current input field value: '%s'", current_input)
 
         if current_input:
             rgba = converter.parse_color(current_input)
             if rgba is not None:
                 r, g, b, a = rgba
                 current_color = QColor(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
-                logger.info(f"Parsed current color: RGBA({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
+                logger.info("Parsed current color: RGBA(%.3f, %.3f, %.3f, %.3f)", r, g, b, a)
             else:
-                logger.warning(f"Failed to parse current color: '{current_input}'")
+                logger.warning("Failed to parse current color: '%s'", current_input)
 
         # Open color dialog
         logger.info("Showing color dialog")
@@ -1526,8 +1526,8 @@ def create_color_converter_widget(style_func, scratch_pad=None):
         if color.isValid():
             # Convert to hex format and update input field
             hex_color = color.name()  # Returns #RRGGBB format
-            logger.info(f"User selected color: {hex_color}")
-            logger.info(f"Setting input field to: {hex_color}")
+            logger.info("User selected color: %s", hex_color)
+            logger.info("Setting input field to: %s", hex_color)
             input_field.setText(hex_color)
             logger.info("Input field updated with selected color")
         else:
@@ -1585,7 +1585,7 @@ def create_color_converter_widget(style_func, scratch_pad=None):
 
     def update_code_presets(rgba_values=None):
         """Update code presets with current color values."""
-        logger.info(f"update_code_presets called with rgba_values: {rgba_values}")
+        logger.info("update_code_presets called with rgba_values: %s", rgba_values)
 
         if rgba_values is None:
             # Default values
@@ -1593,7 +1593,7 @@ def create_color_converter_widget(style_func, scratch_pad=None):
             logger.info("Using default RGBA values for code presets")
         else:
             r, g, b, a = rgba_values
-            logger.info(f"Using provided RGBA values: ({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
+            logger.info("Using provided RGBA values: (%.3f, %.3f, %.3f, %.3f)", r, g, b, a)
 
         # Convert to different representations
         red_b = round(r * 255)
@@ -1682,7 +1682,7 @@ new Color32({red_b}, {green_b}, {blue_b}, {alpha_b})"""
     original_update_color_formats = update_color_formats
 
     def enhanced_update_color_formats(color_input: str):
-        logger.info(f"enhanced_update_color_formats called with input: '{color_input}'")
+        logger.info("enhanced_update_color_formats called with input: '%s'", color_input)
         original_update_color_formats(color_input)
         logger.info("Finished calling original_update_color_formats")
 
@@ -1693,7 +1693,7 @@ new Color32({red_b}, {green_b}, {blue_b}, {alpha_b})"""
             if rgba is not None:
                 try:
                     r, g, b, a = rgba
-                    logger.info(f"Updating code presets with RGBA({r:.3f}, {g:.3f}, {b:.3f}, {a:.3f})")
+                    logger.info("Updating code presets with RGBA(%.3f, %.3f, %.3f, %.3f)", r, g, b, a)
                     update_code_presets((r, g, b, a))
                     logger.info("Code presets updated successfully")
                 except Exception:

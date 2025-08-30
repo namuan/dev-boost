@@ -67,6 +67,7 @@ select = [
     "B",
     # flake8-builtins
     "A",
+    "G",
     # flake8-comprehensions
     "C4",
     # flake8-debugger

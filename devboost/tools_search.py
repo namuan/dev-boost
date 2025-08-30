@@ -36,7 +36,7 @@ class NavigableToolsList(QListWidget):
             current_item = self.currentItem()
             if current_item:
                 self.itemClicked.emit(current_item)
-                logger.info(f"Enter pressed - selected tool: {current_item.data(Qt.ItemDataRole.UserRole)}")
+                logger.info("Enter pressed - selected tool: %s", current_item.data(Qt.ItemDataRole.UserRole))
         elif event.key() == Qt.Key.Key_Escape:
             # Clear the search when Escape is pressed
             if self.clear_search_callback:
@@ -78,7 +78,7 @@ class NavigableToolsList(QListWidget):
         next_item = visible_items[next_index]
         self.setCurrentItem(next_item)
         self.scrollToItem(next_item)
-        logger.info(f"Navigated to: {next_item.data(Qt.ItemDataRole.UserRole)}")
+        logger.info("Navigated to: %s", next_item.data(Qt.ItemDataRole.UserRole))
 
     def _get_visible_items(self):
         """Get a list of currently visible items.
@@ -123,7 +123,7 @@ class ToolsSearch:
         Args:
             text: The current text in the search input field
         """
-        logger.info(f"Search text changed: '{text}'")
+        logger.info("Search text changed: '%s'", text)
         # Store the current search text for the debounced search
         self.current_search_text = text
         # Stop any existing timer and start a new one
@@ -133,7 +133,7 @@ class ToolsSearch:
     def _perform_search(self):
         """Perform the actual search filtering after debounce delay."""
         if hasattr(self, "current_search_text"):
-            logger.info(f"Performing debounced search for: '{self.current_search_text}'")
+            logger.info("Performing debounced search for: '%s'", self.current_search_text)
             self.filter_tools(self.current_search_text)
 
     def _set_item_visibility(self, item: QListWidgetItem, visible: bool):
@@ -233,7 +233,7 @@ class ToolsSearch:
                 self.tool_list.setFocus()
                 # Trigger tool selection to switch to the tool view
                 on_tool_selected_callback(item)
-                logger.info(f"Selected and switched to first visible tool: {item.data(Qt.ItemDataRole.UserRole)}")
+                logger.info("Selected and switched to first visible tool: %s", item.data(Qt.ItemDataRole.UserRole))
                 return
 
     def focus_tool_list(self):
@@ -261,7 +261,7 @@ class ToolsSearch:
         Args:
             search_query: The search string to filter tools by
         """
-        logger.info(f"Filtering tools with query: '{search_query}'")
+        logger.info("Filtering tools with query: '%s'", search_query)
 
         # Update tool visibility based on search query
         visible_count = self._update_tool_visibility(search_query)
@@ -269,7 +269,7 @@ class ToolsSearch:
         # Update visual feedback for search results
         self._update_search_feedback(search_query, visible_count)
 
-        logger.info(f"Visible tools: {visible_count} out of {self.tool_list.count()} tools")
+        logger.info("Visible tools: %d out of %d tools", visible_count, self.tool_list.count())
 
     def _update_search_feedback(self, search_query: str, visible_count: int):
         """Update visual feedback for search results.
@@ -320,4 +320,4 @@ class ToolsSearch:
                 }
             """)
 
-        logger.info(f"Search feedback updated: '{self.search_results_label.text()}'")
+        logger.info("Search feedback updated: '%s'", self.search_results_label.text())

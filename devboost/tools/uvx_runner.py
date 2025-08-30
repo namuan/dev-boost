@@ -88,7 +88,7 @@ class UvxRunner(QObject):
         self.working_directory = Path.home() / "temp"
         # Create the directory if it doesn't exist
         Path(self.working_directory).mkdir(parents=True, exist_ok=True)
-        logger.info(f"UvxRunner initialized with working directory: {self.working_directory}")
+        logger.info("UvxRunner initialized with working directory: %s", self.working_directory)
 
     def _parse_installed_tools(self, uvx_output: str) -> list[str]:
         """Parse uvx list output to extract installed tool names."""
@@ -130,7 +130,7 @@ class UvxRunner(QObject):
         Args:
             tool_name: Name of the uvx tool to get help for
         """
-        logger.info(f"Getting help for uvx tool: {tool_name}")
+        logger.info("Getting help for uvx tool: %s", tool_name)
 
         if not tool_name or tool_name not in UVX_TOOLS:
             self.help_received.emit("Please select a valid tool from the dropdown.")
@@ -142,7 +142,7 @@ class UvxRunner(QObject):
 
             help_text = self._get_tool_help_text(tool_name, help_result)
             self.help_received.emit(help_text)
-            logger.debug(f"Help retrieved successfully for {tool_name}")
+            logger.debug("Help retrieved successfully for %s", tool_name)
 
         except subprocess.TimeoutExpired:
             error_msg = f"Timeout while getting help for {tool_name}"
@@ -178,7 +178,7 @@ class UvxRunner(QObject):
             self.command_failed.emit("Please select a valid tool from the dropdown.")
             return
 
-        logger.info(f"Running uvx tool: {tool_name} with arguments: {arguments}")
+        logger.info("Running uvx tool: %s with arguments: %s", tool_name, arguments)
 
         # Build command
         cmd = ["uvx", tool_name]
@@ -207,7 +207,7 @@ class UvxRunner(QObject):
         self.process.finished.connect(self._handle_finished)
         self.process.errorOccurred.connect(self._handle_error)
 
-        logger.info(f"Starting command: {' '.join(cmd)} in directory: {self.working_directory}")
+        logger.info("Starting command: %s in directory: %s", " ".join(cmd), self.working_directory)
         self.command_started.emit()
 
         self.process.start(cmd[0], cmd[1:])
@@ -222,7 +222,7 @@ class UvxRunner(QObject):
         if self.process:
             data = self.process.readAllStandardOutput().data().decode("utf-8", errors="replace")
             if data:
-                logger.debug(f"Stdout received: {data[:100]}...")
+                logger.debug("Stdout received: %s...", data[:100])
                 self.output_received.emit(data)
 
     def _handle_stderr(self):
@@ -230,12 +230,12 @@ class UvxRunner(QObject):
         if self.process:
             data = self.process.readAllStandardError().data().decode("utf-8", errors="replace")
             if data:
-                logger.debug(f"Stderr received: {data[:100]}...")
+                logger.debug("Stderr received: %s...", data[:100])
                 self.output_received.emit(f"[STDERR] {data}")
 
     def _handle_finished(self, exit_code: int):
         """Handle process completion."""
-        logger.info(f"Command finished with exit code: {exit_code}")
+        logger.info("Command finished with exit code: %d", exit_code)
         self.command_finished.emit(exit_code)
         self.process = None
 
@@ -362,9 +362,9 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     # Filter and show suggestions function
     def show_suggestions(text):
-        logger.debug(f"show_suggestions called with text: '{text}'")
+        logger.debug("show_suggestions called with text: '%s'", text)
         filter_text = text.lower().strip()
-        logger.debug(f"Filter text after processing: '{filter_text}'")
+        logger.debug("Filter text after processing: '%s'", filter_text)
 
         # Clear current suggestions
         tool_suggestions.clear()
@@ -376,7 +376,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             if not filter_text or filter_text in tool_name.lower() or filter_text in display_text.lower():
                 matched_items.append((tool_name, display_text))
 
-        logger.debug(f"Found {len(matched_items)} matching items")
+        logger.debug("Found %d matching items", len(matched_items))
 
         # Add matched items to suggestion list
         for tool_name, display_text in matched_items:
@@ -384,7 +384,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             list_item = tool_suggestions.item(tool_suggestions.count() - 1)
             if list_item:
                 list_item.setData(Qt.ItemDataRole.UserRole, tool_name)
-                logger.debug(f"Added item: '{display_text}' with tool name: '{tool_name}'")
+                logger.debug("Added item: '%s' with tool name: '%s'", display_text, tool_name)
 
         # Show/hide suggestions based on matches
         # Show all tools when input is focused but empty, otherwise filter
@@ -402,7 +402,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             tool_suggestions.setCurrentRow(0)
             current_selected_tool["name"] = matched_items[0][0]
             current_selected_tool["display"] = matched_items[0][1]
-            logger.debug(f"Auto-selected single match: '{matched_items[0][1]}'")
+            logger.debug("Auto-selected single match: '%s'", matched_items[0][1])
         elif len(matched_items) == 0 and filter_text:
             # No matches found
             tool_suggestions.addItem("No matching tools found")
@@ -419,7 +419,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             selected_item = selected_items[0]
             tool_name = selected_item.data(Qt.ItemDataRole.UserRole)
             display_text = selected_item.text()
-            logger.debug(f"Selected tool: name='{tool_name}', display='{display_text}'")
+            logger.debug("Selected tool: name='%s', display='%s'", tool_name, display_text)
             if tool_name:  # Make sure it's not the "no results" item
                 tool_input.setText(display_text)
                 current_selected_tool["name"] = tool_name
@@ -434,25 +434,25 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     # Handle keyboard navigation in suggestions
     def on_tool_input_key_press(event):
-        logger.debug(f"Key press event received: key={event.key()}, text='{event.text()}'")
+        logger.debug("Key press event received: key=%d, text='%s'", event.key(), event.text())
 
         if tool_suggestions.isVisible():
             logger.debug("Tool suggestions are visible")
             if event.key() == Qt.Key.Key_Down:
                 logger.debug("Down arrow key pressed")
                 current_row = tool_suggestions.currentRow()
-                logger.debug(f"Current row: {current_row}, Total rows: {tool_suggestions.count()}")
+                logger.debug("Current row: %d, Total rows: %d", current_row, tool_suggestions.count())
                 if current_row < tool_suggestions.count() - 1:
                     tool_suggestions.setCurrentRow(current_row + 1)
-                    logger.debug(f"Set current row to: {current_row + 1}")
+                    logger.debug("Set current row to: %d", current_row + 1)
                 return
             if event.key() == Qt.Key.Key_Up:
                 logger.debug("Up arrow key pressed")
                 current_row = tool_suggestions.currentRow()
-                logger.debug(f"Current row: {current_row}")
+                logger.debug("Current row: %d", current_row)
                 if current_row > 0:
                     tool_suggestions.setCurrentRow(current_row - 1)
-                    logger.debug(f"Set current row to: {current_row - 1}")
+                    logger.debug("Set current row to: %d", current_row - 1)
                 return
             if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
                 logger.debug("Enter key pressed")
@@ -469,7 +469,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
                 current_selected_tool["display"] = ""
                 logger.debug("ESC key handling completed")
                 return
-            logger.debug(f"Other key pressed while suggestions visible: {event.key()}")
+            logger.debug("Other key pressed while suggestions visible: %d", event.key())
         else:
             logger.debug("Tool suggestions are NOT visible")
             if event.key() == Qt.Key.Key_Escape:
@@ -607,54 +607,57 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             status_label.setText(f"Working directory set to: {directory}")
 
     def on_get_help():
-        logger.debug(f"on_get_help called. Current selected tool: {current_selected_tool}")
-        logger.debug(f"Tool input text: '{tool_input.text()}'")
+        logger.debug("on_get_help called. Current selected tool: %s", current_selected_tool)
+        logger.debug("Tool input text: '%s'", tool_input.text())
         tool_name = (
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
-        logger.debug(f"Tool name to get help for: '{tool_name}'")
+        logger.debug("Tool name to get help for: '%s'", tool_name)
         if tool_name and tool_name in UVX_TOOLS:
-            logger.info(f"Getting help for tool: {tool_name}")
+            logger.info("Getting help for tool: %s", tool_name)
             status_label.setText(f"Getting help for {tool_name}...")
             uvx_runner.get_tool_help(tool_name)
         else:
-            logger.warning(f"Cannot get help - invalid tool: '{tool_name}'")
+            logger.warning("Cannot get help - invalid tool: '%s'", tool_name)
             QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_install_tool():
-        logger.debug(f"on_install_tool called. Current selected tool: {current_selected_tool}")
-        logger.debug(f"Tool input text: '{tool_input.text()}'")
+        logger.debug("on_install_tool called. Current selected tool: %s", current_selected_tool)
+        logger.debug("Tool input text: '%s'", tool_input.text())
         tool_name = (
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
-        logger.debug(f"Tool name to install: '{tool_name}'")
+        logger.debug("Tool name to install: '%s'", tool_name)
         if tool_name and tool_name in UVX_TOOLS:
-            logger.info(f"Installing tool: {tool_name}")
+            logger.info("Installing tool: %s", tool_name)
             status_label.setText(f"Installing {tool_name}...")
             uvx_runner.install_tool(tool_name)
         else:
-            logger.warning(f"Cannot install - invalid tool: '{tool_name}'")
+            logger.warning("Cannot install - invalid tool: '%s'", tool_name)
             QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_run_tool():
-        logger.debug(f"on_run_tool called. Current selected tool: {current_selected_tool}")
-        logger.debug(f"Tool input text: '{tool_input.text()}'")
+        logger.debug("on_run_tool called. Current selected tool: %s", current_selected_tool)
+        logger.debug("Tool input text: '%s'", tool_input.text())
         # Update working directory from input field
         uvx_runner.working_directory = dir_input.text()
 
         tool_name = (
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
-        logger.debug(f"Tool name to run: '{tool_name}'")
+        logger.debug("Tool name to run: '%s'", tool_name)
         if tool_name and tool_name in UVX_TOOLS:
             arguments = args_input.text().strip()
             logger.info(
-                f"Running tool: {tool_name} with args: {arguments} in directory: {uvx_runner.working_directory}"
+                "Running tool: %s with args: %s in directory: %s",
+                tool_name,
+                arguments,
+                uvx_runner.working_directory,
             )
             status_label.setText(f"Running {tool_name} in {uvx_runner.working_directory}...")
             uvx_runner.run_tool(tool_name, arguments)
         else:
-            logger.warning(f"Cannot run - invalid tool: '{tool_name}'")
+            logger.warning("Cannot run - invalid tool: '%s'", tool_name)
             QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_stop_command():
@@ -707,7 +710,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         status_label.setText(f"Command running in {uvx_runner.working_directory}...")
 
     def on_command_finished(exit_code):
-        logger.debug(f"Command finished with exit code {exit_code} - updating UI")
+        logger.debug("Command finished with exit code %d - updating UI", exit_code)
         progress_bar.setVisible(False)
         run_button.setEnabled(True)
         stop_button.setEnabled(False)
@@ -717,7 +720,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             status_label.setText(f"Command failed with exit code {exit_code} in {uvx_runner.working_directory}")
 
     def on_command_failed(error_message):
-        logger.error(f"Command failed: {error_message}")
+        logger.error("Command failed: %s", error_message)
         progress_bar.setVisible(False)
         run_button.setEnabled(True)
         stop_button.setEnabled(False)
@@ -725,7 +728,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         output_text.append(f"\n[ERROR] {error_message}\n")
 
     def on_output_received(text):
-        logger.debug(f"Output received: {text[:50]}...")
+        logger.debug("Output received: %s...", text[:50])
         output_text.append(text)
         # Auto-scroll to bottom
         cursor = output_text.textCursor()

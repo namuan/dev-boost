@@ -62,12 +62,12 @@ class JSONValidator(QObject):
 
         except json.JSONDecodeError as e:
             error_msg = f"JSON Decode Error at line {e.lineno}, column {e.colno}: {e.msg}"
-            logger.exception(f"JSON validation failed: {error_msg}")
+            logger.exception("JSON validation failed: %s", error_msg)
             return False, "", error_msg
 
         except Exception as e:
             error_msg = f"Unexpected error: {e!s}"
-            logger.exception(f"JSON validation failed: {error_msg}")
+            logger.exception("JSON validation failed: %s", error_msg)
             return False, "", error_msg
 
     def minify_json(self, input_text: str) -> tuple[bool, str, str]:
