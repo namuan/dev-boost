@@ -14,6 +14,11 @@ check: ## Run code quality tools.
 	@uv run pre-commit run -a
 	@mob next
 
+.PHONY: upgrade
+upgrade: ## Upgrade all dependencies to their latest versions
+	@echo "🚀 Upgrading all dependencies"
+	@uv lock --upgrade
+
 .PHONY: test
 test: ## Run all unit tests
 	@echo "🚀 Running unit tests"
