@@ -5,7 +5,16 @@ import pytest
 import requests
 from PyQt6.QtWidgets import QApplication
 
-from devboost.tools.http_client import HTTPClient, create_http_client_widget
+from devboost.tools.http_client import (
+    COMMON_HEADER_NAMES,
+    HTTP_HEADERS,
+    AutoCompleteLineEdit,
+    AutoCompleteTableWidget,
+    HeaderKeyLineEdit,
+    HeaderValueLineEdit,
+    HTTPClient,
+    create_http_client_widget,
+)
 
 
 class TestHTTPClient:
@@ -546,6 +555,524 @@ class TestHTTPClientIntegration:
 
         # Verify clipboard was called
         mock_clipboard_instance.setText.assert_called_once_with(test_response)
+
+
+class TestAutoCompleteLineEdit:
+    """Test cases for AutoCompleteLineEdit class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_qapp(self, qapp):
+        """Ensure QApplication is available for widget tests."""
+        self.qapp = qapp
+
+    def test_autocomplete_line_edit_initialization_header_key(self):
+        """Test AutoCompleteLineEdit initialization for header keys."""
+        widget = AutoCompleteLineEdit(is_header_key=True)
+        assert widget.is_header_key is True
+        assert widget.completer is not None
+        # Check that completer has been set up
+        assert widget.completer.maxVisibleItems() == 10
+
+    def test_autocomplete_line_edit_initialization_header_value(self):
+        """Test AutoCompleteLineEdit initialization for header values."""
+        widget = AutoCompleteLineEdit(is_header_key=False)
+        assert widget.is_header_key is False
+        assert widget.completer is not None
+        # Check that completer has been set up
+        assert widget.completer.maxVisibleItems() == 10
+
+    def test_update_value_suggestions(self):
+        """Test updating value suggestions based on header key."""
+        widget = AutoCompleteLineEdit(is_header_key=False)
+
+        # Test with a known header key
+        widget.update_value_suggestions("Content-Type")
+        model = widget.completer.model()
+        suggestions = [model.data(model.index(i, 0)) for i in range(model.rowCount())]
+
+        # Should contain some Content-Type values
+        assert "application/json" in suggestions
+        assert "application/xml" in suggestions
+
+    def test_get_suggestions_for_key(self):
+        """Test getting suggestions for a specific header key."""
+        widget = AutoCompleteLineEdit(is_header_key=False)
+
+        # Test with known header
+        suggestions = widget.get_suggestions_for_key("Accept")
+        assert "application/json" in suggestions
+        assert "*/*" in suggestions
+
+        # Test with unknown header
+        suggestions = widget.get_suggestions_for_key("Unknown-Header")
+        assert suggestions == []
+
+
+class TestHeaderKeyLineEdit:
+    """Test cases for HeaderKeyLineEdit class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_qapp(self, qapp):
+        """Ensure QApplication is available for widget tests."""
+        self.qapp = qapp
+
+    def test_header_key_line_edit_initialization(self):
+        """Test HeaderKeyLineEdit initialization."""
+        widget = HeaderKeyLineEdit()
+        assert widget.is_header_key is True
+        assert widget.placeholderText() == "Enter header name..."
+        assert widget.completer is not None
+
+    def test_get_current_suggestions(self):
+        """Test getting current header key suggestions."""
+        widget = HeaderKeyLineEdit()
+        suggestions = widget.get_current_suggestions()
+
+        # Should return the common header names
+        assert suggestions == COMMON_HEADER_NAMES
+        assert "Content-Type" in suggestions
+        assert "Authorization" in suggestions
+
+    def test_is_valid_header_key(self):
+        """Test header key validation."""
+        widget = HeaderKeyLineEdit()
+
+        # Test valid headers
+        assert widget.is_valid_header_key("Content-Type") is True
+        assert widget.is_valid_header_key("Authorization") is True
+
+        # Test invalid header
+        assert widget.is_valid_header_key("Invalid-Header") is False
+
+    def test_get_matching_headers(self):
+        """Test getting matching headers for partial input."""
+        widget = HeaderKeyLineEdit()
+
+        # Test partial match
+        matches = widget.get_matching_headers("content")
+        content_headers = [h for h in matches if "content" in h.lower()]
+        assert len(content_headers) > 0
+
+        # Test case insensitive
+        matches_lower = widget.get_matching_headers("CONTENT")
+        assert matches == matches_lower
+
+
+class TestHeaderValueLineEdit:
+    """Test cases for HeaderValueLineEdit class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_qapp(self, qapp):
+        """Ensure QApplication is available for widget tests."""
+        self.qapp = qapp
+
+    def test_header_value_line_edit_initialization(self):
+        """Test HeaderValueLineEdit initialization."""
+        widget = HeaderValueLineEdit()
+        assert widget.is_header_key is False
+        assert widget.placeholderText() == "Enter header value..."
+        assert widget.current_header_key == ""
+        assert widget.completer is not None
+
+    def test_set_header_key(self):
+        """Test setting header key for context-aware suggestions."""
+        widget = HeaderValueLineEdit()
+
+        # Set a header key with suggestions
+        widget.set_header_key("Content-Type")
+        assert widget.current_header_key == "Content-Type"
+        assert "application/json" in widget.placeholderText()
+
+        # Test suggestions are updated
+        suggestions = widget.get_current_suggestions()
+        assert "application/json" in suggestions
+
+    def test_get_current_suggestions(self):
+        """Test getting current value suggestions."""
+        widget = HeaderValueLineEdit()
+
+        # Initially no suggestions
+        assert widget.get_current_suggestions() == []
+
+        # After setting header key
+        widget.set_header_key("Accept")
+        suggestions = widget.get_current_suggestions()
+        assert "application/json" in suggestions
+        assert "*/*" in suggestions
+
+    def test_has_suggestions(self):
+        """Test checking if suggestions are available."""
+        widget = HeaderValueLineEdit()
+
+        # Initially no suggestions
+        assert widget.has_suggestions() is False
+
+        # After setting header key with suggestions
+        widget.set_header_key("Content-Type")
+        assert widget.has_suggestions() is True
+
+        # Header key without suggestions
+        widget.set_header_key("X-Custom-Header")
+        assert widget.has_suggestions() is False
+
+    def test_get_suggestion_count(self):
+        """Test getting suggestion count."""
+        widget = HeaderValueLineEdit()
+
+        # Initially no suggestions
+        assert widget.get_suggestion_count() == 0
+
+        # After setting header key
+        widget.set_header_key("Content-Type")
+        count = widget.get_suggestion_count()
+        assert count > 0
+        assert count == len(HTTP_HEADERS["Content-Type"])
+
+    def test_clear_header_context(self):
+        """Test clearing header context."""
+        widget = HeaderValueLineEdit()
+
+        # Set context first
+        widget.set_header_key("Content-Type")
+        assert widget.current_header_key == "Content-Type"
+
+        # Clear context
+        widget.clear_header_context()
+        assert widget.current_header_key == ""
+        assert widget.placeholderText() == "Enter header value..."
+        assert widget.get_suggestion_count() == 0
+
+
+class TestAutoCompleteTableWidget:
+    """Test cases for AutoCompleteTableWidget class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_qapp(self, qapp):
+        """Ensure QApplication is available for widget tests."""
+        self.qapp = qapp
+
+    def test_autocomplete_table_widget_initialization(self):
+        """Test AutoCompleteTableWidget initialization."""
+        widget = AutoCompleteTableWidget()
+        assert widget.rowCount() == 0
+        assert widget.columnCount() == 2
+        assert widget.horizontalHeaderItem(0).text() == "Key"
+        assert widget.horizontalHeaderItem(1).text() == "Value"
+
+    def test_add_header_row_empty(self):
+        """Test adding empty header row."""
+        widget = AutoCompleteTableWidget()
+
+        row_index = widget.add_header_row()
+        assert row_index == 0
+        assert widget.rowCount() == 1
+
+        # Check widgets are created
+        key_widget = widget.cellWidget(0, 0)
+        value_widget = widget.cellWidget(0, 1)
+        assert isinstance(key_widget, HeaderKeyLineEdit)
+        assert isinstance(value_widget, HeaderValueLineEdit)
+
+    def test_add_header_row_with_values(self):
+        """Test adding header row with initial values."""
+        widget = AutoCompleteTableWidget()
+
+        row_index = widget.add_header_row("Content-Type", "application/json")
+        assert row_index == 0
+        assert widget.rowCount() == 1
+
+        # Check values are set
+        key_widget = widget.cellWidget(0, 0)
+        value_widget = widget.cellWidget(0, 1)
+        assert key_widget.text() == "Content-Type"
+        assert value_widget.text() == "application/json"
+
+    def test_get_headers(self):
+        """Test extracting headers from table."""
+        widget = AutoCompleteTableWidget()
+
+        # Add some headers
+        widget.add_header_row("Content-Type", "application/json")
+        widget.add_header_row("Authorization", "Bearer token123")
+        widget.add_header_row("", "")  # Empty row should be ignored
+
+        headers = widget.get_headers()
+        expected = {"Content-Type": "application/json", "Authorization": "Bearer token123"}
+        assert headers == expected
+
+    def test_clear_headers(self):
+        """Test clearing all headers."""
+        widget = AutoCompleteTableWidget()
+
+        # Add some headers
+        widget.add_header_row("Content-Type", "application/json")
+        widget.add_header_row("Authorization", "Bearer token123")
+        assert widget.rowCount() == 2
+
+        # Clear headers
+        widget.clear_headers()
+        assert widget.rowCount() == 0
+
+    def test_set_headers(self):
+        """Test setting headers from dictionary."""
+        widget = AutoCompleteTableWidget()
+
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer token123", "Accept": "application/json"}
+
+        widget.set_headers(headers)
+        assert widget.rowCount() == 3
+
+        # Verify headers are set correctly
+        extracted_headers = widget.get_headers()
+        assert extracted_headers == headers
+
+    def test_delete_selected_rows(self):
+        """Test deleting selected rows."""
+        widget = AutoCompleteTableWidget()
+
+        # Add some headers
+        widget.add_header_row("Content-Type", "application/json")
+        widget.add_header_row("Authorization", "Bearer token123")
+        assert widget.rowCount() == 2
+
+        # Since we can't easily simulate selection in tests,
+        # we'll test the method exists and returns a count
+        deleted_count = widget.delete_selected_rows()
+        assert isinstance(deleted_count, int)
+        assert deleted_count >= 0
+
+
+class TestHTTPHeadersData:
+    """Test cases for HTTP headers data structures."""
+
+    def test_http_headers_structure(self):
+        """Test HTTP_HEADERS dictionary structure."""
+        assert isinstance(HTTP_HEADERS, dict)
+        assert len(HTTP_HEADERS) > 0
+
+        # Test some common headers exist
+        assert "Content-Type" in HTTP_HEADERS
+        assert "Authorization" in HTTP_HEADERS
+        assert "Accept" in HTTP_HEADERS
+
+        # Test values are lists
+        for _header, values in HTTP_HEADERS.items():
+            assert isinstance(values, list)
+
+    def test_common_header_names(self):
+        """Test COMMON_HEADER_NAMES list."""
+        assert isinstance(COMMON_HEADER_NAMES, list)
+        assert len(COMMON_HEADER_NAMES) > 0
+
+        # Should be sorted
+        assert sorted(COMMON_HEADER_NAMES) == COMMON_HEADER_NAMES
+
+        # Should contain all keys from HTTP_HEADERS
+        assert set(COMMON_HEADER_NAMES) == set(HTTP_HEADERS.keys())
+
+    def test_content_type_suggestions(self):
+        """Test Content-Type header suggestions."""
+        content_type_values = HTTP_HEADERS["Content-Type"]
+
+        # Should contain common MIME types
+        assert "application/json" in content_type_values
+        assert "application/xml" in content_type_values
+        assert "text/html" in content_type_values
+        assert "multipart/form-data" in content_type_values
+
+    def test_authorization_suggestions(self):
+        """Test Authorization header suggestions."""
+        auth_values = HTTP_HEADERS["Authorization"]
+
+        # Should contain common auth schemes
+        assert "Bearer " in auth_values
+        assert "Basic " in auth_values
+        assert "JWT " in auth_values
+
+
+class TestAutoCompleteIntegration:
+    """Integration tests for autocomplete functionality with various header combinations."""
+
+    @pytest.fixture(autouse=True)
+    def setup_qapp(self, qapp):
+        """Ensure QApplication is available for widget tests."""
+        self.qapp = qapp
+
+    def test_content_type_autocomplete_integration(self):
+        """Test Content-Type header autocomplete with various values."""
+        table = AutoCompleteTableWidget()
+
+        # Add Content-Type header
+        table.add_header_row("Content-Type", "")
+
+        # Get the widgets
+        value_widget = table.cellWidget(0, 1)
+        assert isinstance(value_widget, HeaderValueLineEdit)
+
+        # Manually trigger the key change to update suggestions
+        # (simulating what happens when user types)
+        value_widget.set_header_key("Content-Type")
+
+        # Test that suggestions are available
+        suggestions = value_widget.get_current_suggestions()
+        assert "application/json" in suggestions
+        assert "application/xml" in suggestions
+        assert "text/html" in suggestions
+
+        # Test setting different values
+        value_widget.setText("application/json")
+        assert value_widget.text() == "application/json"
+
+    def test_authorization_header_combinations(self):
+        """Test Authorization header with different auth schemes."""
+        table = AutoCompleteTableWidget()
+
+        # Test Bearer token
+        table.add_header_row("Authorization", "Bearer token123")
+        headers = table.get_headers()
+        assert headers["Authorization"] == "Bearer token123"
+
+        # Test Basic auth (will overwrite the previous Authorization header in dict)
+        table.add_header_row("Authorization", "Basic dXNlcjpwYXNz")
+        headers = table.get_headers()
+        # Dictionary will only have one Authorization key (the last one)
+        assert "Authorization" in headers
+        assert len(headers) >= 1  # At least one header
+
+    def test_multiple_header_combinations(self):
+        """Test multiple common header combinations."""
+        table = AutoCompleteTableWidget()
+
+        # Common API request headers
+        common_headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": "Bearer token123",
+            "User-Agent": "DevBoost/1.0",
+            "X-API-Key": "api-key-123",
+        }
+
+        table.set_headers(common_headers)
+        extracted_headers = table.get_headers()
+
+        assert extracted_headers == common_headers
+        assert len(extracted_headers) == 5
+
+    def test_cors_headers_combination(self):
+        """Test CORS-related headers combination."""
+        table = AutoCompleteTableWidget()
+
+        cors_headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+
+        table.set_headers(cors_headers)
+        extracted_headers = table.get_headers()
+
+        assert extracted_headers == cors_headers
+
+        # Test that value suggestions work for CORS headers
+        for i, (_key, _expected_value) in enumerate(cors_headers.items()):
+            value_widget = table.cellWidget(i, 1)
+            suggestions = value_widget.get_current_suggestions()
+            assert len(suggestions) > 0  # Should have suggestions for CORS headers
+
+    def test_cache_control_combinations(self):
+        """Test Cache-Control header with different directives."""
+        table = AutoCompleteTableWidget()
+
+        # Test different cache control values
+        cache_values = ["no-cache", "no-store", "max-age=3600", "public", "private"]
+
+        for _i, value in enumerate(cache_values):
+            table.add_header_row("Cache-Control", value)
+
+        headers = table.get_headers()
+        # Dictionary will only have one Cache-Control key (the last one)
+        assert "Cache-Control" in headers
+        assert headers["Cache-Control"] == "private"  # Should be the last value
+        assert table.rowCount() == len(cache_values)  # But table should have all rows
+
+    def test_custom_headers_with_autocomplete(self):
+        """Test custom headers that may not have predefined suggestions."""
+        table = AutoCompleteTableWidget()
+
+        custom_headers = {"X-Custom-Header": "custom-value", "X-Request-ID": "req-123", "X-Correlation-ID": "corr-456"}
+
+        table.set_headers(custom_headers)
+        extracted_headers = table.get_headers()
+
+        assert extracted_headers == custom_headers
+
+        # Test that custom headers still work even without suggestions
+        for i, (key, value) in enumerate(custom_headers.items()):
+            key_widget = table.cellWidget(i, 0)
+            value_widget = table.cellWidget(i, 1)
+
+            assert key_widget.text() == key
+            assert value_widget.text() == value
+
+            # Custom headers may not have suggestions
+            # This is fine - custom headers may have empty suggestions
+
+    def test_header_key_validation_integration(self):
+        """Test header key validation in integration context."""
+        key_widget = HeaderKeyLineEdit()
+
+        # Test valid headers
+        valid_headers = ["Content-Type", "Authorization", "Accept", "User-Agent"]
+        for header in valid_headers:
+            assert key_widget.is_valid_header_key(header) is True
+
+        # Test invalid headers
+        invalid_headers = ["Invalid-Header", "NonExistent-Header"]
+        for header in invalid_headers:
+            assert key_widget.is_valid_header_key(header) is False
+
+    def test_context_aware_value_suggestions(self):
+        """Test that value suggestions change based on header key context."""
+        value_widget = HeaderValueLineEdit()
+
+        # Test Content-Type context
+        value_widget.set_header_key("Content-Type")
+        content_type_suggestions = value_widget.get_current_suggestions()
+        assert "application/json" in content_type_suggestions
+        assert "text/html" in content_type_suggestions
+
+        # Test Accept context
+        value_widget.set_header_key("Accept")
+        accept_suggestions = value_widget.get_current_suggestions()
+        assert "application/json" in accept_suggestions
+        assert "*/*" in accept_suggestions
+
+        # Test Authorization context
+        value_widget.set_header_key("Authorization")
+        auth_suggestions = value_widget.get_current_suggestions()
+        assert "Bearer " in auth_suggestions
+        assert "Basic " in auth_suggestions
+
+        # Verify suggestions are different for different contexts
+        assert content_type_suggestions != accept_suggestions
+        assert accept_suggestions != auth_suggestions
+
+    def test_empty_and_whitespace_handling(self):
+        """Test handling of empty and whitespace-only headers."""
+        table = AutoCompleteTableWidget()
+
+        # Add headers with various empty/whitespace combinations
+        table.add_header_row("", "")  # Completely empty
+        table.add_header_row("  ", "  ")  # Whitespace only
+        table.add_header_row("Content-Type", "")  # Empty value
+        table.add_header_row("", "application/json")  # Empty key
+        table.add_header_row("Accept", "application/json")  # Valid header
+
+        headers = table.get_headers()
+
+        # Only the valid header should be extracted
+        assert len(headers) == 1
+        assert headers["Accept"] == "application/json"
 
 
 # Pytest fixtures

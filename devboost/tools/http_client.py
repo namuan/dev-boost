@@ -4,11 +4,12 @@ import time
 from typing import Any
 
 import requests
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, QStringListModel, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
+    QCompleter,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -29,6 +30,608 @@ from ..styles import get_status_style, get_tool_style
 
 # Logger for debugging
 logger = logging.getLogger(__name__)
+
+# HTTP Header Data Dictionaries for Autocomplete
+HTTP_HEADERS = {
+    # Authentication headers
+    "Authorization": ["Bearer ", "Basic ", "Digest ", "OAuth ", "JWT ", "Token ", "ApiKey "],
+    # Content headers
+    "Content-Type": [
+        "application/json",
+        "application/xml",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data",
+        "text/plain",
+        "text/html",
+        "text/css",
+        "text/javascript",
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/svg+xml",
+        "application/octet-stream",
+    ],
+    "Accept": [
+        "application/json",
+        "application/xml",
+        "text/html",
+        "text/plain",
+        "*/*",
+        "application/pdf",
+        "image/*",
+        "text/css",
+        "application/javascript",
+    ],
+    "Accept-Encoding": ["gzip, deflate, br", "gzip, deflate", "gzip", "deflate", "br", "identity"],
+    "Accept-Language": ["en-US,en;q=0.9", "en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "zh-CN", "ja-JP"],
+    # Cache headers
+    "Cache-Control": [
+        "no-cache",
+        "no-store",
+        "max-age=0",
+        "max-age=3600",
+        "max-age=86400",
+        "public",
+        "private",
+        "must-revalidate",
+    ],
+    "Pragma": ["no-cache"],
+    "Expires": ["0", "-1"],
+    # CORS headers
+    "Access-Control-Allow-Origin": ["*", "https://localhost:3000", "https://example.com"],
+    "Access-Control-Allow-Methods": ["GET, POST, PUT, DELETE, OPTIONS", "GET, POST, OPTIONS", "*"],
+    "Access-Control-Allow-Headers": [
+        "Content-Type, Authorization",
+        "*",
+        "X-Requested-With, Content-Type, Authorization",
+    ],
+    # Custom headers
+    "X-API-Key": [],
+    "X-Requested-With": ["XMLHttpRequest"],
+    "X-Forwarded-For": [],
+    "X-Real-IP": [],
+    "X-Frame-Options": ["DENY", "SAMEORIGIN", "ALLOW-FROM"],
+    "X-Content-Type-Options": ["nosniff"],
+    "X-XSS-Protection": ["1; mode=block", "0"],
+    # Connection headers
+    "Connection": ["keep-alive", "close"],
+    "Keep-Alive": ["timeout=5, max=1000"],
+    # User agent
+    "User-Agent": [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "curl/7.68.0",
+        "PostmanRuntime/7.28.0",
+    ],
+    # Content length and encoding
+    "Content-Length": [],
+    "Content-Encoding": ["gzip", "deflate", "br"],
+    "Transfer-Encoding": ["chunked"],
+    # Location and redirect
+    "Location": [],
+    "Referer": [],
+    # Security headers
+    "Strict-Transport-Security": ["max-age=31536000; includeSubDomains"],
+    "Content-Security-Policy": ["default-src 'self'"],
+    # Custom application headers
+    "X-Custom-Header": [],
+    "X-Request-ID": [],
+    "X-Correlation-ID": [],
+}
+
+# Common HTTP header names for autocomplete (sorted alphabetically)
+COMMON_HEADER_NAMES = sorted(HTTP_HEADERS.keys())
+
+
+class AutoCompleteLineEdit(QLineEdit):
+    """
+    Custom QLineEdit widget with autocomplete functionality for HTTP headers.
+
+    This widget provides intelligent autocomplete suggestions based on whether
+    it's used for header keys or values, with context-aware suggestions.
+    """
+
+    def __init__(self, is_header_key=True, parent=None):
+        """
+        Initialize the AutoCompleteLineEdit widget.
+
+        Args:
+            is_header_key (bool): True if this is for header keys, False for values
+            parent: Parent widget
+        """
+        super().__init__(parent)
+        self.is_header_key = is_header_key
+        self.completer = None
+        self.setup_completer()
+        logger.debug(f"AutoCompleteLineEdit initialized (is_header_key={is_header_key})")
+
+    def setup_completer(self):
+        """
+        Set up the QCompleter with appropriate data based on widget type.
+        """
+        if self.is_header_key:
+            # For header keys, use the list of common header names
+            model = QStringListModel(COMMON_HEADER_NAMES)
+            self.completer = QCompleter(model, self)
+            logger.debug(f"Created completer model with {model.rowCount()} items: {COMMON_HEADER_NAMES[:3]}...")
+        else:
+            # For header values, start with empty completer
+            # Will be populated dynamically based on the selected header key
+            model = QStringListModel([])
+            self.completer = QCompleter(model, self)
+            logger.debug("Created empty completer model for header values")
+
+        # Configure completer behavior
+        self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)  # Case-insensitive matching
+        self.completer.setFilterMode(Qt.MatchFlag.MatchContains)  # Substring matching
+        self.completer.setMaxVisibleItems(10)  # Limit visible suggestions
+
+        logger.debug(
+            f"Configured completer: case_sensitive={self.completer.caseSensitivity()}, filter_mode={self.completer.filterMode()}"
+        )
+
+        # Set the completer for this line edit
+        self.setCompleter(self.completer)
+
+        # Ensure completer is activated
+        self.completer.setCompletionMode(self.completer.CompletionMode.PopupCompletion)
+
+        # Test the completer with a known prefix
+        if self.is_header_key:
+            self.completer.setCompletionPrefix("Acc")
+            test_count = self.completer.completionCount()
+            logger.debug(f"Test completion for 'Acc': {test_count} matches")
+
+        # Apply custom styling to the completer popup
+        self.apply_completer_styling()
+
+        logger.debug(
+            f"Completer setup complete for {'key' if self.is_header_key else 'value'} field with {self.completer.model().rowCount() if self.completer.model() else 0} suggestions"
+        )
+
+    def apply_completer_styling(self):
+        """
+        Apply custom styling to the completer popup for better visual appearance.
+        """
+        if not self.completer:
+            return
+
+        # Get the popup widget
+        popup = self.completer.popup()
+        if popup:
+            # Apply custom stylesheet to the popup
+            popup_style = """
+                QListView {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                    border-radius: 4px;
+                    selection-background-color: #0078d4;
+                    selection-color: #ffffff;
+                    font-size: 12px;
+                    padding: 2px;
+                }
+                QListView::item {
+                    padding: 4px 8px;
+                    border-bottom: 1px solid #404040;
+                }
+                QListView::item:hover {
+                    background-color: #404040;
+                }
+                QListView::item:selected {
+                    background-color: #0078d4;
+                    color: #ffffff;
+                }
+                QScrollBar:vertical {
+                    background-color: #2b2b2b;
+                    width: 12px;
+                    border-radius: 6px;
+                }
+                QScrollBar::handle:vertical {
+                    background-color: #555555;
+                    border-radius: 6px;
+                    min-height: 20px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background-color: #666666;
+                }
+            """
+            popup.setStyleSheet(popup_style)
+
+        # Apply styling to the line edit itself
+        line_edit_style = """
+            QLineEdit {
+                background-color: #3c3c3c;
+                color: #ffffff;
+                border: 1px solid #555555;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+                background-color: #404040;
+            }
+            QLineEdit:hover {
+                border-color: #666666;
+            }
+        """
+        self.setStyleSheet(line_edit_style)
+
+        logger.debug("Applied custom styling to completer and line edit")
+
+    def update_value_suggestions(self, header_key: str):
+        """
+        Update autocomplete suggestions for header values based on the selected key.
+
+        Args:
+            header_key (str): The header key to get value suggestions for
+        """
+        if self.is_header_key:
+            return  # This method is only for value fields
+
+        # Get suggestions for the given header key
+        suggestions = HTTP_HEADERS.get(header_key, [])
+
+        # Update the completer model
+        if self.completer:
+            model = QStringListModel(suggestions)
+            self.completer.setModel(model)
+            logger.debug(
+                f"Updated value suggestions for '{header_key}': {len(suggestions)} items - {suggestions[:3]}{'...' if len(suggestions) > 3 else ''}"
+            )
+
+    def get_suggestions_for_key(self, header_key: str) -> list[str]:
+        """
+        Get autocomplete suggestions for a specific header key.
+
+        Args:
+            header_key (str): The header key to get suggestions for
+
+        Returns:
+            List of suggestion strings
+        """
+        return HTTP_HEADERS.get(header_key, [])
+
+    def keyPressEvent(self, event):
+        """
+        Override key press event to ensure completer is triggered.
+        """
+        logger.debug(f"KeyPress event: key={event.key()}, text='{event.text()}', is_header_key={self.is_header_key}")
+
+        super().keyPressEvent(event)
+
+        # Log current state after key press
+        current_text = self.text()
+        logger.debug(f"After keyPress: current_text='{current_text}', has_completer={self.completer is not None}")
+
+        # Trigger completer for header keys when typing
+        if self.is_header_key and self.completer:
+            logger.debug("Processing autocomplete for header key widget")
+            # Only show completer if we have text and it's not just whitespace
+            text = current_text.strip()
+            logger.debug(f"Stripped text: '{text}', length: {len(text)}")
+
+            if len(text) >= 1:  # Show after 1 character
+                logger.debug(f"Setting completion prefix to: '{text}'")
+
+                # Check if completer model is empty and recreate if needed
+                model = self.completer.model()
+                model_row_count = model.rowCount() if model else 0
+
+                # If model is empty, recreate it
+                if model_row_count == 0 and self.is_header_key:
+                    logger.debug("Model is empty, recreating completer model")
+                    new_model = QStringListModel(COMMON_HEADER_NAMES)
+                    self.completer.setModel(new_model)
+                    model = self.completer.model()
+                    model_row_count = model.rowCount() if model else 0
+                    logger.debug(f"Recreated model with {model_row_count} items")
+
+                self.completer.setCompletionPrefix(text)
+                completion_count = self.completer.completionCount()
+                logger.debug(f"Completion count: {completion_count}")
+
+                if completion_count > 0:
+                    popup = self.completer.popup()
+                    popup.setCurrentIndex(self.completer.completionModel().index(0, 0))
+                    self.completer.complete()
+                    logger.debug(f"Triggered completer for '{text}' with {completion_count} matches")
+                else:
+                    logger.debug(f"No completions found for '{text}'")
+            else:
+                logger.debug(f"Text too short for completion: '{text}'")
+        else:
+            if not self.is_header_key:
+                logger.debug("Not a header key widget, skipping autocomplete")
+            if not self.completer:
+                logger.debug("No completer available")
+
+
+class HeaderKeyLineEdit(AutoCompleteLineEdit):
+    """
+    Specialized line edit widget for HTTP header keys with autocomplete.
+
+    This widget is specifically designed for header key input and provides
+    autocomplete suggestions from the list of common HTTP header names.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the HeaderKeyLineEdit widget.
+
+        Args:
+            parent: Parent widget
+        """
+        logger.debug("Creating HeaderKeyLineEdit widget")
+        super().__init__(is_header_key=True, parent=parent)
+        self.setPlaceholderText("Enter header name...")
+        logger.debug(
+            f"HeaderKeyLineEdit initialized with completer: {self.completer is not None}, suggestions: {len(COMMON_HEADER_NAMES)}"
+        )
+
+        # Log some sample suggestions for debugging
+        sample_suggestions = COMMON_HEADER_NAMES[:5]
+        logger.debug(f"Sample header suggestions: {sample_suggestions}")
+
+    def get_current_suggestions(self) -> list[str]:
+        """
+        Get the current list of header key suggestions.
+
+        Returns:
+            List of header key suggestions
+        """
+        return COMMON_HEADER_NAMES
+
+    def is_valid_header_key(self, key: str) -> bool:
+        """
+        Check if the provided key is a valid/known HTTP header.
+
+        Args:
+            key (str): The header key to validate
+
+        Returns:
+            bool: True if the key is a known header, False otherwise
+        """
+        return key in HTTP_HEADERS
+
+    def get_matching_headers(self, partial_key: str) -> list[str]:
+        """
+        Get header names that match the partial input.
+
+        Args:
+            partial_key (str): Partial header key to match
+
+        Returns:
+            List of matching header names
+        """
+        partial_lower = partial_key.lower()
+        return [header for header in COMMON_HEADER_NAMES if partial_lower in header.lower()]
+
+
+class HeaderValueLineEdit(AutoCompleteLineEdit):
+    """
+    Specialized line edit widget for HTTP header values with context-aware autocomplete.
+
+    This widget provides intelligent autocomplete suggestions based on the selected
+    header key, offering relevant values for each specific header type.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the HeaderValueLineEdit widget.
+
+        Args:
+            parent: Parent widget
+        """
+        super().__init__(is_header_key=False, parent=parent)
+        self.setPlaceholderText("Enter header value...")
+        self.current_header_key = ""
+        logger.debug("HeaderValueLineEdit initialized")
+
+    def set_header_key(self, header_key: str):
+        """
+        Set the current header key to provide context-aware value suggestions.
+
+        Args:
+            header_key (str): The header key to provide suggestions for
+        """
+        self.current_header_key = header_key.strip()
+        self.update_value_suggestions(self.current_header_key)
+
+        # Update placeholder text based on header key
+        if self.current_header_key:
+            suggestions = self.get_suggestions_for_key(self.current_header_key)
+            placeholder = f"e.g., {suggestions[0]}" if suggestions else f"Enter value for {self.current_header_key}..."
+        else:
+            placeholder = "Enter header value..."
+
+        self.setPlaceholderText(placeholder)
+        suggestion_count = len(self.get_suggestions_for_key(self.current_header_key))
+        logger.debug(
+            f"HeaderValueLineEdit updated for key: '{self.current_header_key}' with {suggestion_count} suggestions, placeholder: '{placeholder}'"
+        )
+
+    def get_current_suggestions(self) -> list[str]:
+        """
+        Get the current list of value suggestions based on the selected header key.
+
+        Returns:
+            List of value suggestions for the current header key
+        """
+        return self.get_suggestions_for_key(self.current_header_key)
+
+    def has_suggestions(self) -> bool:
+        """
+        Check if the current header key has predefined value suggestions.
+
+        Returns:
+            bool: True if suggestions are available, False otherwise
+        """
+        return len(self.get_current_suggestions()) > 0
+
+    def get_suggestion_count(self) -> int:
+        """
+        Get the number of available suggestions for the current header key.
+
+        Returns:
+            int: Number of available suggestions
+        """
+        return len(self.get_current_suggestions())
+
+    def clear_header_context(self):
+        """
+        Clear the header key context and reset to default state.
+        """
+        self.current_header_key = ""
+        self.setPlaceholderText("Enter header value...")
+        # Clear the completer model
+        if self.completer:
+            model = QStringListModel([])
+            self.completer.setModel(model)
+        logger.debug("HeaderValueLineEdit context cleared")
+
+
+class AutoCompleteTableWidget(QTableWidget):
+    """
+    Custom table widget for HTTP headers with autocomplete functionality.
+
+    This widget replaces the standard QTableWidget and provides autocomplete
+    functionality for both header keys and values using custom line edit widgets.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the AutoCompleteTableWidget.
+
+        Args:
+            parent: Parent widget
+        """
+        super().__init__(0, 2, parent)
+        self.setHorizontalHeaderLabels(["Key", "Value"])
+        self.setup_table()
+        logger.debug("AutoCompleteTableWidget initialized")
+
+    def setup_table(self):
+        """
+        Set up the table with proper column widths and behavior.
+        """
+        # Set column widths - give more space to the Key column
+        self.setColumnWidth(0, 200)  # Key column width
+        self.horizontalHeader().setStretchLastSection(True)  # Value column stretches
+        self.setMaximumHeight(150)
+
+        # Enable selection of entire rows
+        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+
+        logger.debug("AutoCompleteTableWidget setup complete")
+
+    def add_header_row(self, key: str = "", value: str = ""):
+        """
+        Add a new header row with autocomplete widgets.
+
+        Args:
+            key (str): Initial key value
+            value (str): Initial value
+        """
+        row_count = self.rowCount()
+        self.insertRow(row_count)
+
+        # Create autocomplete widgets
+        logger.debug(f"Creating autocomplete widgets for row {row_count}")
+        key_widget = HeaderKeyLineEdit(self)
+        value_widget = HeaderValueLineEdit(self)
+        logger.debug(f"Created key_widget: {type(key_widget).__name__}, value_widget: {type(value_widget).__name__}")
+
+        # Set initial values if provided
+        if key:
+            key_widget.setText(key)
+        if value:
+            value_widget.setText(value)
+            value_widget.set_header_key(key)
+
+        # Connect key changes to update value suggestions
+        def on_key_changed(text, value_widget=value_widget, row=row_count):
+            logger.debug(f"Header key changed in row {row}: '{text}' - updating value suggestions")
+            value_widget.set_header_key(text)
+
+        key_widget.textChanged.connect(on_key_changed)
+
+        # Set the widgets in the table
+        self.setCellWidget(row_count, 0, key_widget)
+        self.setCellWidget(row_count, 1, value_widget)
+
+        logger.debug(f"Added autocomplete header row {row_count} (key='{key}', value='{value}')")
+
+        return row_count
+
+    def get_headers(self) -> dict[str, str]:
+        """
+        Extract headers from the table widgets.
+
+        Returns:
+            Dictionary of header key-value pairs
+        """
+        headers = {}
+
+        for row in range(self.rowCount()):
+            key_widget = self.cellWidget(row, 0)
+            value_widget = self.cellWidget(row, 1)
+
+            if isinstance(key_widget, HeaderKeyLineEdit) and isinstance(value_widget, HeaderValueLineEdit):
+                key = key_widget.text().strip()
+                value = value_widget.text().strip()
+
+                if key and value:
+                    headers[key] = value
+
+        logger.debug(f"Extracted headers from autocomplete table: {headers}")
+        return headers
+
+    def clear_headers(self):
+        """
+        Clear all header rows from the table.
+        """
+        self.setRowCount(0)
+        logger.debug("Cleared all headers from autocomplete table")
+
+    def set_headers(self, headers: dict[str, str]):
+        """
+        Set headers in the table from a dictionary.
+
+        Args:
+            headers (dict): Dictionary of header key-value pairs
+        """
+        self.clear_headers()
+
+        for key, value in headers.items():
+            self.add_header_row(key, value)
+
+        logger.debug(f"Set {len(headers)} headers in autocomplete table")
+
+    def delete_selected_rows(self):
+        """
+        Delete the currently selected rows.
+        """
+        selected_rows = set()
+        for item in self.selectedItems():
+            if item:
+                selected_rows.add(item.row())
+
+        # Also check for selected cell widgets
+        for row in range(self.rowCount()):
+            key_widget = self.cellWidget(row, 0)
+            value_widget = self.cellWidget(row, 1)
+            if (key_widget and key_widget.hasFocus()) or (value_widget and value_widget.hasFocus()):
+                selected_rows.add(row)
+
+        # Delete rows in reverse order to maintain correct indices
+        for row in sorted(selected_rows, reverse=True):
+            self.removeRow(row)
+
+        logger.debug(f"Deleted selected header rows: {selected_rows}")
+        return len(selected_rows)
 
 
 class HTTPClient(QObject):
@@ -238,12 +841,7 @@ def create_http_client_widget(style_func, scratch_pad=None):
     headers_label = QLabel("Headers:")
     request_layout.addWidget(headers_label)
 
-    headers_table = QTableWidget(0, 2)
-    headers_table.setHorizontalHeaderLabels(["Key", "Value"])
-    # Set column widths - give more space to the Key column
-    headers_table.setColumnWidth(0, 200)  # Key column width
-    headers_table.horizontalHeader().setStretchLastSection(True)  # Value column stretches
-    headers_table.setMaximumHeight(150)
+    headers_table = AutoCompleteTableWidget()
     request_layout.addWidget(headers_table)
 
     # Header buttons layout
@@ -310,35 +908,17 @@ def create_http_client_widget(style_func, scratch_pad=None):
     # Event handlers
     def add_header_row():
         """Add a new header row to the table."""
-        row_count = headers_table.rowCount()
-        headers_table.insertRow(row_count)
-        headers_table.setItem(row_count, 0, QTableWidgetItem(""))
-        headers_table.setItem(row_count, 1, QTableWidgetItem(""))
-        logger.debug(f"Added header row {row_count}")
+        row_index = headers_table.add_header_row()
+        logger.debug(f"Added autocomplete header row {row_index}")
 
     def delete_header_row():
         """Delete selected header row(s) from the table."""
-        selected_rows = set()
-        for item in headers_table.selectedItems():
-            selected_rows.add(item.row())
-
-        # Delete rows in reverse order to maintain correct indices
-        for row in sorted(selected_rows, reverse=True):
-            headers_table.removeRow(row)
-
-        logger.debug(f"Deleted header row(s) {selected_rows}")
+        deleted_count = headers_table.delete_selected_rows()
+        logger.debug(f"Deleted {deleted_count} header row(s)")
 
     def get_headers() -> dict[str, str]:
         """Extract headers from the table."""
-        headers = {}
-        for row in range(headers_table.rowCount()):
-            key_item = headers_table.item(row, 0)
-            value_item = headers_table.item(row, 1)
-            if key_item and value_item:
-                key = key_item.text().strip()
-                value = value_item.text().strip()
-                if key and value:
-                    headers[key] = value
+        headers = headers_table.get_headers()
         logger.debug(f"Extracted headers: {headers}")
         return headers
 
@@ -419,7 +999,7 @@ Content Type: {response_data["content_type"]}"""
         """Clear all form data and responses."""
         url_input.clear()
         method_combo.setCurrentIndex(0)
-        headers_table.setRowCount(0)
+        headers_table.clear_headers()
         body_input.clear()
         response_body_edit.clear()
         response_body_edit.setStyleSheet("")
@@ -457,9 +1037,7 @@ Content Type: {response_data["content_type"]}"""
     http_client.request_failed.connect(on_request_failed)
 
     # Add some default headers
-    add_header_row()
-    headers_table.setItem(0, 0, QTableWidgetItem("Content-Type"))
-    headers_table.setItem(0, 1, QTableWidgetItem("application/json"))
+    headers_table.add_header_row("Content-Type", "application/json")
 
     # Add keyboard shortcuts
     send_shortcut = QShortcut(QKeySequence("Ctrl+Return"), widget)
