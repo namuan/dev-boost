@@ -2,15 +2,15 @@ import logging
 import os
 import subprocess
 
-from PyQt6.QtCore import QObject, QProcess, pyqtSignal
+from PyQt6.QtCore import QObject, QProcess, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
-    QComboBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -325,7 +325,7 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     control_layout.addLayout(dir_layout)
 
-    # Tool selection with filtering
+    # Tool selection with auto-completion
     tool_layout = QVBoxLayout()
     tool_layout.setSpacing(4)
 
@@ -333,63 +333,242 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
     tool_label = QLabel("Tool:")
     tool_layout.addWidget(tool_label)
 
-    # Filter input
-    filter_input = QLineEdit()
-    filter_input.setPlaceholderText("Type to filter tools...")
-    tool_layout.addWidget(filter_input)
+    # Auto-completion input
+    tool_input = QLineEdit()
+    tool_input.setPlaceholderText("Type to search for tools...")
+    tool_layout.addWidget(tool_input)
 
-    # Tool combo box
-    tool_combo = QComboBox()
-    tool_combo.addItem("Select a tool...", "")
-    # Store items with name and description for better filtering
+    # Tool suggestion list (hidden by default)
+    tool_suggestions = QListWidget()
+    tool_suggestions.setVisible(False)
+    tool_suggestions.setMaximumHeight(150)  # Limit height to prevent overwhelming UI
+    # Add custom styling to make the dropdown more visible
+    tool_suggestions.setStyleSheet("""
+        QListWidget {
+            background-color: #ffffff;
+            border: 1px solid #80bdff;
+            border-radius: 6px;
+            padding: 4px;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            color: #333333;
+            selection-background-color: #e6f0ff;
+            selection-color: #333333;
+        }
+        QListWidget::item {
+            padding: 6px 8px;
+            border-radius: 4px;
+        }
+        QListWidget::item:hover {
+            background-color: #f0f8ff;
+        }
+        QListWidget::item:selected {
+            background-color: #d0e1ff;
+            font-weight: 500;
+        }
+    """)
+    tool_layout.addWidget(tool_suggestions)
+
+    # Focus event handlers
+    def on_tool_input_focus_in(event):
+        """Show all tools when input gains focus and is empty"""
+        logger.debug("Tool input gained focus")
+        if not tool_input.text().strip():
+            show_suggestions("")  # Show all tools
+        QLineEdit.focusInEvent(tool_input, event)
+
+    def on_tool_input_focus_out(event):
+        """Hide suggestions when input loses focus (with slight delay to allow clicks)"""
+        logger.debug("Tool input lost focus")
+        # Use a timer to delay hiding suggestions to allow clicking on items
+        from PyQt6.QtCore import QTimer
+
+        QTimer.singleShot(150, lambda: tool_suggestions.setVisible(False) if not tool_suggestions.hasFocus() else None)
+        QLineEdit.focusOutEvent(tool_input, event)
+
+    # Override focus events for the tool_input
+    tool_input.focusInEvent = on_tool_input_focus_in
+    tool_input.focusOutEvent = on_tool_input_focus_out
+
+    # Also hide suggestions when clicking elsewhere
+    def on_tool_suggestions_focus_out(event):
+        """Hide suggestions when they lose focus"""
+        logger.debug("Tool suggestions lost focus")
+        QListWidget.focusOutEvent(tool_suggestions, event)
+        tool_suggestions.setVisible(False)
+
+    tool_suggestions.focusOutEvent = on_tool_suggestions_focus_out
+
+    # Store tool items with name and description for better filtering
     tool_items = []
     for tool_name, description in PIPX_TOOLS.items():
         display_text = f"{tool_name} - {description}"
         tool_items.append((tool_name, display_text))
-        tool_combo.addItem(display_text, tool_name)
-    tool_layout.addWidget(tool_combo)
 
-    # Filter function
-    def filter_tools(text):
-        # Store current selection if any
-        current_data = tool_combo.currentData()
+    # Current selected tool
+    current_selected_tool = {"name": "", "display": ""}
 
-        # Clear current items
-        tool_combo.clear()
-        tool_combo.addItem("Select a tool...", "")
-
-        # Add items that match the filter
+    # Filter and show suggestions function
+    def show_suggestions(text):
+        logger.debug(f"show_suggestions called with text: '{text}'")
         filter_text = text.lower().strip()
-        matched_items = []
+        logger.debug(f"Filter text after processing: '{filter_text}'")
 
-        # Collect all matching items first
+        # Clear current suggestions
+        tool_suggestions.clear()
+        logger.debug("Cleared tool suggestions")
+
+        # Find matching tools
+        matched_items = []
         for tool_name, display_text in tool_items:
             if not filter_text or filter_text in tool_name.lower() or filter_text in display_text.lower():
                 matched_items.append((tool_name, display_text))
 
-        # Add matched items to combo box
+        logger.debug(f"Found {len(matched_items)} matching items")
+
+        # Add matched items to suggestion list
         for tool_name, display_text in matched_items:
-            tool_combo.addItem(display_text, tool_name)
+            tool_suggestions.addItem(display_text)
+            list_item = tool_suggestions.item(tool_suggestions.count() - 1)
+            if list_item:
+                list_item.setData(Qt.ItemDataRole.UserRole, tool_name)
+                logger.debug(f"Added item: '{display_text}' with tool name: '{tool_name}'")
 
-        # Add a "no results" item if nothing matches
-        if len(matched_items) == 0 and filter_text:
-            tool_combo.addItem("No matching tools found", "")
-
-        # Try to restore previous selection if it's still in the list
-        if current_data:
-            for i in range(tool_combo.count()):
-                if tool_combo.itemData(i) == current_data:
-                    tool_combo.setCurrentIndex(i)
-                    break
+        # Show/hide suggestions based on matches
+        # Show all tools when input is focused but empty, otherwise filter
+        if matched_items and (filter_text or tool_input.hasFocus()):
+            tool_suggestions.setVisible(True)
+            logger.debug("Set tool suggestions visible")
         else:
-            # Select the first item if only one match (and it's not the "no results" item)
-            if tool_combo.count() == 2 and "No matching tools found" not in tool_combo.itemText(1):
-                tool_combo.setCurrentIndex(1)
-            else:
-                tool_combo.setCurrentIndex(0)
+            tool_suggestions.setVisible(False)
+            current_selected_tool["name"] = ""
+            current_selected_tool["display"] = ""
+            logger.debug("Set tool suggestions hidden and cleared current selection")
 
-    # Connect filter input to filter function
-    filter_input.textChanged.connect(filter_tools)
+        # Auto-select first item if only one match
+        if len(matched_items) == 1:
+            tool_suggestions.setCurrentRow(0)
+            current_selected_tool["name"] = matched_items[0][0]
+            current_selected_tool["display"] = matched_items[0][1]
+            logger.debug(f"Auto-selected single match: '{matched_items[0][1]}'")
+        elif len(matched_items) == 0 and filter_text:
+            # No matches found
+            tool_suggestions.addItem("No matching tools found")
+            tool_suggestions.setCurrentRow(0)
+            current_selected_tool["name"] = ""
+            current_selected_tool["display"] = ""
+            logger.debug("Added 'No matching tools found' item")
+
+    # Handle selection from suggestions
+    def on_suggestion_selected():
+        logger.debug("on_suggestion_selected called")
+        selected_items = tool_suggestions.selectedItems()
+        if selected_items:
+            selected_item = selected_items[0]
+            tool_name = selected_item.data(Qt.ItemDataRole.UserRole)
+            display_text = selected_item.text()
+            logger.debug(f"Selected tool: name='{tool_name}', display='{display_text}'")
+            if tool_name:  # Make sure it's not the "no results" item
+                tool_input.setText(display_text)
+                current_selected_tool["name"] = tool_name
+                current_selected_tool["display"] = display_text
+                tool_suggestions.setVisible(False)
+                tool_input.setFocus()  # Return focus to input field
+                logger.debug("Tool selection completed and suggestions hidden")
+            else:
+                logger.debug("Selected item was 'no results' item, not setting tool")
+        else:
+            logger.debug("No selected items found")
+
+    # Handle keyboard navigation in suggestions
+    def on_tool_input_key_press(event):
+        logger.debug(f"Key press event received: key={event.key()}, text='{event.text()}'")
+
+        if tool_suggestions.isVisible():
+            logger.debug("Tool suggestions are visible")
+            if event.key() == Qt.Key.Key_Down:
+                logger.debug("Down arrow key pressed")
+                current_row = tool_suggestions.currentRow()
+                logger.debug(f"Current row: {current_row}, Total rows: {tool_suggestions.count()}")
+                if current_row < tool_suggestions.count() - 1:
+                    tool_suggestions.setCurrentRow(current_row + 1)
+                    logger.debug(f"Set current row to: {current_row + 1}")
+                return
+            elif event.key() == Qt.Key.Key_Up:
+                logger.debug("Up arrow key pressed")
+                current_row = tool_suggestions.currentRow()
+                logger.debug(f"Current row: {current_row}")
+                if current_row > 0:
+                    tool_suggestions.setCurrentRow(current_row - 1)
+                    logger.debug(f"Set current row to: {current_row - 1}")
+                return
+            elif event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
+                logger.debug("Enter key pressed")
+                on_suggestion_selected()
+                return
+            elif event.key() == Qt.Key.Key_Escape:
+                logger.debug("Escape key pressed - executing reset logic")
+                logger.debug("Hiding tool suggestions")
+                tool_suggestions.setVisible(False)
+                logger.debug("Clearing tool input")
+                tool_input.clear()
+                logger.debug("Resetting current selected tool")
+                current_selected_tool["name"] = ""
+                current_selected_tool["display"] = ""
+                logger.debug("ESC key handling completed")
+                return
+            else:
+                logger.debug(f"Other key pressed while suggestions visible: {event.key()}")
+        else:
+            logger.debug("Tool suggestions are NOT visible")
+            if event.key() == Qt.Key.Key_Escape:
+                logger.debug("Escape key pressed while suggestions hidden - executing reset logic")
+                logger.debug("Clearing tool input")
+                tool_input.clear()
+                logger.debug("Resetting current selected tool")
+                current_selected_tool["name"] = ""
+                current_selected_tool["display"] = ""
+                logger.debug("ESC key handling completed")
+                return
+
+        logger.debug("Calling default key press event handler")
+        # For all other keys, let the default behavior happen
+        QLineEdit.keyPressEvent(tool_input, event)
+
+        # After processing the key, update suggestions
+        # This ensures that as the user types, the list filters properly
+        show_suggestions(tool_input.text())
+
+    # Override keyPressEvent for the tool_input
+    tool_input.keyPressEvent = on_tool_input_key_press
+
+    # Connect signals
+    tool_input.textChanged.connect(show_suggestions)
+    tool_suggestions.itemClicked.connect(on_suggestion_selected)
+    tool_suggestions.itemActivated.connect(on_suggestion_selected)
+
+    # Show all tools when the input field gains focus
+    def on_tool_input_focus_in_wrapper(event):
+        on_tool_input_focus_in(event)
+        # If the input is empty, show all tools
+        if not tool_input.text().strip():
+            show_suggestions("")
+
+    # Show all tools when input gains focus and is empty
+    def on_tool_input_focus_in(event):
+        QLineEdit.focusInEvent(tool_input, event)  # Call the original event handler
+        if not tool_input.text().strip():
+            show_suggestions("")  # Show all tools when empty and focused
+
+    tool_input.focusInEvent = on_tool_input_focus_in
+
+    # Also show all tools when the user clicks on the input field
+    def on_tool_input_mouse_press(event):
+        QLineEdit.mousePressEvent(tool_input, event)
+        if not tool_input.text().strip():
+            show_suggestions("")  # Show all tools when empty
+
+    tool_input.mousePressEvent = on_tool_input_mouse_press
 
     control_layout.addLayout(tool_layout)
 
@@ -479,29 +658,46 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             status_label.setText(f"Working directory set to: {directory}")
 
     def on_get_help():
-        tool_name = tool_combo.currentData()
-        if tool_name:
+        logger.debug(f"on_get_help called. Current selected tool: {current_selected_tool}")
+        logger.debug(f"Tool input text: '{tool_input.text()}'")
+        tool_name = (
+            current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
+        )
+        logger.debug(f"Tool name to get help for: '{tool_name}'")
+        if tool_name and tool_name in PIPX_TOOLS:
             logger.info(f"Getting help for tool: {tool_name}")
             status_label.setText(f"Getting help for {tool_name}...")
             pipx_runner.get_tool_help(tool_name)
         else:
-            QMessageBox.warning(widget, "Warning", "Please select a tool first.")
+            logger.warning(f"Cannot get help - invalid tool: '{tool_name}'")
+            QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_install_tool():
-        tool_name = tool_combo.currentData()
-        if tool_name:
+        logger.debug(f"on_install_tool called. Current selected tool: {current_selected_tool}")
+        logger.debug(f"Tool input text: '{tool_input.text()}'")
+        tool_name = (
+            current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
+        )
+        logger.debug(f"Tool name to install: '{tool_name}'")
+        if tool_name and tool_name in PIPX_TOOLS:
             logger.info(f"Installing tool: {tool_name}")
             status_label.setText(f"Installing {tool_name}...")
             pipx_runner.install_tool(tool_name)
         else:
-            QMessageBox.warning(widget, "Warning", "Please select a tool first.")
+            logger.warning(f"Cannot install - invalid tool: '{tool_name}'")
+            QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_run_tool():
+        logger.debug(f"on_run_tool called. Current selected tool: {current_selected_tool}")
+        logger.debug(f"Tool input text: '{tool_input.text()}'")
         # Update working directory from input field
         pipx_runner.working_directory = dir_input.text()
 
-        tool_name = tool_combo.currentData()
-        if tool_name:
+        tool_name = (
+            current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
+        )
+        logger.debug(f"Tool name to run: '{tool_name}'")
+        if tool_name and tool_name in PIPX_TOOLS:
             arguments = args_input.text().strip()
             logger.info(
                 f"Running tool: {tool_name} with args: {arguments} in directory: {pipx_runner.working_directory}"
@@ -509,7 +705,8 @@ def create_pipx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             status_label.setText(f"Running {tool_name} in {pipx_runner.working_directory}...")
             pipx_runner.run_tool(tool_name, arguments)
         else:
-            QMessageBox.warning(widget, "Warning", "Please select a tool first.")
+            logger.warning(f"Cannot run - invalid tool: '{tool_name}'")
+            QMessageBox.warning(widget, "Warning", "Please select a valid tool first.")
 
     def on_stop_command():
         logger.info("Stopping command")
