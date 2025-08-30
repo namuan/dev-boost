@@ -125,6 +125,48 @@ class PipxRunner(QObject):
         os.makedirs(self.working_directory, exist_ok=True)
         logger.info(f"PipxRunner initialized with working directory: {self.working_directory}")
 
+    def _parse_installed_tools(self, pipx_output: str) -> list[str]:
+        """Parse pipx list output to extract installed tool names."""
+        installed_tools = []
+        if pipx_output.strip():
+            for line in pipx_output.strip().split("\n"):
+                line = line.strip()
+                # Skip empty lines and warning messages
+                if (
+                    line
+                    and not line.startswith("   ")
+                    and not line.startswith("One or more")
+                    and not line.startswith("They were likely")
+                    and not line.startswith("Please uninstall")
+                    and "⚠️" not in line
+                ):
+                    # Extract package name (first word before version)
+                    package_name = line.split()[0]
+                    installed_tools.append(package_name)
+        return installed_tools
+
+    def _get_not_installed_help_text(self, tool_name: str) -> str:
+        """Generate help text for tools that are not installed."""
+        return (
+            f"Tool '{tool_name}' is not installed.\n\n"
+            f"Description: {PIPX_TOOLS[tool_name]}\n\n"
+            f"To install: pipx install {tool_name}\n\n"
+            "You can install it using the 'Install Tool' button below."
+        )
+
+    def _get_tool_help_text(self, tool_name: str, help_result) -> str:
+        """Generate help text from tool --help command result."""
+        if help_result.returncode == 0:
+            help_text = f"Help for {tool_name}:\n\n{help_result.stdout}"
+            if help_result.stderr:
+                help_text += f"\n\nAdditional info:\n{help_result.stderr}"
+        else:
+            help_text = f"Could not get help for {tool_name}.\n\n"
+            help_text += f"Description: {PIPX_TOOLS[tool_name]}\n\n"
+            if help_result.stderr:
+                help_text += f"Error: {help_result.stderr}"
+        return help_text
+
     def get_tool_help(self, tool_name: str) -> None:
         """
         Get help information for a specific pipx tool.
@@ -139,31 +181,18 @@ class PipxRunner(QObject):
             return
 
         try:
-            # First check if tool is installed
+            # Check if tool is installed
             result = subprocess.run(["pipx", "list", "--short"], capture_output=True, text=True, timeout=10)  # noqa: S603, S607
-
-            installed_tools = result.stdout.strip().split("\n") if result.stdout.strip() else []
+            installed_tools = self._parse_installed_tools(result.stdout)
 
             if tool_name not in installed_tools:
-                help_text = f"Tool '{tool_name}' is not installed.\n\n"
-                help_text += f"Description: {PIPX_TOOLS[tool_name]}\n\n"
-                help_text += f"To install: pipx install {tool_name}\n\n"
-                help_text += "You can install it using the 'Install Tool' button below."
+                help_text = self._get_not_installed_help_text(tool_name)
                 self.help_received.emit(help_text)
                 return
 
             # Get help for installed tool
             help_result = subprocess.run([tool_name, "--help"], capture_output=True, text=True, timeout=15)  # noqa: S603
-
-            if help_result.returncode == 0:
-                help_text = f"Help for {tool_name}:\n\n{help_result.stdout}"
-                if help_result.stderr:
-                    help_text += f"\n\nAdditional info:\n{help_result.stderr}"
-            else:
-                help_text = f"Could not get help for {tool_name}.\n\n"
-                help_text += f"Description: {PIPX_TOOLS[tool_name]}\n\n"
-                if help_result.stderr:
-                    help_text += f"Error: {help_result.stderr}"
+            help_text = self._get_tool_help_text(tool_name, help_result)
 
             self.help_received.emit(help_text)
             logger.debug(f"Help retrieved successfully for {tool_name}")
