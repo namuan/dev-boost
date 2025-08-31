@@ -161,19 +161,6 @@ class UvxRunner(QObject):
             logger.exception(error_msg)
             self.help_received.emit(f"Error: {error_msg}")
 
-    def _get_tool_help_text(self, tool_name: str, help_result) -> str:
-        """Generate help text from tool --help command result."""
-        if help_result.returncode == 0:
-            help_text = f"Help for {tool_name}:\n\n{help_result.stdout}"
-            if help_result.stderr:
-                help_text += f"\n\nAdditional info:\n{help_result.stderr}"
-        else:
-            help_text = f"Could not get help for {tool_name}.\n\n"
-            help_text += f"Description: {UVX_TOOLS[tool_name]}\n\n"
-            if help_result.stderr:
-                help_text += f"Error: {help_result.stderr}"
-        return help_text
-
     def run_tool(self, tool_name: str, arguments: str) -> None:
         """
         Run a uvx tool with the provided arguments.
