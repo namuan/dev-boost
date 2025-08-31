@@ -1,5 +1,6 @@
 General Rules:
 
+- Always start any task by running `make start-work` with a feature name. Eg `make start-work FEATURE=user-config`
 - Use XRay tool to explore the codebase, Find specific functions, classes, or methods in the codebase, See what code might break if you change this symbol.
 - MUST Add extensive logging to help with debugging as this is a GUI application
 - MUST Run `make check` before starting a new check list item to make sure there aren't any existing issues to resolve

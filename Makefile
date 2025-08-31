@@ -6,6 +6,10 @@ install: ## Install the virtual environment and install the pre-commit hooks
 	@uv sync
 	@uv run pre-commit install
 
+start-work: ## Start working on a new feature
+	@echo "🚀 Starting work on a new feature"
+	@mob start -i -b "$(FEATURE)"
+
 .PHONY: check
 check: ## Run code quality tools.
 	@echo "🚀 Checking lock file consistency with 'pyproject.toml'"
