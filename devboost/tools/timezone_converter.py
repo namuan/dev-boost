@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 from datetime import date, datetime, time, timedelta
@@ -10,6 +11,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -29,7 +31,11 @@ logger = logging.getLogger(__name__)
 class TimeZoneConverter:
     """Backend logic for timezone conversion and management."""
 
-    # Common city to timezone mappings
+    # Cache for CSV data to avoid repeated file reads
+    _csv_city_data: ClassVar[dict[str, str] | None] = None
+    _csv_file_path: ClassVar[Path | None] = None
+
+    # Common city to timezone mappings (fallback for when CSV is not available)
     CITY_TIMEZONE_MAP: ClassVar[dict[str, str]] = {
         # Major cities
         "new york": "America/New_York",
@@ -123,6 +129,96 @@ class TimeZoneConverter:
         return config_dir
 
     @staticmethod
+    def _get_csv_file_path() -> Path | None:
+        """Get the path to the GeoLite2 CSV file.
+
+        Returns:
+            Path to CSV file if it exists, None otherwise
+        """
+        # Check user-configured path first
+        configured_path = TimeZoneConverter.get_csv_file_path_config()
+        if configured_path:
+            csv_path = Path(configured_path)
+            if csv_path.exists():
+                logger.debug("Found CSV file at configured path: %s", csv_path)
+                return csv_path
+            logger.warning("Configured CSV file path does not exist: %s", csv_path)
+
+        # Check current working directory
+        csv_path = Path("GeoLite2-City-Locations-en.csv")
+        if csv_path.exists():
+            logger.debug("Found CSV file in current directory: %s", csv_path)
+            return csv_path
+
+        # Check in project root
+        project_root = Path(__file__).parent.parent.parent
+        csv_path = project_root / "GeoLite2-City-Locations-en.csv"
+        if csv_path.exists():
+            logger.debug("Found CSV file in project root: %s", csv_path)
+            return csv_path
+
+        logger.warning("GeoLite2-City-Locations-en.csv not found in any location")
+        return None
+
+    @classmethod
+    def _load_csv_city_data(cls) -> dict[str, str]:
+        """Load city data from GeoLite2 CSV file.
+
+        Returns:
+            Dictionary mapping city names to timezone identifiers
+        """
+        if cls._csv_city_data is not None:
+            return cls._csv_city_data
+
+        csv_path = cls._get_csv_file_path()
+        if csv_path is None:
+            logger.info("CSV file not found, using fallback city mappings")
+            cls._csv_city_data = cls.CITY_TIMEZONE_MAP.copy()
+            return cls._csv_city_data
+
+        cls._csv_file_path = csv_path
+        city_data = {}
+
+        try:
+            logger.info("Loading city data from CSV: %s", csv_path)
+            with csv_path.open("r", encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+
+                for row in reader:
+                    city_name = row.get("city_name", "").strip()
+                    timezone = row.get("time_zone", "").strip()
+
+                    # Skip rows without city name or timezone
+                    if not city_name or not timezone:
+                        continue
+
+                    # Skip UTC offset timezones, we want IANA timezone identifiers
+                    if timezone.startswith("UTC") or "±" in timezone or "-" in timezone:
+                        continue
+
+                    # Convert city name to lowercase for consistent lookup
+                    city_key = city_name.lower()
+
+                    # Only add if it's a proper IANA timezone (contains '/')
+                    if "/" in timezone:
+                        city_data[city_key] = timezone
+
+            logger.info("Loaded %d cities from CSV file", len(city_data))
+
+            # Merge with fallback mappings (hardcoded mappings take precedence for major cities)
+            merged_data = city_data.copy()
+            merged_data.update(cls.CITY_TIMEZONE_MAP)
+
+            cls._csv_city_data = merged_data
+            return cls._csv_city_data
+
+        except Exception:
+            logger.exception("Error loading CSV file %s", csv_path)
+            logger.info("Falling back to hardcoded city mappings")
+            cls._csv_city_data = cls.CITY_TIMEZONE_MAP.copy()
+            return cls._csv_city_data
+
+    @staticmethod
     def _get_timezone_from_datetime() -> str | None:
         """Get timezone from datetime now."""
         try:
@@ -146,6 +242,29 @@ class TimeZoneConverter:
 
             tz_name = time_module.tzname[time_module.daylight]
             logger.debug("Time module timezone: %s", tz_name)
+
+            # Map common timezone abbreviations to IANA identifiers
+            tz_abbr_map = {
+                "BST": "Europe/London",
+                "GMT": "Europe/London",
+                "EST": "America/New_York",
+                "EDT": "America/New_York",
+                "PST": "America/Los_Angeles",
+                "PDT": "America/Los_Angeles",
+                "CST": "America/Chicago",
+                "CDT": "America/Chicago",
+                "MST": "America/Denver",
+                "MDT": "America/Denver",
+                "JST": "Asia/Tokyo",
+                "AEST": "Australia/Sydney",
+                "AEDT": "Australia/Sydney",
+            }
+
+            if tz_name in tz_abbr_map:
+                mapped_tz = tz_abbr_map[tz_name]
+                logger.debug("Mapped timezone abbreviation %s to %s", tz_name, mapped_tz)
+                return mapped_tz
+
             return tz_name
         except Exception:
             logger.debug("Could not determine timezone from time module.", exc_info=True)
@@ -339,6 +458,65 @@ class TimeZoneConverter:
             logger.info("Cities saved successfully")
         except OSError:
             logger.exception("Error saving cities")
+
+    @staticmethod
+    def get_csv_file_path_config() -> str | None:
+        """Get the configured CSV file path from configuration.
+
+        Returns:
+            Configured CSV file path, or None if not set
+        """
+        config_file = TimeZoneConverter.get_config_dir() / "timezone_config.json"
+
+        if not config_file.exists():
+            logger.debug("No CSV path configuration found")
+            return None
+
+        try:
+            with config_file.open("r", encoding="utf-8") as f:
+                config = json.load(f)
+            csv_path = config.get("csv_file_path")
+            logger.debug("Loaded CSV path configuration: %s", csv_path)
+            return csv_path
+        except (json.JSONDecodeError, OSError):
+            logger.exception("Error loading CSV path configuration")
+            return None
+
+    @staticmethod
+    def save_csv_file_path_config(csv_path: str) -> None:
+        """Save the CSV file path to configuration.
+
+        Args:
+            csv_path: Path to the CSV file to save
+        """
+        config_file = TimeZoneConverter.get_config_dir() / "timezone_config.json"
+        logger.info("Saving CSV path configuration: %s", csv_path)
+
+        # Load existing config or create new one
+        config = {}
+        if config_file.exists():
+            try:
+                with config_file.open("r", encoding="utf-8") as f:
+                    config = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                logger.warning("Could not load existing config, creating new one")
+                config = {}
+
+        config["csv_file_path"] = csv_path
+
+        try:
+            with config_file.open("w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            logger.info("CSV path configuration saved successfully")
+        except OSError:
+            logger.exception("Error saving CSV path configuration")
+
+    @classmethod
+    def clear_csv_cache(cls) -> None:
+        """Clear the cached CSV data to force reload from new file."""
+        cls._csv_city_data = None
+        cls._csv_file_path = None
+        logger.info("CSV cache cleared")
 
     @staticmethod
     def get_current_time_in_timezone(timezone_name: str) -> datetime | None:
@@ -569,8 +747,8 @@ class TimeZoneConverter:
 
         return None
 
-    @staticmethod
-    def get_timezone_for_city(city_name: str) -> str | None:
+    @classmethod
+    def get_timezone_for_city(cls, city_name: str) -> str | None:
         """Get timezone identifier for a city.
 
         Args:
@@ -585,15 +763,18 @@ class TimeZoneConverter:
         city_lower = city_name.lower().strip()
         logger.debug("Looking up timezone for city: '%s'", city_lower)
 
+        # Load city data (uses cache if already loaded)
+        city_data = cls._load_csv_city_data()
+
         # Check direct mapping
-        if city_lower in TimeZoneConverter.CITY_TIMEZONE_MAP:
-            timezone = TimeZoneConverter.CITY_TIMEZONE_MAP[city_lower]
+        if city_lower in city_data:
+            timezone = city_data[city_lower]
             logger.debug("Found timezone for '%s': %s", city_name, timezone)
             return timezone
 
         # Check partial matches (but avoid matching empty strings)
         if city_lower:  # Only check partial matches if city_lower is not empty
-            for city_key, timezone in TimeZoneConverter.CITY_TIMEZONE_MAP.items():
+            for city_key, timezone in city_data.items():
                 if city_lower in city_key or city_key in city_lower:
                     logger.debug("Found partial match for '%s': %s", city_name, timezone)
                     return timezone
@@ -601,8 +782,8 @@ class TimeZoneConverter:
         logger.warning("No timezone found for city: '%s'", city_name)
         return None
 
-    @staticmethod
-    def search_cities(query: str) -> list[dict[str, str]]:
+    @classmethod
+    def search_cities(cls, query: str) -> list[dict[str, str]]:
         """Search for cities matching query.
 
         Args:
@@ -617,14 +798,23 @@ class TimeZoneConverter:
         query_lower = query.lower().strip()
         logger.debug("Searching cities for query: '%s'", query_lower)
 
+        # Load city data (uses cache if already loaded)
+        city_data = cls._load_csv_city_data()
+
         matches = []
-        for city_name, timezone in TimeZoneConverter.CITY_TIMEZONE_MAP.items():
+        for city_name, timezone in city_data.items():
             if query_lower in city_name:
                 matches.append({
                     "name": city_name.title(),
                     "timezone": timezone,
                     "display_name": f"{city_name.title()} ({timezone})",
                 })
+
+        # Sort matches by city name for better user experience
+        matches.sort(key=lambda x: x["name"])
+
+        # Limit results to avoid overwhelming the UI
+        matches = matches[:50]
 
         logger.debug("Found %d matching cities", len(matches))
         return matches
@@ -697,15 +887,61 @@ class TimeZoneConverterUI:
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.converter_widget.setStyleSheet(get_tool_style())
 
+        # Add CSV configuration section
+        self.csv_config_section, self.csv_config_widgets = self._create_csv_config_section()
+
+        main_layout.addWidget(self.csv_config_section)
+
+        csv_separator = QFrame()
+        csv_separator.setFrameShape(QFrame.Shape.HLine)
+        csv_separator.setFrameShadow(QFrame.Shadow.Sunken)
+        main_layout.addWidget(csv_separator)
+
         main_layout.addWidget(self.input_section)
+
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         main_layout.addWidget(separator)
+
         main_layout.addWidget(self.results_section)
 
         self._connect_signals()
+        self._load_csv_config()
         self.update_results()
+
+    def _handle_input_key_press(self, event):
+        """Handle keyboard events for city input navigation."""
+        suggestions_combo = self.results_widgets["city_suggestions_combo"]
+
+        if suggestions_combo.isVisible():
+            if event.key() == Qt.Key.Key_Down:
+                # Move focus to dropdown and select first item
+                suggestions_combo.setFocus()
+                suggestions_combo.setCurrentIndex(0)
+                return
+            if event.key() == Qt.Key.Key_Escape:
+                # Hide dropdown
+                suggestions_combo.setVisible(False)
+                return
+
+        # Call the original keyPressEvent for normal behavior
+        QLineEdit.keyPressEvent(self.results_widgets["add_city_input"], event)
+
+    def handle_city_input_enter(self):
+        """Handle Enter key press in city input field."""
+        suggestions_combo = self.results_widgets["city_suggestions_combo"]
+
+        if suggestions_combo.isVisible() and suggestions_combo.count() > 0:
+            # If dropdown is visible, select the first item
+            city_data = suggestions_combo.itemData(0)
+            if city_data:
+                self._add_selected_city(city_data)
+                suggestions_combo.setVisible(False)
+                self.results_widgets["add_city_input"].clear()
+        else:
+            # No dropdown visible, use regular add city logic
+            self.add_city_from_input()
 
     def _create_input_section(self) -> tuple[QWidget, dict[str, QWidget]]:
         """Create the input section of the timezone converter widget."""
@@ -788,17 +1024,36 @@ class TimeZoneConverterUI:
         results_layout = QVBoxLayout(results_section)
         results_layout.setSpacing(5)
 
+        # Header
         results_header_layout = QHBoxLayout()
         results_label = QLabel("Time Conversions")
         results_label.setObjectName("sectionHeader")
-
-        add_city_button = QPushButton("+ Add City")
-
         results_header_layout.addWidget(results_label)
         results_header_layout.addStretch()
-        results_header_layout.addWidget(add_city_button)
-
         results_layout.addLayout(results_header_layout)
+
+        # Add city input section
+        add_city_layout = QHBoxLayout()
+        add_city_layout.setSpacing(5)
+
+        add_city_label = QLabel("Add City:")
+        add_city_input = QLineEdit()
+        add_city_input.setPlaceholderText("Enter city name (e.g., Paris, Tokyo, Sydney)")
+
+        add_city_button = QPushButton("Add")
+        add_city_button.setFixedWidth(60)
+
+        add_city_layout.addWidget(add_city_label)
+        add_city_layout.addWidget(add_city_input)
+        add_city_layout.addWidget(add_city_button)
+
+        results_layout.addLayout(add_city_layout)
+
+        # City suggestions dropdown (initially hidden)
+        city_suggestions_combo = QComboBox()
+        city_suggestions_combo.setVisible(False)
+        city_suggestions_combo.setMaxVisibleItems(10)
+        results_layout.addWidget(city_suggestions_combo)
 
         results_list = QListWidget()
         results_list.setMinimumHeight(300)
@@ -808,8 +1063,64 @@ class TimeZoneConverterUI:
 
         results_layout.addWidget(results_list)
 
-        widgets = {"add_city_button": add_city_button, "results_list": results_list}
+        widgets = {
+            "add_city_input": add_city_input,
+            "add_city_button": add_city_button,
+            "city_suggestions_combo": city_suggestions_combo,
+            "results_list": results_list,
+        }
         return results_section, widgets
+
+    def _create_csv_config_section(self) -> tuple[QWidget, dict[str, QWidget]]:
+        """Create the CSV configuration section of the timezone converter widget."""
+        csv_config_section = QWidget()
+        csv_config_layout = QVBoxLayout(csv_config_section)
+        csv_config_layout.setSpacing(3)
+
+        # Header
+        header_layout = QHBoxLayout()
+        header_label = QLabel("CSV Data Source Configuration")
+        header_label.setObjectName("sectionHeader")
+        header_layout.addWidget(header_label)
+        header_layout.addStretch()
+
+        # File path input
+        file_path_layout = QHBoxLayout()
+        file_path_layout.setSpacing(5)
+
+        file_path_label = QLabel("CSV File:")
+        file_path_input = QLineEdit()
+        file_path_input.setPlaceholderText("Path to GeoLite2-City-Locations-en.csv file")
+        file_path_input.setReadOnly(True)
+
+        browse_button = QPushButton("Browse...")
+        browse_button.setFixedWidth(80)
+
+        reset_button = QPushButton("Reset")
+        reset_button.setFixedWidth(60)
+        reset_button.setToolTip("Reset to default CSV file locations")
+
+        file_path_layout.addWidget(file_path_label)
+        file_path_layout.addWidget(file_path_input)
+        file_path_layout.addWidget(browse_button)
+        file_path_layout.addWidget(reset_button)
+
+        # Status label
+        status_label = QLabel("")
+        status_label.setObjectName("statusLabel")
+        status_label.setMaximumHeight(20)
+
+        csv_config_layout.addLayout(header_layout)
+        csv_config_layout.addLayout(file_path_layout)
+        csv_config_layout.addWidget(status_label)
+
+        widgets = {
+            "file_path_input": file_path_input,
+            "browse_button": browse_button,
+            "reset_button": reset_button,
+            "status_label": status_label,
+        }
+        return csv_config_section, widgets
 
     def _connect_signals(self):
         """Connect widget signals to slots."""
@@ -822,7 +1133,18 @@ class TimeZoneConverterUI:
         self.input_widgets["date_input"].textChanged.connect(self.update_results)
         self.input_widgets["source_city_combo"].currentTextChanged.connect(self.update_results)
 
-        self.results_widgets["add_city_button"].clicked.connect(self.show_add_city_dialog)
+        # Add city signals
+        self.results_widgets["add_city_button"].clicked.connect(self.add_city_from_input)
+        self.results_widgets["add_city_input"].returnPressed.connect(self.handle_city_input_enter)
+        self.results_widgets["add_city_input"].textChanged.connect(self.on_city_input_changed)
+        self.results_widgets["city_suggestions_combo"].activated.connect(self.on_city_suggestion_selected)
+
+        # Set up keyboard event handling for the input field
+        self.results_widgets["add_city_input"].keyPressEvent = self._handle_input_key_press
+
+        # CSV configuration signals
+        self.csv_config_widgets["browse_button"].clicked.connect(self.browse_csv_file)
+        self.csv_config_widgets["reset_button"].clicked.connect(self.reset_csv_file)
 
         if self.input_widgets["send_to_scratch_pad_button"]:
             self.input_widgets["send_to_scratch_pad_button"].clicked.connect(self.send_to_scratch_pad_func)
@@ -966,8 +1288,9 @@ class TimeZoneConverterUI:
     def _get_source_timezone(self, source_city: str) -> str:
         """Determine the source timezone from the input."""
         if not source_city:
-            logger.debug("No source city specified, using UTC")
-            return "UTC"
+            local_tz = self.converter.get_local_timezone()
+            logger.debug("No source city specified, using local timezone: %s", local_tz)
+            return local_tz
 
         for city in self.saved_cities:
             if city["name"].lower() == source_city.lower():
@@ -975,7 +1298,7 @@ class TimeZoneConverterUI:
                 logger.debug("Found source timezone from saved cities: %s for %s", source_tz, source_city)
                 return source_tz
 
-        source_tz = self.converter.get_timezone_for_city(source_city)
+        source_tz = TimeZoneConverter.get_timezone_for_city(source_city)
         if source_tz:
             logger.debug("Found source timezone from city mapping: %s for %s", source_tz, source_city)
             return source_tz
@@ -1062,47 +1385,113 @@ class TimeZoneConverterUI:
             logger.info("Pasted from clipboard: %s", clipboard_text)
             self.update_results()
 
-    def show_add_city_dialog(self):
-        """Show a simple dialog to add a city."""
-        from PyQt6.QtWidgets import QInputDialog
+    def on_city_input_changed(self, text: str):
+        """Handle changes in the city input field to show suggestions."""
+        text = text.strip()
+        suggestions_combo = self.results_widgets["city_suggestions_combo"]
 
-        city_name, ok = QInputDialog.getText(
-            self.converter_widget, "Add City", "Enter city name (e.g., Paris, Tokyo, Sydney):"
-        )
+        if len(text) < 2:  # Only search after 2+ characters
+            suggestions_combo.setVisible(False)
+            return
 
-        if ok and city_name.strip():
-            city_name = city_name.strip()
-            logger.info("User wants to add city: %s", city_name)
+        # Search for matching cities
+        matches = TimeZoneConverter.search_cities(text)
 
-            timezone = self.converter.get_timezone_for_city(city_name)
+        if len(matches) > 1:  # Show dropdown only if multiple matches
+            suggestions_combo.clear()
+            for match in matches:
+                suggestions_combo.addItem(match["display_name"], match)
+            suggestions_combo.setVisible(True)
+            logger.debug("Showing %d city suggestions for '%s'", len(matches), text)
+        else:
+            suggestions_combo.setVisible(False)
 
-            if timezone:
-                for existing_city in self.saved_cities:
-                    if existing_city["timezone"] == timezone:
-                        logger.warning("City with timezone %s already exists", timezone)
-                        return
+    def on_city_suggestion_selected(self, index: int):
+        """Handle selection from the city suggestions dropdown."""
+        suggestions_combo = self.results_widgets["city_suggestions_combo"]
+        if index >= 0:
+            city_data = suggestions_combo.itemData(index)
+            if city_data:
+                self._add_selected_city(city_data)
+                suggestions_combo.setVisible(False)
+                self.results_widgets["add_city_input"].clear()
 
-                new_city = {"name": city_name.title(), "timezone": timezone}
-                self.saved_cities.append(new_city)
-                self.converter.save_cities(self.saved_cities)
+    def add_city_from_input(self):
+        """Add a city from the input field."""
+        city_name = self.results_widgets["add_city_input"].text().strip()
 
-                source_city_combo = self.input_widgets["source_city_combo"]
-                source_city_combo.addItem(new_city["name"], new_city["timezone"])
+        if not city_name:
+            return
 
-                logger.info("Added city: %s (%s)", new_city["name"], timezone)
-                self.update_results()
+        logger.info("User wants to add city: %s", city_name)
+
+        # Search for matching cities
+        matches = TimeZoneConverter.search_cities(city_name)
+
+        if len(matches) == 1:
+            # Single match - add directly
+            self._add_selected_city(matches[0])
+            self.results_widgets["add_city_input"].clear()
+        elif len(matches) > 1:
+            # Multiple matches - show dropdown if not already visible
+            suggestions_combo = self.results_widgets["city_suggestions_combo"]
+            if not suggestions_combo.isVisible():
+                self.on_city_input_changed(city_name)  # Trigger dropdown display
             else:
+                # If dropdown is visible, select the first item
+                if suggestions_combo.count() > 0:
+                    city_data = suggestions_combo.itemData(0)
+                    if city_data:
+                        self._add_selected_city(city_data)
+                        suggestions_combo.setVisible(False)
+                        self.results_widgets["add_city_input"].clear()
+        else:
+            # No matches found
+            from PyQt6.QtWidgets import QMessageBox
+
+            QMessageBox.warning(
+                self.converter_widget,
+                "City Not Found",
+                f"Could not find timezone information for '{city_name}'.\n\n"
+                "Try using a major city name like:\n"
+                "• London, Paris, Berlin\n"
+                "• New York, Los Angeles, Chicago\n"
+                "• Tokyo, Sydney, Mumbai",
+            )
+
+    def _add_selected_city(self, city_data: dict):
+        """Add a selected city to the saved cities list.
+
+        Args:
+            city_data: Dictionary containing city name, timezone, and display_name
+        """
+        city_name = city_data["name"]
+        timezone = city_data["timezone"]
+
+        logger.info("Adding selected city: %s (%s)", city_name, timezone)
+
+        # Check for duplicate city names (allow multiple cities with same timezone)
+        for existing_city in self.saved_cities:
+            if existing_city["name"].lower() == city_name.lower():
+                logger.warning("City %s already exists in saved cities", city_name)
                 from PyQt6.QtWidgets import QMessageBox
 
-                QMessageBox.warning(
+                QMessageBox.information(
                     self.converter_widget,
-                    "City Not Found",
-                    f"Could not find timezone information for '{city_name}'.\n\n"
-                    "Try using a major city name like:\n"
-                    "• London, Paris, Berlin\n"
-                    "• New York, Los Angeles, Chicago\n"
-                    "• Tokyo, Sydney, Mumbai",
+                    "City Already Exists",
+                    f"The city '{city_name}' is already in your timezone list.\n\nPlease choose a different city.",
                 )
+                return
+
+        new_city = {"name": city_name, "timezone": timezone}
+        self.saved_cities.append(new_city)
+        self.converter.save_cities(self.saved_cities)
+
+        source_city_combo = self.input_widgets["source_city_combo"]
+        source_city_combo.addItem(new_city["name"], new_city["timezone"])
+
+        logger.info("Added city: %s (%s)", new_city["name"], timezone)
+        self.update_results()
 
     def send_to_scratch_pad_func(self):
         """Send current results to scratch pad."""
@@ -1147,6 +1536,126 @@ class TimeZoneConverterUI:
             self.scratch_pad.get_content() + "\n\n" + results_text if self.scratch_pad.get_content() else results_text
         )
         logger.info("Results sent to scratch pad successfully")
+
+    def _load_csv_config(self):
+        """Load and display the current CSV configuration."""
+        configured_path = self.converter.get_csv_file_path_config()
+        if configured_path:
+            self.csv_config_widgets["file_path_input"].setText(configured_path)
+            self._update_csv_status(f"Using configured CSV file: {Path(configured_path).name}")
+        else:
+            self.csv_config_widgets["file_path_input"].setText("")
+            self._update_csv_status("Using default CSV file locations")
+
+    def _update_csv_status(self, message: str):
+        """Update the CSV configuration status message."""
+        self.csv_config_widgets["status_label"].setText(message)
+        logger.debug("CSV status updated: %s", message)
+
+    def browse_csv_file(self):
+        """Open file dialog to browse for CSV file."""
+        file_dialog = QFileDialog(self.converter_widget)
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        file_dialog.setNameFilter("CSV files (*.csv);;All files (*.*)")
+        file_dialog.setWindowTitle("Select GeoLite2 City Locations CSV File")
+
+        if file_dialog.exec():
+            selected_files = file_dialog.selectedFiles()
+            if selected_files:
+                csv_path = selected_files[0]
+                logger.info("User selected CSV file: %s", csv_path)
+
+                # Validate the CSV file
+                if self._validate_csv_file(csv_path):
+                    # Save the configuration
+                    self.converter.save_csv_file_path_config(csv_path)
+
+                    # Clear cache to force reload
+                    self.converter.clear_csv_cache()
+
+                    # Update UI
+                    self.csv_config_widgets["file_path_input"].setText(csv_path)
+                    self._update_csv_status(f"Successfully loaded: {Path(csv_path).name}")
+
+                    # Refresh results with new data
+                    self.update_results()
+
+                    logger.info("CSV file configuration updated successfully")
+                else:
+                    self._update_csv_status("Invalid CSV file format")
+
+    def reset_csv_file(self):
+        """Reset CSV file configuration to use default locations."""
+        logger.info("Resetting CSV file configuration")
+
+        # Clear the saved configuration
+        config_file = self.converter.get_config_dir() / "timezone_config.json"
+        if config_file.exists():
+            try:
+                with config_file.open("r", encoding="utf-8") as f:
+                    config = json.load(f)
+                if "csv_file_path" in config:
+                    del config["csv_file_path"]
+                    with config_file.open("w", encoding="utf-8") as f:
+                        json.dump(config, f, indent=2, ensure_ascii=False)
+            except (json.JSONDecodeError, OSError):
+                logger.warning("Could not update config file")
+
+        # Clear cache to force reload
+        self.converter.clear_csv_cache()
+
+        # Update UI
+        self.csv_config_widgets["file_path_input"].setText("")
+        self._update_csv_status("Reset to default CSV file locations")
+
+        # Refresh results
+        self.update_results()
+
+        logger.info("CSV file configuration reset successfully")
+
+    def _validate_csv_file(self, csv_path: str) -> bool:
+        """Validate that the selected CSV file has the expected format.
+
+        Args:
+            csv_path: Path to the CSV file to validate
+
+        Returns:
+            True if the file is valid, False otherwise
+        """
+        try:
+            csv_file = Path(csv_path)
+            if not csv_file.exists():
+                logger.error("CSV file does not exist: %s", csv_path)
+                return False
+
+            # Check if file can be opened and has expected columns
+            with csv_file.open("r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+
+                # Check for required columns
+                required_columns = {"city_name", "time_zone"}
+                if not required_columns.issubset(set(reader.fieldnames or [])):
+                    logger.error("CSV file missing required columns: %s", required_columns)
+                    return False
+
+                # Try to read first few rows to ensure it's valid
+                valid_rows = 0
+                for i, row in enumerate(reader):
+                    if i >= 10:  # Check first 10 rows
+                        break
+                    if row.get("city_name") and row.get("time_zone"):
+                        valid_rows += 1
+
+                if valid_rows == 0:
+                    logger.error("CSV file contains no valid data rows")
+                    return False
+
+                logger.info("CSV file validation successful: %s", csv_path)
+                return True
+
+        except Exception:
+            logger.exception("Error validating CSV file %s", csv_path)
+            return False
 
 
 def create_timezone_converter_widget(style_func, scratch_pad=None):
