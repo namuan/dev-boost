@@ -10,7 +10,6 @@ General Rules:
 
 Coding Rules:
 Always add import at the top of the file
-Keep functions small and concise - Minimize line count, operators, and variables to improve readability.
 Use consistent patterns - Avoid novelty in function structure; standardize how similar logic is implemented across the codebase.
 Break up complex chains - Split long function chains, iterators, or comprehensions into logical groups using helper functions or intermediate variables.
 Simplify conditionals - Keep condition tests short and prefer sequences of the same logical operator (avoid mixing && and || when possible).
