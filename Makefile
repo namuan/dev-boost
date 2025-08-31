@@ -28,6 +28,11 @@ test: ## Run all unit tests
 	@echo "🚀 Running unit tests"
 	@uv run pytest -v
 
+.PHONY: test-single
+test-single: ## Run a single test file (usage: make test-single TEST=test_config.py)
+	@echo "🚀 Running single test: $(TEST)"
+	@uv run pytest -v tests/$(TEST)
+
 .PHONY: run
 run: ## Run the application
 	@echo "🚀 Testing code: Running $(PROJECTNAME)"

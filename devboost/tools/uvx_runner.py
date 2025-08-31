@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from devboost.config import get_config_manager
 from devboost.styles import get_autocomplete_dropdown_style, get_status_style, get_tool_style
 
 # Logger for debugging
@@ -82,15 +83,23 @@ class UvxRunner(QObject):
     output_received = pyqtSignal(str)  # output_text
     help_received = pyqtSignal(str)  # help_text
 
-    def __init__(self, uvx_path: str = "/opt/homebrew/bin/uvx"):
+    def __init__(self, uvx_path: str | None = None):
         super().__init__()
         self.process = None
-        # Set default working directory to temp folder under $HOME
-        self.working_directory = Path.home() / "temp"
+        # Load configuration
+        config_manager = get_config_manager()
+
+        # Set up working directory from config or default
+        self.working_directory = Path(config_manager.get("uvx_runner.working_directory", str(Path.home() / "temp")))
         # Create the directory if it doesn't exist
         Path(self.working_directory).mkdir(parents=True, exist_ok=True)
-        # Set the uvx path
-        self.uvx_path = uvx_path
+
+        # Set uvx path from config, parameter, or default
+        if uvx_path is not None:
+            self.uvx_path = uvx_path
+        else:
+            self.uvx_path = config_manager.get("uvx_runner.uvx_path", "/opt/homebrew/bin/uvx")
+
         logger.info(
             "UvxRunner initialized with working directory: %s and uvx path: %s", self.working_directory, self.uvx_path
         )
@@ -137,7 +146,8 @@ class UvxRunner(QObject):
         """
         logger.info("Getting help for uvx tool: %s", tool_name)
 
-        if not tool_name or tool_name not in UVX_TOOLS:
+        available_tools = self.get_all_available_tools()
+        if not tool_name or tool_name not in available_tools:
             self.help_received.emit("Please select a valid tool from the dropdown.")
             return
 
@@ -169,7 +179,8 @@ class UvxRunner(QObject):
             tool_name: Name of the tool to run
             arguments: Command line arguments for the tool
         """
-        if not tool_name or tool_name not in UVX_TOOLS:
+        available_tools = self.get_all_available_tools()
+        if not tool_name or tool_name not in available_tools:
             self.command_failed.emit("Please select a valid tool from the dropdown.")
             return
 
@@ -203,7 +214,7 @@ class UvxRunner(QObject):
 
         self.process = QProcess()
         # Set the working directory
-        self.process.setWorkingDirectory(self.working_directory)
+        self.process.setWorkingDirectory(str(self.working_directory))
         self.process.readyReadStandardOutput.connect(self._handle_stdout)
         self.process.readyReadStandardError.connect(self._handle_stderr)
         self.process.finished.connect(self._handle_finished)
@@ -221,13 +232,83 @@ class UvxRunner(QObject):
 
     def set_uvx_path(self, uvx_path: str) -> None:
         """
-        Set the path to the uvx executable.
+        Set the path to the uvx executable and save to configuration.
 
         Args:
             uvx_path: Path to the uvx executable
         """
         self.uvx_path = uvx_path
+        # Save to configuration
+        config_manager = get_config_manager()
+        config_manager.set("uvx_runner.uvx_path", uvx_path)
         logger.info("Uvx path updated to: %s", uvx_path)
+
+    def set_working_directory(self, working_directory: str) -> None:
+        """
+        Set the working directory and save to configuration.
+
+        Args:
+            working_directory: Path to the working directory
+        """
+        self.working_directory = Path(working_directory)
+        # Ensure working directory exists
+        Path(self.working_directory).mkdir(parents=True, exist_ok=True)
+        # Save to configuration
+        config_manager = get_config_manager()
+        config_manager.set("uvx_runner.working_directory", str(self.working_directory))
+        logger.info("Working directory updated to: %s", self.working_directory)
+
+    def get_tools_list(self) -> list[str]:
+        """
+        Get the user's custom tools list from configuration.
+
+        Returns:
+            List of custom tool names
+        """
+        config_manager = get_config_manager()
+        return config_manager.get("uvx_runner.tools_list", [])
+
+    def add_tool_to_list(self, tool_name: str) -> None:
+        """
+        Add a tool to the user's custom tools list and save to configuration.
+
+        Args:
+            tool_name: Name of the tool to add
+        """
+        config_manager = get_config_manager()
+        tools_list = self.get_tools_list()
+        if tool_name not in tools_list:
+            tools_list.append(tool_name)
+            config_manager.set("uvx_runner.tools_list", tools_list)
+            logger.info("Added tool '%s' to custom tools list", tool_name)
+
+    def remove_tool_from_list(self, tool_name: str) -> None:
+        """
+        Remove a tool from the user's custom tools list and save to configuration.
+
+        Args:
+            tool_name: Name of the tool to remove
+        """
+        config_manager = get_config_manager()
+        tools_list = self.get_tools_list()
+        if tool_name in tools_list:
+            tools_list.remove(tool_name)
+            config_manager.set("uvx_runner.tools_list", tools_list)
+            logger.info("Removed tool '%s' from custom tools list", tool_name)
+
+    def get_all_available_tools(self) -> dict[str, str]:
+        """
+        Get all available tools including predefined and custom tools.
+
+        Returns:
+            Dictionary mapping tool names to descriptions
+        """
+        all_tools = UVX_TOOLS.copy()
+        custom_tools = self.get_tools_list()
+        for tool in custom_tools:
+            if tool not in all_tools:
+                all_tools[tool] = "Custom tool (no description available)"
+        return all_tools
 
     def _handle_stdout(self):
         """Handle standard output from the running process."""
@@ -382,7 +463,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
 
     # Store tool items with name and description for better filtering
     tool_items = []
-    for tool_name, description in UVX_TOOLS.items():
+    for tool_name, description in uvx_runner.get_all_available_tools().items():
         display_text = f"{tool_name} - {description}"
         tool_items.append((tool_name, display_text))
 
@@ -632,7 +713,7 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         directory = QFileDialog.getExistingDirectory(widget, "Select Working Directory", dir_input.text())
         if directory:
             dir_input.setText(directory)
-            uvx_runner.working_directory = directory
+            uvx_runner.set_working_directory(directory)
             status_label.setText(f"Working directory set to: {directory}")
 
     def on_browse_uvx():
@@ -651,7 +732,8 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
         logger.debug("Tool name to get help for: '%s'", tool_name)
-        if tool_name and tool_name in UVX_TOOLS:
+        available_tools = uvx_runner.get_all_available_tools()
+        if tool_name and tool_name in available_tools:
             logger.info("Getting help for tool: %s", tool_name)
             status_label.setText(f"Getting help for {tool_name}...")
             uvx_runner.get_tool_help(tool_name)
@@ -678,13 +760,14 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
         logger.debug("on_run_tool called. Current selected tool: %s", current_selected_tool)
         logger.debug("Tool input text: '%s'", tool_input.text())
         # Update working directory from input field
-        uvx_runner.working_directory = dir_input.text()
+        uvx_runner.set_working_directory(dir_input.text())
 
         tool_name = (
             current_selected_tool["name"] if current_selected_tool["name"] else tool_input.text().split(" - ")[0]
         )
         logger.debug("Tool name to run: '%s'", tool_name)
-        if tool_name and tool_name in UVX_TOOLS:
+        available_tools = uvx_runner.get_all_available_tools()
+        if tool_name and tool_name in available_tools:
             arguments = args_input.text().strip()
             logger.info(
                 "Running tool: %s with args: %s in directory: %s",
