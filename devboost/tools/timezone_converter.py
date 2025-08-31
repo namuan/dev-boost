@@ -882,8 +882,8 @@ class TimeZoneConverterUI:
         self.results_section, self.results_widgets = self._create_results_section()
 
         main_layout = QVBoxLayout(self.converter_widget)
-        main_layout.setContentsMargins(10, 5, 5, 10)
-        main_layout.setSpacing(5)
+        main_layout.setContentsMargins(10, 10, 10, 15)
+        main_layout.setSpacing(20)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.converter_widget.setStyleSheet(get_tool_style())
 
@@ -947,10 +947,10 @@ class TimeZoneConverterUI:
         """Create the input section of the timezone converter widget."""
         input_section = QWidget()
         input_section_layout = QVBoxLayout(input_section)
-        input_section_layout.setSpacing(3)
+        input_section_layout.setSpacing(15)
 
         top_controls_layout = QHBoxLayout()
-        top_controls_layout.setSpacing(5)
+        top_controls_layout.setSpacing(10)
 
         now_button = QPushButton("Now")
         clipboard_button = QPushButton("Clipboard")
@@ -973,7 +973,7 @@ class TimeZoneConverterUI:
         top_controls_layout.addStretch()
 
         input_fields_layout = QHBoxLayout()
-        input_fields_layout.setSpacing(5)
+        input_fields_layout.setSpacing(10)
 
         time_input = QLineEdit()
         time_input.setPlaceholderText("Enter time (e.g., 14:30, 2:30 PM, 1430)")
@@ -1022,19 +1022,15 @@ class TimeZoneConverterUI:
         """Create the results section of the timezone converter widget."""
         results_section = QWidget()
         results_layout = QVBoxLayout(results_section)
-        results_layout.setSpacing(5)
+        results_layout.setSpacing(15)
 
         # Header
         results_header_layout = QHBoxLayout()
-        results_label = QLabel("Time Conversions")
-        results_label.setObjectName("sectionHeader")
-        results_header_layout.addWidget(results_label)
-        results_header_layout.addStretch()
         results_layout.addLayout(results_header_layout)
 
         # Add city input section
         add_city_layout = QHBoxLayout()
-        add_city_layout.setSpacing(5)
+        add_city_layout.setSpacing(10)
 
         add_city_label = QLabel("Add City:")
         add_city_input = QLineEdit()
@@ -1058,7 +1054,7 @@ class TimeZoneConverterUI:
         results_list = QListWidget()
         results_list.setMinimumHeight(300)
         results_list.setMaximumHeight(600)
-        results_list.setSpacing(10)
+        results_list.setSpacing(15)
         results_list.setContentsMargins(0, 0, 0, 0)
 
         results_layout.addWidget(results_list)
@@ -1075,20 +1071,17 @@ class TimeZoneConverterUI:
         """Create the CSV configuration section of the timezone converter widget."""
         csv_config_section = QWidget()
         csv_config_layout = QVBoxLayout(csv_config_section)
-        csv_config_layout.setSpacing(3)
+        csv_config_layout.setSpacing(12)
 
         # Header
         header_layout = QHBoxLayout()
-        header_label = QLabel("CSV Data Source Configuration")
-        header_label.setObjectName("sectionHeader")
-        header_layout.addWidget(header_label)
         header_layout.addStretch()
 
         # File path input
         file_path_layout = QHBoxLayout()
-        file_path_layout.setSpacing(5)
+        file_path_layout.setSpacing(10)
 
-        file_path_label = QLabel("CSV File:")
+        file_path_label = QLabel("CSV Data Source Configuration:")
         file_path_input = QLineEdit()
         file_path_input.setPlaceholderText("Path to GeoLite2-City-Locations-en.csv file")
         file_path_input.setReadOnly(True)
