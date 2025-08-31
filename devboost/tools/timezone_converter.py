@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from devboost.styles import get_tool_style
+from devboost.styles import get_autocomplete_dropdown_style, get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -878,6 +878,12 @@ class TimeZoneConverterUI:
         self.saved_cities = self.converter.load_saved_cities()
         self.use_24h_format = True
 
+        # Current selected city for auto-completion
+        self.current_selected_city = {"name": "", "display": ""}
+
+        # Store city items for better filtering
+        self.city_items = []
+
         self.input_section, self.input_widgets = self._create_input_section()
         self.results_section, self.results_widgets = self._create_results_section()
 
@@ -908,39 +914,171 @@ class TimeZoneConverterUI:
 
         self._connect_signals()
         self._load_csv_config()
+        self._initialize_city_suggestions()
         self.update_results()
+
+    def _initialize_city_suggestions(self):
+        """Initialize city suggestions data and event handlers."""
+        # Load all available cities for suggestions from CSV data
+        city_data_dict = TimeZoneConverter._load_csv_city_data()
+        self.city_items = []
+        for city_name, timezone in city_data_dict.items():
+            display_text = f"{city_name.title()} ({timezone})"
+            city_data = {"name": city_name.title(), "timezone": timezone, "display_name": display_text}
+            self.city_items.append((city_name.title(), display_text, city_data))
+
+        # Set up focus and mouse event handlers
+        add_city_input = self.results_widgets["add_city_input"]
+        city_suggestions = self.results_widgets["city_suggestions"]
+
+        # Override focus events
+        def on_city_input_focus_in(event):
+            QLineEdit.focusInEvent(add_city_input, event)
+            if not add_city_input.text().strip():
+                self._show_city_suggestions("")  # Show all cities when empty and focused
+
+        def on_city_input_focus_out(event):
+            from PyQt6.QtCore import QTimer
+
+            QTimer.singleShot(
+                150, lambda: city_suggestions.setVisible(False) if not city_suggestions.hasFocus() else None
+            )
+            QLineEdit.focusOutEvent(add_city_input, event)
+
+        def on_city_suggestions_focus_out(event):
+            QListWidget.focusOutEvent(city_suggestions, event)
+            city_suggestions.setVisible(False)
+
+        def on_city_input_mouse_press(event):
+            QLineEdit.mousePressEvent(add_city_input, event)
+            if not add_city_input.text().strip():
+                self._show_city_suggestions("")  # Show all cities when empty
+
+        # Apply event handlers
+        add_city_input.focusInEvent = on_city_input_focus_in
+        add_city_input.focusOutEvent = on_city_input_focus_out
+        add_city_input.mousePressEvent = on_city_input_mouse_press
+        city_suggestions.focusOutEvent = on_city_suggestions_focus_out
+
+        logger.info("City suggestions initialized with %d cities", len(self.city_items))
+
+    def _show_city_suggestions(self, text):
+        """Filter and show city suggestions based on input text."""
+        filter_text = text.lower().strip()
+        city_suggestions = self.results_widgets["city_suggestions"]
+        add_city_input = self.results_widgets["add_city_input"]
+
+        # Clear current suggestions
+        city_suggestions.clear()
+
+        # Find matching cities
+        matched_items = []
+        for city_name, display_text, city_data in self.city_items:
+            if not filter_text or filter_text in city_name.lower() or filter_text in display_text.lower():
+                matched_items.append((city_name, display_text, city_data))
+
+        # Limit results to prevent overwhelming UI
+        matched_items = matched_items[:50]
+
+        # Add matched items to suggestion list
+        for _, display_text, city_data in matched_items:
+            city_suggestions.addItem(display_text)
+            list_item = city_suggestions.item(city_suggestions.count() - 1)
+            if list_item:
+                list_item.setData(Qt.ItemDataRole.UserRole, city_data)
+
+        # Show/hide suggestions based on matches
+        if matched_items and (filter_text or add_city_input.hasFocus()):
+            city_suggestions.setVisible(True)
+        else:
+            city_suggestions.setVisible(False)
+            self.current_selected_city = {"name": "", "display": ""}
+
+        # Auto-select first item if only one match
+        if len(matched_items) == 1:
+            city_suggestions.setCurrentRow(0)
+            self.current_selected_city = {"name": matched_items[0][0], "display": matched_items[0][1]}
+        elif len(matched_items) == 0 and filter_text:
+            # No matches found
+            city_suggestions.addItem("No matching cities found")
+            city_suggestions.setCurrentRow(0)
+            self.current_selected_city = {"name": "", "display": ""}
+
+        logger.debug("Showing %d city suggestions for '%s'", len(matched_items), text)
+
+    def _on_city_suggestion_selected(self):
+        """Handle selection from city suggestions list."""
+        city_suggestions = self.results_widgets["city_suggestions"]
+        add_city_input = self.results_widgets["add_city_input"]
+
+        selected_items = city_suggestions.selectedItems()
+        if selected_items:
+            selected_item = selected_items[0]
+            city_data = selected_item.data(Qt.ItemDataRole.UserRole)
+            display_text = selected_item.text()
+
+            if city_data:  # Make sure it's not the "no results" item
+                add_city_input.setText(display_text)
+                self.current_selected_city = {"name": city_data["name"], "display": display_text}
+                city_suggestions.setVisible(False)
+                add_city_input.setFocus()
+                # Automatically add the selected city
+                self._add_selected_city(city_data)
+                add_city_input.clear()
+                logger.debug("City selected and added: %s", city_data["name"])
 
     def _handle_input_key_press(self, event):
         """Handle keyboard events for city input navigation."""
-        suggestions_combo = self.results_widgets["city_suggestions_combo"]
+        city_suggestions = self.results_widgets["city_suggestions"]
+        add_city_input = self.results_widgets["add_city_input"]
 
-        if suggestions_combo.isVisible():
+        if city_suggestions.isVisible():
             if event.key() == Qt.Key.Key_Down:
-                # Move focus to dropdown and select first item
-                suggestions_combo.setFocus()
-                suggestions_combo.setCurrentIndex(0)
+                current_row = city_suggestions.currentRow()
+                if current_row < city_suggestions.count() - 1:
+                    city_suggestions.setCurrentRow(current_row + 1)
+                return
+            if event.key() == Qt.Key.Key_Up:
+                current_row = city_suggestions.currentRow()
+                if current_row > 0:
+                    city_suggestions.setCurrentRow(current_row - 1)
+                return
+            if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
+                self._on_city_suggestion_selected()
                 return
             if event.key() == Qt.Key.Key_Escape:
-                # Hide dropdown
-                suggestions_combo.setVisible(False)
+                city_suggestions.setVisible(False)
+                add_city_input.clear()
+                self.current_selected_city = {"name": "", "display": ""}
+                return
+        else:
+            if event.key() == Qt.Key.Key_Escape:
+                add_city_input.clear()
+                self.current_selected_city = {"name": "", "display": ""}
                 return
 
         # Call the original keyPressEvent for normal behavior
-        QLineEdit.keyPressEvent(self.results_widgets["add_city_input"], event)
+        QLineEdit.keyPressEvent(add_city_input, event)
+
+        # Update suggestions after processing the key
+        self._show_city_suggestions(add_city_input.text())
 
     def handle_city_input_enter(self):
         """Handle Enter key press in city input field."""
-        suggestions_combo = self.results_widgets["city_suggestions_combo"]
+        city_suggestions = self.results_widgets["city_suggestions"]
+        add_city_input = self.results_widgets["add_city_input"]
 
-        if suggestions_combo.isVisible() and suggestions_combo.count() > 0:
-            # If dropdown is visible, select the first item
-            city_data = suggestions_combo.itemData(0)
-            if city_data:
-                self._add_selected_city(city_data)
-                suggestions_combo.setVisible(False)
-                self.results_widgets["add_city_input"].clear()
+        if city_suggestions.isVisible() and city_suggestions.count() > 0:
+            # If suggestions are visible, select the first item
+            first_item = city_suggestions.item(0)
+            if first_item:
+                city_data = first_item.data(Qt.ItemDataRole.UserRole)
+                if city_data:
+                    self._add_selected_city(city_data)
+                    city_suggestions.setVisible(False)
+                    add_city_input.clear()
         else:
-            # No dropdown visible, use regular add city logic
+            # No suggestions visible, use regular add city logic
             self.add_city_from_input()
 
     def _create_input_section(self) -> tuple[QWidget, dict[str, QWidget]]:
@@ -1028,28 +1166,35 @@ class TimeZoneConverterUI:
         results_header_layout = QHBoxLayout()
         results_layout.addLayout(results_header_layout)
 
-        # Add city input section
-        add_city_layout = QHBoxLayout()
-        add_city_layout.setSpacing(10)
+        # Add city input section with auto-completion
+        city_input_layout = QVBoxLayout()
+        city_input_layout.setSpacing(4)
+
+        # City input label and controls
+        city_controls_layout = QHBoxLayout()
+        city_controls_layout.setSpacing(10)
 
         add_city_label = QLabel("Add City:")
         add_city_input = QLineEdit()
-        add_city_input.setPlaceholderText("Enter city name (e.g., Paris, Tokyo, Sydney)")
+        add_city_input.setPlaceholderText("Type to search for cities...")
 
         add_city_button = QPushButton("Add")
         add_city_button.setFixedWidth(60)
 
-        add_city_layout.addWidget(add_city_label)
-        add_city_layout.addWidget(add_city_input)
-        add_city_layout.addWidget(add_city_button)
+        city_controls_layout.addWidget(add_city_label)
+        city_controls_layout.addWidget(add_city_input)
+        city_controls_layout.addWidget(add_city_button)
 
-        results_layout.addLayout(add_city_layout)
+        city_input_layout.addLayout(city_controls_layout)
 
-        # City suggestions dropdown (initially hidden)
-        city_suggestions_combo = QComboBox()
-        city_suggestions_combo.setVisible(False)
-        city_suggestions_combo.setMaxVisibleItems(10)
-        results_layout.addWidget(city_suggestions_combo)
+        # City suggestions list (hidden by default)
+        city_suggestions = QListWidget()
+        city_suggestions.setVisible(False)
+        city_suggestions.setMaximumHeight(150)  # Limit height to prevent overwhelming UI
+        city_suggestions.setStyleSheet(get_autocomplete_dropdown_style())
+        city_input_layout.addWidget(city_suggestions)
+
+        results_layout.addLayout(city_input_layout)
 
         results_list = QListWidget()
         results_list.setMinimumHeight(300)
@@ -1062,7 +1207,7 @@ class TimeZoneConverterUI:
         widgets = {
             "add_city_input": add_city_input,
             "add_city_button": add_city_button,
-            "city_suggestions_combo": city_suggestions_combo,
+            "city_suggestions": city_suggestions,
             "results_list": results_list,
         }
         return results_section, widgets
@@ -1129,8 +1274,9 @@ class TimeZoneConverterUI:
         # Add city signals
         self.results_widgets["add_city_button"].clicked.connect(self.add_city_from_input)
         self.results_widgets["add_city_input"].returnPressed.connect(self.handle_city_input_enter)
-        self.results_widgets["add_city_input"].textChanged.connect(self.on_city_input_changed)
-        self.results_widgets["city_suggestions_combo"].activated.connect(self.on_city_suggestion_selected)
+        self.results_widgets["add_city_input"].textChanged.connect(self._show_city_suggestions)
+        self.results_widgets["city_suggestions"].itemClicked.connect(self._on_city_suggestion_selected)
+        self.results_widgets["city_suggestions"].itemActivated.connect(self._on_city_suggestion_selected)
 
         # Set up keyboard event handling for the input field
         self.results_widgets["add_city_input"].keyPressEvent = self._handle_input_key_press
@@ -1378,45 +1524,27 @@ class TimeZoneConverterUI:
             logger.info("Pasted from clipboard: %s", clipboard_text)
             self.update_results()
 
-    def on_city_input_changed(self, text: str):
-        """Handle changes in the city input field to show suggestions."""
-        text = text.strip()
-        suggestions_combo = self.results_widgets["city_suggestions_combo"]
-
-        if len(text) < 2:  # Only search after 2+ characters
-            suggestions_combo.setVisible(False)
-            return
-
-        # Search for matching cities
-        matches = TimeZoneConverter.search_cities(text)
-
-        if len(matches) > 1:  # Show dropdown only if multiple matches
-            suggestions_combo.clear()
-            for match in matches:
-                suggestions_combo.addItem(match["display_name"], match)
-            suggestions_combo.setVisible(True)
-            logger.debug("Showing %d city suggestions for '%s'", len(matches), text)
-        else:
-            suggestions_combo.setVisible(False)
-
-    def on_city_suggestion_selected(self, index: int):
-        """Handle selection from the city suggestions dropdown."""
-        suggestions_combo = self.results_widgets["city_suggestions_combo"]
-        if index >= 0:
-            city_data = suggestions_combo.itemData(index)
-            if city_data:
-                self._add_selected_city(city_data)
-                suggestions_combo.setVisible(False)
-                self.results_widgets["add_city_input"].clear()
-
+    # ruff: noqa: C901
     def add_city_from_input(self):
         """Add a city from the input field."""
-        city_name = self.results_widgets["add_city_input"].text().strip()
+        add_city_input = self.results_widgets["add_city_input"]
+        city_suggestions = self.results_widgets["city_suggestions"]
+        city_name = add_city_input.text().strip()
 
         if not city_name:
             return
 
         logger.info("User wants to add city: %s", city_name)
+
+        # Check if we have a current selected city from auto-completion
+        if self.current_selected_city["name"] and city_name.lower() in self.current_selected_city["display"].lower():
+            # Use the selected city data
+            for _, _, city_data in self.city_items:
+                if city_data["name"] == self.current_selected_city["name"]:
+                    self._add_selected_city(city_data)
+                    add_city_input.clear()
+                    city_suggestions.setVisible(False)
+                    return
 
         # Search for matching cities
         matches = TimeZoneConverter.search_cities(city_name)
@@ -1424,20 +1552,21 @@ class TimeZoneConverterUI:
         if len(matches) == 1:
             # Single match - add directly
             self._add_selected_city(matches[0])
-            self.results_widgets["add_city_input"].clear()
+            add_city_input.clear()
         elif len(matches) > 1:
-            # Multiple matches - show dropdown if not already visible
-            suggestions_combo = self.results_widgets["city_suggestions_combo"]
-            if not suggestions_combo.isVisible():
-                self.on_city_input_changed(city_name)  # Trigger dropdown display
+            # Multiple matches - show suggestions if not already visible
+            if not city_suggestions.isVisible():
+                self._show_city_suggestions(city_name)  # Trigger suggestions display
             else:
-                # If dropdown is visible, select the first item
-                if suggestions_combo.count() > 0:
-                    city_data = suggestions_combo.itemData(0)
-                    if city_data:
-                        self._add_selected_city(city_data)
-                        suggestions_combo.setVisible(False)
-                        self.results_widgets["add_city_input"].clear()
+                # If suggestions are visible, select the first item
+                if city_suggestions.count() > 0:
+                    first_item = city_suggestions.item(0)
+                    if first_item:
+                        city_data = first_item.data(Qt.ItemDataRole.UserRole)
+                        if city_data:
+                            self._add_selected_city(city_data)
+                            city_suggestions.setVisible(False)
+                            add_city_input.clear()
         else:
             # No matches found
             from PyQt6.QtWidgets import QMessageBox
