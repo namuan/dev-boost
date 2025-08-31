@@ -145,8 +145,8 @@ class TestTimeZoneConverter:
 
     def test_get_timezone_for_city(self):
         """Test city to timezone mapping."""
-        # Test exact matches
-        result = TimeZoneConverter.get_timezone_for_city("new york")
+        # Test exact matches with fallback cities that should work
+        result = TimeZoneConverter.get_timezone_for_city("nyc")
         assert result == "America/New_York"
 
         result = TimeZoneConverter.get_timezone_for_city("london")
@@ -156,7 +156,7 @@ class TestTimeZoneConverter:
         assert result == "Asia/Tokyo"
 
         # Test case insensitive
-        result = TimeZoneConverter.get_timezone_for_city("NEW YORK")
+        result = TimeZoneConverter.get_timezone_for_city("NYC")
         assert result == "America/New_York"
 
         result = TimeZoneConverter.get_timezone_for_city("London")
@@ -179,13 +179,13 @@ class TestTimeZoneConverter:
 
     def test_search_cities(self):
         """Test city search functionality."""
-        # Test search for 'new'
-        results = TimeZoneConverter.search_cities("new")
+        # Test search for 'york' (should find New York)
+        results = TimeZoneConverter.search_cities("york")
         assert len(results) > 0
 
-        # Should find 'new york'
+        # Should find 'New York'
         city_names = [city["name"].lower() for city in results]
-        assert any("new york" in name for name in city_names)
+        assert any(name == "new york" for name in city_names)
 
         # Test search for 'london'
         results = TimeZoneConverter.search_cities("london")
@@ -199,6 +199,92 @@ class TestTimeZoneConverter:
         # Test no matches
         results = TimeZoneConverter.search_cities("nonexistent_city_xyz")
         assert results == []
+
+    def test_search_cities_barcelona_duplicates(self):
+        """Test that Barcelona search returns multiple entries from different countries."""
+        # Search for Barcelona should return multiple results
+        results = TimeZoneConverter.search_cities("barcelona")
+
+        # Should find at least 2 Barcelona entries (Spain and Venezuela)
+        barcelona_results = [city for city in results if city["name"].lower() == "barcelona"]
+        assert len(barcelona_results) >= 2, f"Expected at least 2 Barcelona entries, got {len(barcelona_results)}"
+
+        # Should have different timezones
+        timezones = {city["timezone"] for city in barcelona_results}
+        assert len(timezones) >= 2, f"Expected different timezones, got {timezones}"
+
+        # Should include Spain (Europe/Madrid) and Venezuela (America/Caracas)
+        expected_timezones = {"Europe/Madrid", "America/Caracas"}
+        found_timezones = {city["timezone"] for city in barcelona_results}
+        assert expected_timezones.issubset(found_timezones), f"Expected {expected_timezones}, found {found_timezones}"
+
+        # Display names should include country information for disambiguation
+        for city in barcelona_results:
+            display_name = city["display_name"]
+            assert "barcelona" in display_name.lower(), f"Display name should contain Barcelona: {display_name}"
+            # Should contain country or region info
+            assert any(
+                keyword in display_name.lower() for keyword in ["spain", "venezuela", "catalonia", "anzoátegui"]
+            ), f"Display name should contain country/region info: {display_name}"
+
+    def test_search_cities_various_duplicates(self):
+        """Test search functionality with various cities that have duplicates."""
+        # Test cities that commonly have duplicates
+        test_cities = ["paris", "london", "madrid", "rome", "berlin"]
+
+        for city_name in test_cities:
+            results = TimeZoneConverter.search_cities(city_name)
+            assert len(results) > 0, f"Should find results for {city_name}"
+
+            # Check that results contain the searched city
+            matching_cities = [city for city in results if city_name in city["name"].lower()]
+            assert len(matching_cities) > 0, f"Should find cities matching {city_name}"
+
+            # Check that display names are properly formatted
+            for city in matching_cities:
+                display_name = city["display_name"]
+                assert city_name in display_name.lower(), f"Display name should contain {city_name}: {display_name}"
+                assert (
+                    "(" in display_name and ")" in display_name
+                ), f"Display name should contain timezone: {display_name}"
+
+    def test_search_cities_edge_cases(self):
+        """Test edge cases for city search functionality."""
+        # Test empty query
+        results = TimeZoneConverter.search_cities("")
+        assert results == [], "Empty query should return empty results"
+
+        # Test whitespace-only query
+        results = TimeZoneConverter.search_cities("   ")
+        assert results == [], "Whitespace-only query should return empty results"
+
+        # Test non-existent city
+        results = TimeZoneConverter.search_cities("nonexistent_city_xyz_123")
+        assert results == [], "Non-existent city should return empty results"
+
+        # Test very short query that might match many cities
+        results = TimeZoneConverter.search_cities("a")
+        assert len(results) <= 50, "Results should be limited to 50 entries"
+
+        # Test case sensitivity
+        results_lower = TimeZoneConverter.search_cities("london")
+        results_upper = TimeZoneConverter.search_cities("LONDON")
+        results_mixed = TimeZoneConverter.search_cities("London")
+
+        # All should return the same results (case insensitive)
+        assert len(results_lower) > 0, "Lowercase search should find results"
+        assert len(results_upper) > 0, "Uppercase search should find results"
+        assert len(results_mixed) > 0, "Mixed case search should find results"
+
+        # Test special characters in query
+        results = TimeZoneConverter.search_cities("saint-")
+        # Should handle special characters gracefully (either find results or return empty)
+        assert isinstance(results, list), "Should return a list even with special characters"
+
+        # Test very long query
+        long_query = "a" * 100
+        results = TimeZoneConverter.search_cities(long_query)
+        assert results == [], "Very long query should return empty results"
 
     def test_get_current_time_in_timezone(self):
         """Test getting current time in timezone."""

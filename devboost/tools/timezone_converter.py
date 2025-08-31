@@ -32,7 +32,7 @@ class TimeZoneConverter:
     """Backend logic for timezone conversion and management."""
 
     # Cache for CSV data to avoid repeated file reads
-    _csv_city_data: ClassVar[dict[str, str] | None] = None
+    _csv_city_data: ClassVar[list[dict[str, str]] | None] = None
     _csv_file_path: ClassVar[Path | None] = None
 
     # Common city to timezone mappings (fallback for when CSV is not available)
@@ -161,11 +161,11 @@ class TimeZoneConverter:
         return None
 
     @classmethod
-    def _load_csv_city_data(cls) -> dict[str, str]:
+    def _load_csv_city_data(cls) -> list[dict[str, str]]:
         """Load city data from GeoLite2 CSV file.
 
         Returns:
-            Dictionary mapping city names to timezone identifiers
+            List of city dictionaries with keys: name, timezone, country, region
         """
         if cls._csv_city_data is not None:
             return cls._csv_city_data
@@ -173,11 +173,15 @@ class TimeZoneConverter:
         csv_path = cls._get_csv_file_path()
         if csv_path is None:
             logger.info("CSV file not found, using fallback city mappings")
-            cls._csv_city_data = cls.CITY_TIMEZONE_MAP.copy()
+            # Convert fallback mappings to list format
+            fallback_cities = []
+            for city_name, timezone in cls.CITY_TIMEZONE_MAP.items():
+                fallback_cities.append({"name": city_name.title(), "timezone": timezone, "country": "", "region": ""})
+            cls._csv_city_data = fallback_cities
             return cls._csv_city_data
 
         cls._csv_file_path = csv_path
-        city_data = {}
+        city_data_list = []
 
         try:
             logger.info("Loading city data from CSV: %s", csv_path)
@@ -187,6 +191,8 @@ class TimeZoneConverter:
                 for row in reader:
                     city_name = row.get("city_name", "").strip()
                     timezone = row.get("time_zone", "").strip()
+                    country = row.get("country_name", "").strip()
+                    region = row.get("subdivision_1_name", "").strip()
 
                     # Skip rows without city name or timezone
                     if not city_name or not timezone:
@@ -196,26 +202,47 @@ class TimeZoneConverter:
                     if timezone.startswith("UTC") or "±" in timezone or "-" in timezone:
                         continue
 
-                    # Convert city name to lowercase for consistent lookup
-                    city_key = city_name.lower()
-
                     # Only add if it's a proper IANA timezone (contains '/')
                     if "/" in timezone:
-                        city_data[city_key] = timezone
+                        city_entry = {
+                            "name": city_name.title(),
+                            "timezone": timezone,
+                            "country": country,
+                            "region": region,
+                        }
+                        city_data_list.append(city_entry)
 
-            logger.info("Loaded %d cities from CSV file", len(city_data))
+            logger.info("Loaded %d cities from CSV file", len(city_data_list))
 
-            # Merge with fallback mappings (hardcoded mappings take precedence for major cities)
-            merged_data = city_data.copy()
-            merged_data.update(cls.CITY_TIMEZONE_MAP)
+            # Add fallback mappings to the list (for major cities)
+            for city_name, timezone in cls.CITY_TIMEZONE_MAP.items():
+                # Check if this city is already in the list to avoid duplicates
+                existing_city = next(
+                    (
+                        city
+                        for city in city_data_list
+                        if city["name"].lower() == city_name.lower() and city["timezone"] == timezone
+                    ),
+                    None,
+                )
+                if not existing_city:
+                    fallback_entry = {"name": city_name.title(), "timezone": timezone, "country": "", "region": ""}
+                    city_data_list.append(fallback_entry)
 
-            cls._csv_city_data = merged_data
+            # Sort cities alphabetically by name for consistent display
+            city_data_list.sort(key=lambda x: x["name"].lower())
+
+            cls._csv_city_data = city_data_list
             return cls._csv_city_data
 
         except Exception:
             logger.exception("Error loading CSV file %s", csv_path)
             logger.info("Falling back to hardcoded city mappings")
-            cls._csv_city_data = cls.CITY_TIMEZONE_MAP.copy()
+            # Convert fallback mappings to list format
+            fallback_cities = []
+            for city_name, timezone in cls.CITY_TIMEZONE_MAP.items():
+                fallback_cities.append({"name": city_name.title(), "timezone": timezone, "country": "", "region": ""})
+            cls._csv_city_data = fallback_cities
             return cls._csv_city_data
 
     @staticmethod
@@ -436,8 +463,30 @@ class TimeZoneConverter:
         try:
             with config_file.open("r", encoding="utf-8") as f:
                 cities = json.load(f)
-            logger.info("Loaded %d saved cities", len(cities))
-            return cities
+
+            # Validate the data structure - ensure each city has proper timezone string
+            validated_cities = []
+            for city in cities:
+                if isinstance(city, dict) and "name" in city and "timezone" in city:
+                    # Ensure timezone is a string, not a list or other type
+                    if isinstance(city["timezone"], str):
+                        validated_cities.append(city)
+                    else:
+                        logger.warning(
+                            "Skipping city %s with invalid timezone type: %s",
+                            city.get("name", "unknown"),
+                            type(city["timezone"]),
+                        )
+                else:
+                    logger.warning("Skipping invalid city entry: %s", city)
+
+            # If we had to filter out invalid entries, save the cleaned data
+            if len(validated_cities) != len(cities):
+                logger.info("Cleaned %d invalid entries from saved cities", len(cities) - len(validated_cities))
+                TimeZoneConverter.save_cities(validated_cities)
+
+            logger.info("Loaded %d saved cities", len(validated_cities))
+            return validated_cities
         except (json.JSONDecodeError, OSError):
             logger.exception("Error loading saved cities")
             return []
@@ -764,18 +813,21 @@ class TimeZoneConverter:
         logger.debug("Looking up timezone for city: '%s'", city_lower)
 
         # Load city data (uses cache if already loaded)
-        city_data = cls._load_csv_city_data()
+        city_data_list = cls._load_csv_city_data()
 
-        # Check direct mapping
-        if city_lower in city_data:
-            timezone = city_data[city_lower]
-            logger.debug("Found timezone for '%s': %s", city_name, timezone)
-            return timezone
+        # Check exact name matches first
+        for city_entry in city_data_list:
+            if city_entry["name"].lower() == city_lower:
+                timezone = city_entry["timezone"]
+                logger.debug("Found exact match for '%s': %s", city_name, timezone)
+                return timezone
 
         # Check partial matches (but avoid matching empty strings)
         if city_lower:  # Only check partial matches if city_lower is not empty
-            for city_key, timezone in city_data.items():
-                if city_lower in city_key or city_key in city_lower:
+            for city_entry in city_data_list:
+                city_entry_lower = city_entry["name"].lower()
+                if city_lower in city_entry_lower or city_entry_lower in city_lower:
+                    timezone = city_entry["timezone"]
                     logger.debug("Found partial match for '%s': %s", city_name, timezone)
                     return timezone
 
@@ -799,15 +851,31 @@ class TimeZoneConverter:
         logger.debug("Searching cities for query: '%s'", query_lower)
 
         # Load city data (uses cache if already loaded)
-        city_data = cls._load_csv_city_data()
+        city_data_list = cls._load_csv_city_data()
 
         matches = []
-        for city_name, timezone in city_data.items():
-            if query_lower in city_name:
+        for city_entry in city_data_list:
+            city_name = city_entry["name"]
+            timezone = city_entry["timezone"]
+            country = city_entry["country"]
+            region = city_entry["region"]
+
+            # Search in city name (case insensitive)
+            if query_lower in city_name.lower():
+                # Create display name with country/region info for disambiguation
+                if country and region:
+                    display_name = f"{city_name}, {region}, {country} ({timezone})"
+                elif country:
+                    display_name = f"{city_name}, {country} ({timezone})"
+                else:
+                    display_name = f"{city_name} ({timezone})"
+
                 matches.append({
-                    "name": city_name.title(),
+                    "name": city_name,
                     "timezone": timezone,
-                    "display_name": f"{city_name.title()} ({timezone})",
+                    "country": country,
+                    "region": region,
+                    "display_name": display_name,
                 })
 
         # Sort matches by city name for better user experience
@@ -920,12 +988,30 @@ class TimeZoneConverterUI:
     def _initialize_city_suggestions(self):
         """Initialize city suggestions data and event handlers."""
         # Load all available cities for suggestions from CSV data
-        city_data_dict = TimeZoneConverter._load_csv_city_data()
+        city_data_list = TimeZoneConverter._load_csv_city_data()
         self.city_items = []
-        for city_name, timezone in city_data_dict.items():
-            display_text = f"{city_name.title()} ({timezone})"
-            city_data = {"name": city_name.title(), "timezone": timezone, "display_name": display_text}
-            self.city_items.append((city_name.title(), display_text, city_data))
+        for city_entry in city_data_list:
+            city_name = city_entry["name"]
+            timezone = city_entry["timezone"]
+            country = city_entry["country"]
+            region = city_entry["region"]
+
+            # Create display text with country/region info for disambiguation
+            if country and region:
+                display_text = f"{city_name}, {region}, {country} ({timezone})"
+            elif country:
+                display_text = f"{city_name}, {country} ({timezone})"
+            else:
+                display_text = f"{city_name} ({timezone})"
+
+            city_data = {
+                "name": city_name,
+                "timezone": timezone,
+                "country": country,
+                "region": region,
+                "display_name": display_text,
+            }
+            self.city_items.append((city_name, display_text, city_data))
 
         # Set up focus and mouse event handlers
         add_city_input = self.results_widgets["add_city_input"]
