@@ -335,12 +335,12 @@ class TestTimeZoneConverter:
 
         # Test 12-hour format
         result = TimeZoneConverter.format_time(dt, use_24h=False)
-        assert result == "02:30 PM"
+        assert result == "02:30 p.m."
 
         # Test morning time
         dt_morning = datetime(2024, 3, 15, 9, 15, tzinfo=ZoneInfo("UTC"))
         result = TimeZoneConverter.format_time(dt_morning, use_24h=False)
-        assert result == "09:15 AM"
+        assert result == "09:15 a.m."
 
     def test_format_date(self):
         """Test date formatting."""

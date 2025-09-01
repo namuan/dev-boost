@@ -787,11 +787,13 @@ def create_http_client_widget(style_func, scratch_pad=None):
     clear_button = QPushButton("Clear")
     copy_response_button = QPushButton("Copy Response")
     send_to_scratch_button = QPushButton("Send to Scratch Pad")
+    copy_curl_button = QPushButton("Copy Curl")
 
     action_layout.addWidget(clear_button)
     action_layout.addWidget(copy_response_button)
     if scratch_pad:
         action_layout.addWidget(send_to_scratch_button)
+        action_layout.addWidget(copy_curl_button)
 
     request_layout.addLayout(action_layout)
 
@@ -995,6 +997,61 @@ Content Type: {response_data["content_type"]}"""
             QApplication.clipboard().setText(response_text)
             logger.debug("Response copied to clipboard")
 
+    def generate_curl_command() -> str:
+        """Generate curl command from current request parameters."""
+        method = method_combo.currentText()
+        url = url_input.text().strip()
+        if not url:
+            return ""
+
+        headers = get_headers()
+        body = body_input.toPlainText().strip()
+
+        curl_cmd = [f"curl -X {method}"]
+
+        # Add headers with proper escaping
+        for key, value in headers.items():
+            # Escape double quotes in header values
+            escaped_value = value.replace('"', '\\"')
+            curl_cmd.append(f'-H "{key}: {escaped_value}"')
+
+        # Add request body if present
+        if body:
+            # Escape double quotes and newlines in body
+            escaped_body = body.replace('"', '\\"').replace("\n", "\\n")
+
+            # Check if body is JSON
+            try:
+                json.loads(body)
+                curl_cmd.append(f'-d "{escaped_body}"')
+            except json.JSONDecodeError:
+                # Handle form data
+                if "x-www-form-urlencoded" in headers.get("Content-Type", ""):
+                    curl_cmd.append(f'--data-urlencode "{escaped_body}"')
+                else:
+                    curl_cmd.append(f'-d "{escaped_body}"')
+
+        # Escape URL special characters
+        escaped_url = url.replace('"', '\\"')
+        curl_cmd.append(f'"{escaped_url}"')
+
+        logger.debug("Generated curl command: %s", " ".join(curl_cmd))
+        return " ".join(curl_cmd)
+
+    def copy_curl_to_scratch_pad():
+        """Generate curl command and send to scratch pad."""
+        if not scratch_pad:
+            return
+
+        curl_cmd = generate_curl_command()
+        if not curl_cmd:
+            logger.debug("No request parameters to generate curl command")
+            return
+
+        QApplication.clipboard().setText(curl_cmd)
+        send_to_scratch_pad(scratch_pad, curl_cmd)
+        logger.debug("cURL command copied to clipboard and scratch pad")
+
     def send_to_scratch_pad_func():
         """Send response to scratch pad."""
         if scratch_pad:
@@ -1011,6 +1068,7 @@ Content Type: {response_data["content_type"]}"""
     copy_response_button.clicked.connect(copy_response)
     if scratch_pad:
         send_to_scratch_button.clicked.connect(send_to_scratch_pad_func)
+        copy_curl_button.clicked.connect(copy_curl_to_scratch_pad)
 
     # Connect HTTP client signals
     http_client.request_started.connect(on_request_started)
