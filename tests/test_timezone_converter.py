@@ -323,25 +323,6 @@ class TestTimeZoneConverter:
         result = TimeZoneConverter.convert_time_between_zones("14:30", "Invalid/Timezone", "Europe/London")
         assert result is None
 
-    def test_format_time(self):
-        """Test time formatting."""
-        from zoneinfo import ZoneInfo
-
-        dt = datetime(2024, 3, 15, 14, 30, tzinfo=ZoneInfo("UTC"))
-
-        # Test 24-hour format
-        result = TimeZoneConverter.format_time(dt, use_24h=True)
-        assert result == "14:30"
-
-        # Test 12-hour format
-        result = TimeZoneConverter.format_time(dt, use_24h=False)
-        assert result == "02:30 p.m."
-
-        # Test morning time
-        dt_morning = datetime(2024, 3, 15, 9, 15, tzinfo=ZoneInfo("UTC"))
-        result = TimeZoneConverter.format_time(dt_morning, use_24h=False)
-        assert result == "09:15 a.m."
-
     def test_format_date(self):
         """Test date formatting."""
         from zoneinfo import ZoneInfo

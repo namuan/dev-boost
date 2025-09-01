@@ -4,7 +4,7 @@ import time
 from typing import Any
 
 import requests
-from PyQt6.QtCore import QObject, QStringListModel, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, QStringListModel, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
@@ -615,30 +615,25 @@ class AutoCompleteTableWidget(QTableWidget):
         return len(selected_rows)
 
 
-class HTTPClient(QObject):
+class HTTPWorkerThread(QThread):
     """
-    Backend HTTP client logic with proper error handling and response processing.
+    Worker thread for handling HTTP requests asynchronously to keep UI responsive.
+
+    This thread performs the actual HTTP request in the background and emits
+    signals to communicate with the main UI thread.
     """
 
+    # Signals to communicate with main thread
     request_completed = pyqtSignal(dict)  # response_data
-    request_started = pyqtSignal()
     request_failed = pyqtSignal(str)  # error_message
+    request_cancelled = pyqtSignal()  # request was cancelled
+    request_progress = pyqtSignal(str)  # progress message
 
-    def __init__(self):
-        super().__init__()
-        self.session = requests.Session()
-        logger.info("HTTPClient initialized")
-
-    def make_request(
-        self,
-        method: str,
-        url: str,
-        headers: dict[str, str] | None = None,
-        body: str | None = None,
-        timeout: int = 30,
-    ) -> None:
+    def __init__(
+        self, method: str, url: str, headers: dict[str, str] | None = None, body: str | None = None, timeout: int = 30
+    ):
         """
-        Makes an HTTP request with proper error handling and timing.
+        Initialize the worker thread with request parameters.
 
         Args:
             method: HTTP method (GET, POST, PUT, DELETE, etc.)
@@ -647,26 +642,65 @@ class HTTPClient(QObject):
             body: Optional request body as string
             timeout: Request timeout in seconds
         """
-        logger.info("Making %s request to %s", method, url)
-        self.request_started.emit()
+        super().__init__()
+        self.method = method
+        self.url = url
+        self.headers = headers or {}
+        self.body = body
+        self.timeout = timeout
+        self.session = requests.Session()
+        self._cancelled = False
+        logger.debug("HTTPWorkerThread initialized for %s %s", method, url)
+
+    def cancel(self):
+        """
+        Cancel the current request by setting the cancelled flag and closing the session.
+
+        This will interrupt any ongoing HTTP request and prevent new ones from starting.
+        """
+        self._cancelled = True
+        logger.info("HTTP request cancellation requested")
+
+        # Close the session to interrupt any ongoing requests
+        try:
+            if hasattr(self, "session") and self.session:
+                self.session.close()
+                logger.debug("HTTP session closed for cancellation")
+        except Exception as e:
+            logger.warning("Error closing HTTP session during cancellation: %s", e)
+
+    def run(self):
+        """
+        Execute the HTTP request in the worker thread.
+
+        This method runs in the background thread and emits signals
+        to communicate results back to the main thread.
+        """
+        if self._cancelled:
+            logger.info("Request cancelled before execution")
+            self.request_cancelled.emit()
+            return
 
         try:
+            logger.info("Worker thread making %s request to %s", self.method, self.url)
+            self.request_progress.emit("Preparing request...")
+
             # Prepare request data
-            request_headers = headers or {}
+            request_headers = self.headers.copy()
             request_data = None
             json_data = None
 
             # Handle request body
-            if body and body.strip():
+            if self.body and self.body.strip():
                 # Try to parse as JSON first
                 try:
-                    json_data = json.loads(body)
+                    json_data = json.loads(self.body)
                     if "Content-Type" not in request_headers:
                         request_headers["Content-Type"] = "application/json"
                     logger.debug("Request body parsed as JSON")
                 except json.JSONDecodeError:
                     # Treat as raw data
-                    request_data = body
+                    request_data = self.body
                     if "Content-Type" not in request_headers:
                         request_headers["Content-Type"] = "text/plain"
                     logger.debug("Request body treated as raw data")
@@ -674,41 +708,60 @@ class HTTPClient(QObject):
             # Record start time
             start_time = time.time()
 
+            # Check for cancellation before making request
+            if self._cancelled:
+                logger.info("Request cancelled before execution")
+                self.request_cancelled.emit()
+                return
+
+            self.request_progress.emit(f"Sending {self.method} request...")
             # Make the request
             response = self.session.request(
-                method=method.upper(),
-                url=url,
+                method=self.method.upper(),
+                url=self.url,
                 headers=request_headers,
                 data=request_data,
                 json=json_data,
-                timeout=timeout,
+                timeout=self.timeout,
                 allow_redirects=True,
             )
 
+            # Check for cancellation after request
+            if self._cancelled:
+                logger.info("Request cancelled after execution")
+                self.request_cancelled.emit()
+                return
+
             # Calculate response time
             response_time = time.time() - start_time
+            self.request_progress.emit("Processing response...")
 
             # Process response
             response_data = self._process_response(response, response_time)
-            logger.info("Request completed with status %d", response.status_code)
+            logger.info("Worker thread request completed with status %d", response.status_code)
+            self.request_progress.emit("Request completed successfully")
             self.request_completed.emit(response_data)
 
         except requests.exceptions.Timeout:
-            error_msg = f"Request timed out after {timeout} seconds"
-            logger.exception(error_msg)
-            self.request_failed.emit(error_msg)
+            if not self._cancelled:
+                error_msg = f"Request timed out after {self.timeout} seconds"
+                logger.exception(error_msg)
+                self.request_failed.emit(error_msg)
         except requests.exceptions.ConnectionError:
-            error_msg = "Connection error - please check the URL and your internet connection"
-            logger.exception(error_msg)
-            self.request_failed.emit(error_msg)
+            if not self._cancelled:
+                error_msg = "Connection error - please check the URL and your internet connection"
+                logger.exception(error_msg)
+                self.request_failed.emit(error_msg)
         except requests.exceptions.RequestException as e:
-            error_msg = f"Request failed: {e!s}"
-            logger.exception(error_msg)
-            self.request_failed.emit(error_msg)
+            if not self._cancelled:
+                error_msg = f"Request failed: {e!s}"
+                logger.exception(error_msg)
+                self.request_failed.emit(error_msg)
         except Exception as e:
-            error_msg = f"Unexpected error: {e!s}"
-            logger.exception(error_msg)
-            self.request_failed.emit(error_msg)
+            if not self._cancelled:
+                error_msg = f"Unexpected error: {e!s}"
+                logger.exception(error_msg)
+                self.request_failed.emit(error_msg)
 
     def _process_response(self, response: requests.Response, response_time: float) -> dict[str, Any]:
         """
@@ -749,6 +802,204 @@ class HTTPClient(QObject):
             "url": response.url,
             "method": response.request.method,
         }
+
+
+class HTTPClient(QObject):
+    """
+    Backend HTTP client logic with proper error handling and response processing.
+    """
+
+    request_completed = pyqtSignal(dict)  # response_data
+    request_started = pyqtSignal()
+    request_failed = pyqtSignal(str)  # error_message
+    request_cancelled = pyqtSignal()  # request was cancelled
+    request_progress = pyqtSignal(str)  # progress message
+
+    def __init__(self):
+        super().__init__()
+        self.request_queue = []
+        self.active_workers = {}
+        self.max_concurrent_requests = 3
+        self._request_id_counter = 0
+        logger.info("HTTPClient initialized with async worker support and request queue")
+
+    def make_request(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str] | None = None,
+        body: str | None = None,
+        timeout: int = 30,
+    ) -> str:
+        """
+        Makes an HTTP request asynchronously using a worker thread to keep UI responsive.
+        Supports request queuing for multiple concurrent requests.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE, etc.)
+            url: Complete URL for the request
+            headers: Optional dictionary of headers
+            body: Optional request body as string
+            timeout: Request timeout in seconds
+
+        Returns:
+            str: Request ID for tracking the request
+        """
+        # Generate unique request ID
+        self._request_id_counter += 1
+        request_id = f"req_{self._request_id_counter}"
+
+        logger.info("Queuing async %s request to %s (ID: %s)", method, url, request_id)
+
+        # Create request data
+        request_data = {
+            "id": request_id,
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "body": body,
+            "timeout": timeout,
+        }
+
+        # Add to queue
+        self.request_queue.append(request_data)
+
+        # Process queue
+        self._process_request_queue()
+
+        return request_id
+
+    def cancel_request(self, request_id: str | None = None) -> bool:
+        """
+        Cancel an HTTP request. If request_id is provided, cancels that specific request.
+        Otherwise, cancels all active requests.
+
+        Args:
+            request_id: Optional specific request ID to cancel
+
+        Returns:
+            bool: True if any request was cancelled, False otherwise
+        """
+        cancelled = False
+
+        if request_id:
+            # Cancel specific request
+            if request_id in self.active_workers:
+                worker = self.active_workers[request_id]
+                if worker.isRunning():
+                    logger.info("Cancelling HTTP request %s", request_id)
+                    worker.cancel()
+                    cancelled = True
+
+            # Remove from queue if not yet started
+            self.request_queue = [req for req in self.request_queue if req["id"] != request_id]
+        else:
+            # Cancel all active requests
+            for req_id, worker in self.active_workers.items():
+                if worker.isRunning():
+                    logger.info("Cancelling HTTP request %s", req_id)
+                    worker.cancel()
+                    cancelled = True
+
+            # Clear queue
+            if self.request_queue:
+                logger.info("Clearing %d queued requests", len(self.request_queue))
+                self.request_queue.clear()
+                cancelled = True
+
+        return cancelled
+
+    def _process_request_queue(self):
+        """
+        Process the request queue by starting workers for queued requests
+        up to the maximum concurrent limit.
+        """
+        # Start new workers for queued requests if we have capacity
+        while len(self.active_workers) < self.max_concurrent_requests and self.request_queue:
+            request_data = self.request_queue.pop(0)
+            request_id = request_data["id"]
+
+            logger.info("Starting worker for request %s", request_id)
+
+            # Create and configure worker thread
+            worker = HTTPWorkerThread(
+                request_data["method"],
+                request_data["url"],
+                request_data["headers"],
+                request_data["body"],
+                request_data["timeout"],
+            )
+
+            # Store worker with request ID
+            self.active_workers[request_id] = worker
+
+            # Connect worker signals with request ID context
+            worker.request_completed.connect(
+                lambda data, req_id=request_id: self._handle_request_completed(req_id, data)
+            )
+            worker.request_failed.connect(lambda error, req_id=request_id: self._handle_request_failed(req_id, error))
+            worker.request_cancelled.connect(lambda req_id=request_id: self._handle_request_cancelled(req_id))
+            worker.request_progress.connect(lambda msg, req_id=request_id: self._handle_request_progress(req_id, msg))
+
+            # Clean up worker when finished
+            worker.finished.connect(lambda req_id=request_id: self._cleanup_worker(req_id))
+
+            # Emit started signal and start worker
+            self.request_started.emit()
+            worker.start()
+            logger.debug("Worker thread started for request %s", request_id)
+
+    def _handle_request_completed(self, request_id: str, data: dict):
+        """Handle request completion with request ID context."""
+        logger.info("Request %s completed successfully", request_id)
+        data["request_id"] = request_id
+        self.request_completed.emit(data)
+
+    def _handle_request_failed(self, request_id: str, error: str):
+        """Handle request failure with request ID context."""
+        logger.info("Request %s failed: %s", request_id, error)
+        self.request_failed.emit(f"[{request_id}] {error}")
+
+    def _handle_request_cancelled(self, request_id: str):
+        """Handle request cancellation with request ID context."""
+        logger.info("Request %s was cancelled", request_id)
+        self.request_cancelled.emit()
+
+    def _handle_request_progress(self, request_id: str, message: str):
+        """Handle request progress with request ID context."""
+        self.request_progress.emit(f"[{request_id}] {message}")
+
+    def _cleanup_worker(self, request_id: str | None = None):
+        """
+        Clean up a worker thread after it finishes.
+
+        Args:
+            request_id: ID of the request to clean up, or None for legacy cleanup
+        """
+        if request_id and request_id in self.active_workers:
+            worker = self.active_workers[request_id]
+            worker.deleteLater()
+            del self.active_workers[request_id]
+            logger.debug("Worker thread for request %s cleaned up", request_id)
+
+            # Process queue to start next request if any
+            self._process_request_queue()
+
+    def get_active_request_count(self) -> int:
+        """Get the number of currently active requests."""
+        return len(self.active_workers)
+
+    def get_queued_request_count(self) -> int:
+        """Get the number of requests waiting in the queue."""
+        return len(self.request_queue)
+
+    def get_active_request_ids(self) -> list[str]:
+        """Get list of active request IDs."""
+        return list(self.active_workers.keys())
+
+    def is_request_active(self, request_id: str) -> bool:
+        """Check if a specific request is currently active."""
+        return request_id in self.active_workers
 
 
 # ruff: noqa: C901
@@ -818,6 +1069,12 @@ def create_http_client_widget(style_func, scratch_pad=None):
     send_button.setFixedWidth(80)
     url_layout.addWidget(send_button)
 
+    # Cancel button (initially hidden)
+    cancel_button = QPushButton("Cancel")
+    cancel_button.setFixedWidth(80)
+    cancel_button.setVisible(False)
+    url_layout.addWidget(cancel_button)
+
     request_layout.addLayout(url_layout)
 
     # Headers section
@@ -856,10 +1113,59 @@ def create_http_client_widget(style_func, scratch_pad=None):
 
     main_layout.addWidget(request_frame)
 
-    # Progress bar
+    # Progress section with enhanced visual feedback
+    progress_frame = QFrame()
+    progress_frame.setVisible(False)
+    progress_layout = QVBoxLayout(progress_frame)
+    progress_layout.setContentsMargins(10, 5, 10, 5)
+    progress_layout.setSpacing(5)
+
+    # Progress label for status text
+    progress_label = QLabel("Preparing request...")
+    progress_label.setStyleSheet("color: #0066cc; font-weight: bold;")
+    progress_layout.addWidget(progress_label)
+
+    # Status and timing layout
+    status_layout = QHBoxLayout()
+
+    # Request status indicator
+    status_label = QLabel("Ready")
+    status_label.setStyleSheet("color: #666666; font-size: 12px;")
+    status_layout.addWidget(status_label)
+
+    status_layout.addStretch()
+
+    # Elapsed time display
+    elapsed_time_label = QLabel("")
+    elapsed_time_label.setStyleSheet("color: #666666; font-size: 12px; font-family: monospace;")
+    status_layout.addWidget(elapsed_time_label)
+
+    progress_layout.addLayout(status_layout)
+
+    # Progress bar with enhanced styling
     progress_bar = QProgressBar()
-    progress_bar.setVisible(False)
-    main_layout.addWidget(progress_bar)
+    progress_bar.setStyleSheet("""
+        QProgressBar {
+            border: 2px solid #cccccc;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        QProgressBar::chunk {
+            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #4CAF50, stop:1 #45a049);
+            border-radius: 3px;
+        }
+    """)
+    progress_layout.addWidget(progress_bar)
+
+    main_layout.addWidget(progress_frame)
+
+    # Timer for elapsed time tracking
+    elapsed_timer = QTimer()
+    elapsed_timer.timeout.connect(lambda: update_elapsed_time())
+    request_start_time = None
 
     # Response section with tabs
     response_tabs = QTabWidget()
@@ -887,6 +1193,28 @@ def create_http_client_widget(style_func, scratch_pad=None):
     # Action buttons
     action_layout = QHBoxLayout()
     action_layout.addStretch()
+
+    # Timer and status management functions
+    def update_elapsed_time():
+        """Update the elapsed time display."""
+        nonlocal request_start_time
+        if request_start_time:
+            elapsed = time.time() - request_start_time
+            elapsed_time_label.setText(f"Elapsed: {elapsed:.1f}s")
+
+    def start_request_timer():
+        """Start the request timer."""
+        nonlocal request_start_time
+        request_start_time = time.time()
+        elapsed_timer.start(100)  # Update every 100ms
+        elapsed_time_label.setText("Elapsed: 0.0s")
+
+    def stop_request_timer():
+        """Stop the request timer."""
+        elapsed_timer.stop()
+        if request_start_time:
+            final_elapsed = time.time() - request_start_time
+            elapsed_time_label.setText(f"Completed in: {final_elapsed:.1f}s")
 
     # Event handlers
     def add_header_row():
@@ -923,15 +1251,38 @@ def create_http_client_widget(style_func, scratch_pad=None):
         """Handle request start."""
         send_button.setEnabled(False)
         send_button.setText("Sending...")
-        progress_bar.setVisible(True)
+        cancel_button.setVisible(True)
+        progress_frame.setVisible(True)
         progress_bar.setRange(0, 0)  # Indeterminate progress
-        logger.debug("Request started - UI updated")
+        progress_label.setText("Starting request...")
+        status_label.setText("Sending request...")
+        status_label.setStyleSheet("color: #ff9800; font-size: 12px; font-weight: bold;")
+        start_request_timer()
+        logger.debug("Request started - UI updated with enhanced progress and timing")
 
     def on_request_completed(response_data):
         """Handle successful request completion."""
         send_button.setEnabled(True)
         send_button.setText("Send")
-        progress_bar.setVisible(False)
+        cancel_button.setVisible(False)
+        stop_request_timer()
+
+        # Update status based on response code
+        status_code = response_data.get("status_code", 0)
+        if 200 <= status_code < 300:
+            status_label.setText(f"Success ({status_code})")
+            status_label.setStyleSheet("color: #4CAF50; font-size: 12px; font-weight: bold;")
+        elif 400 <= status_code < 500:
+            status_label.setText(f"Client Error ({status_code})")
+            status_label.setStyleSheet("color: #ff9800; font-size: 12px; font-weight: bold;")
+        elif 500 <= status_code < 600:
+            status_label.setText(f"Server Error ({status_code})")
+            status_label.setStyleSheet("color: #f44336; font-size: 12px; font-weight: bold;")
+        else:
+            status_label.setText(f"Response ({status_code})")
+            status_label.setStyleSheet("color: #666666; font-size: 12px; font-weight: bold;")
+
+        progress_frame.setVisible(False)
 
         # Update response body
         response_body_edit.setPlainText(response_data["body"])
@@ -966,7 +1317,14 @@ Content Type: {response_data["content_type"]}"""
         """Handle request failure."""
         send_button.setEnabled(True)
         send_button.setText("Send")
-        progress_bar.setVisible(False)
+        cancel_button.setVisible(False)
+        stop_request_timer()
+
+        # Update status for error
+        status_label.setText("Request Failed")
+        status_label.setStyleSheet("color: #f44336; font-size: 12px; font-weight: bold;")
+
+        progress_frame.setVisible(False)
 
         # Show error in response body
         response_body_edit.setPlainText(f"Error: {error_message}")
@@ -988,7 +1346,14 @@ Content Type: {response_data["content_type"]}"""
         response_body_edit.setStyleSheet("")
         response_headers_table.setRowCount(0)
         stats_text.clear()
-        logger.debug("All fields cleared")
+
+        # Reset status indicators
+        status_label.setText("Ready")
+        status_label.setStyleSheet("color: #666666; font-size: 12px;")
+        elapsed_time_label.setText("")
+        elapsed_timer.stop()
+
+        logger.debug("All fields and status indicators cleared")
 
     def copy_response():
         """Copy response body to clipboard."""
@@ -1070,10 +1435,41 @@ Content Type: {response_data["content_type"]}"""
         send_to_scratch_button.clicked.connect(send_to_scratch_pad_func)
         copy_curl_button.clicked.connect(copy_curl_to_scratch_pad)
 
+    def cancel_request():
+        """Cancel the current HTTP request."""
+        if http_client.cancel_request():
+            send_button.setEnabled(True)
+            send_button.setText("Send")
+            cancel_button.setVisible(False)
+            stop_request_timer()
+            status_label.setText("Cancelled")
+            status_label.setStyleSheet("color: #ff9800; font-size: 12px; font-weight: bold;")
+            progress_frame.setVisible(False)
+            logger.debug("Request cancelled by user")
+
+    def on_request_cancelled():
+        """Handle request cancellation."""
+        send_button.setEnabled(True)
+        send_button.setText("Send")
+        cancel_button.setVisible(False)
+        stop_request_timer()
+        status_label.setText("Cancelled")
+        status_label.setStyleSheet("color: #ff9800; font-size: 12px; font-weight: bold;")
+        progress_frame.setVisible(False)
+        logger.debug("Request was cancelled")
+
+    def on_request_progress(message):
+        """Handle request progress updates."""
+        progress_label.setText(message)
+        logger.debug("Progress update: %s", message)
+
     # Connect HTTP client signals
     http_client.request_started.connect(on_request_started)
     http_client.request_completed.connect(on_request_completed)
     http_client.request_failed.connect(on_request_failed)
+    http_client.request_cancelled.connect(on_request_cancelled)
+    http_client.request_progress.connect(on_request_progress)
+    cancel_button.clicked.connect(cancel_request)
 
     # Add some default headers
     headers_table.add_header_row("Content-Type", "application/json")

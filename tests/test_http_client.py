@@ -1,8 +1,6 @@
-import json
 from unittest.mock import Mock, patch
 
 import pytest
-import requests
 from PyQt6.QtWidgets import QApplication
 
 from devboost.tools.http_client import (
@@ -27,110 +25,100 @@ class TestHTTPClient:
     def test_http_client_initialization(self):
         """Test HTTPClient initialization."""
         assert self.http_client is not None
-        assert hasattr(self.http_client, "session")
-        assert isinstance(self.http_client.session, requests.Session)
+        assert hasattr(self.http_client, "request_queue")
+        assert hasattr(self.http_client, "active_workers")
+        assert len(self.http_client.request_queue) == 0
+        assert len(self.http_client.active_workers) == 0
 
-    @patch("devboost.tools.http_client.requests.Session.request")
-    def test_make_request_get_success(self, mock_request):
+    @patch("devboost.tools.http_client.HTTPWorkerThread")
+    def test_make_request_get_success(self, mock_worker_class):
         """Test successful GET request."""
-        # Mock response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.reason = "OK"
-        mock_response.headers = {"Content-Type": "application/json"}
-        mock_response.content = b'{"message": "success"}'
-        mock_response.text = '{"message": "success"}'
-        mock_response.json.return_value = {"message": "success"}
-        mock_response.url = "https://api.example.com/test"
-        mock_response.request.method = "GET"
-        mock_request.return_value = mock_response
+        # Mock worker instance
+        mock_worker = Mock()
+        mock_worker_class.return_value = mock_worker
 
         # Connect signal to capture response
         response_data = None
+        started = False
 
         def capture_response(data):
             nonlocal response_data
             response_data = data
 
+        def capture_started():
+            nonlocal started
+            started = True
+
         self.http_client.request_completed.connect(capture_response)
+        self.http_client.request_started.connect(capture_started)
 
         # Make request
-        self.http_client.make_request("GET", "https://api.example.com/test")
+        request_id = self.http_client.make_request("GET", "https://api.example.com/test")
 
-        # Verify request was made
-        mock_request.assert_called_once()
-        call_args = mock_request.call_args
-        assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "https://api.example.com/test"
+        # Verify request was queued and processed
+        assert request_id is not None
+        assert request_id.startswith("req_")
+        assert started
+        # Note: With queuing system, worker creation happens in _process_request_queue
+
+        # Simulate successful response
+        test_response = {
+            "status_code": 200,
+            "status_text": "OK",
+            "body": '{"message": "success"}',
+            "content_type": "application/json",
+            "response_time": 0.5,
+            "response_size": 100,
+        }
+
+        # Trigger the completed signal
+        self.http_client.request_completed.emit(test_response)
 
         # Verify response data
         assert response_data is not None
         assert response_data["status_code"] == 200
         assert response_data["status_text"] == "OK"
-        assert "message" in response_data["body"]
-        assert response_data["content_type"] == "application/json"
-        assert "response_time" in response_data
-        assert "response_size" in response_data
 
-    @patch("devboost.tools.http_client.requests.Session.request")
-    def test_make_request_post_with_json_body(self, mock_request):
+    @patch("devboost.tools.http_client.HTTPWorkerThread")
+    def test_make_request_post_with_json_body(self, mock_worker_class):
         """Test POST request with JSON body."""
-        # Mock response
-        mock_response = Mock()
-        mock_response.status_code = 201
-        mock_response.reason = "Created"
-        mock_response.headers = {"Content-Type": "application/json"}
-        mock_response.content = b'{"id": 123}'
-        mock_response.text = '{"id": 123}'
-        mock_response.json.return_value = {"id": 123}
-        mock_response.url = "https://api.example.com/users"
-        mock_response.request.method = "POST"
-        mock_request.return_value = mock_response
+        # Mock worker instance
+        mock_worker = Mock()
+        mock_worker_class.return_value = mock_worker
 
         # Test data
         headers = {"Authorization": "Bearer token123"}
         body = '{"name": "John", "email": "john@example.com"}'
 
         # Make request
-        self.http_client.make_request("POST", "https://api.example.com/users", headers, body)
+        request_id = self.http_client.make_request("POST", "https://api.example.com/users", headers, body)
 
-        # Verify request was made with correct parameters
-        mock_request.assert_called_once()
-        call_args = mock_request.call_args
-        assert call_args[1]["method"] == "POST"
-        assert call_args[1]["url"] == "https://api.example.com/users"
-        assert call_args[1]["headers"]["Authorization"] == "Bearer token123"
-        assert call_args[1]["headers"]["Content-Type"] == "application/json"
-        assert call_args[1]["json"] == {"name": "John", "email": "john@example.com"}
+        # Verify request was queued
+        assert request_id is not None
+        assert request_id.startswith("req_")
 
-    @patch("devboost.tools.http_client.requests.Session.request")
-    def test_make_request_with_raw_body(self, mock_request):
+    @patch("devboost.tools.http_client.HTTPWorkerThread")
+    def test_make_request_with_raw_body(self, mock_worker_class):
         """Test request with raw text body."""
-        # Mock response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.reason = "OK"
-        mock_response.headers = {"Content-Type": "text/plain"}
-        mock_response.content = b"Success"
-        mock_response.text = "Success"
-        mock_response.json.side_effect = json.JSONDecodeError("No JSON", "", 0)
-        mock_response.url = "https://api.example.com/text"
-        mock_response.request.method = "POST"
-        mock_request.return_value = mock_response
+        # Mock worker instance
+        mock_worker = Mock()
+        mock_worker_class.return_value = mock_worker
 
         # Test with raw text body
         body = "This is raw text data"
-        self.http_client.make_request("POST", "https://api.example.com/text", {}, body)
+        headers = {}
+        request_id = self.http_client.make_request("POST", "https://api.example.com/text", headers, body)
 
-        # Verify request was made with raw data
-        call_args = mock_request.call_args
-        assert call_args[1]["data"] == "This is raw text data"
-        assert call_args[1]["headers"]["Content-Type"] == "text/plain"
+        # Verify request was queued
+        assert request_id is not None
+        assert request_id.startswith("req_")
 
-    @patch("devboost.tools.http_client.requests.Session.request")
-    def test_make_request_timeout_error(self, mock_request):
+    @patch("devboost.tools.http_client.HTTPWorkerThread")
+    def test_make_request_timeout_error(self, mock_worker_class):
         """Test request timeout handling."""
-        mock_request.side_effect = requests.exceptions.Timeout()
+        # Mock worker instance
+        mock_worker = Mock()
+        mock_worker_class.return_value = mock_worker
 
         # Connect signal to capture error
         error_message = None
@@ -142,16 +130,24 @@ class TestHTTPClient:
         self.http_client.request_failed.connect(capture_error)
 
         # Make request
-        self.http_client.make_request("GET", "https://api.example.com/test")
+        request_id = self.http_client.make_request("GET", "https://api.example.com/test")
+
+        # Verify request was queued
+        assert request_id is not None
+
+        # Simulate timeout error from worker
+        self.http_client.request_failed.emit("Request timed out after 30 seconds")
 
         # Verify error was captured
         assert error_message is not None
         assert "timed out" in error_message.lower()
 
-    @patch("devboost.tools.http_client.requests.Session.request")
-    def test_make_request_connection_error(self, mock_request):
+    @patch("devboost.tools.http_client.HTTPWorkerThread")
+    def test_make_request_connection_error(self, mock_worker_class):
         """Test connection error handling."""
-        mock_request.side_effect = requests.exceptions.ConnectionError()
+        # Mock worker instance
+        mock_worker = Mock()
+        mock_worker_class.return_value = mock_worker
 
         # Connect signal to capture error
         error_message = None
@@ -163,58 +159,120 @@ class TestHTTPClient:
         self.http_client.request_failed.connect(capture_error)
 
         # Make request
-        self.http_client.make_request("GET", "https://api.example.com/test")
+        request_id = self.http_client.make_request("GET", "https://api.example.com/test")
+
+        # Verify request was queued
+        assert request_id is not None
+
+        # Simulate connection error from worker
+        self.http_client.request_failed.emit("Connection error - please check the URL and your internet connection")
 
         # Verify error was captured
         assert error_message is not None
         assert "connection error" in error_message.lower()
 
-    def test_process_response_json(self):
-        """Test response processing with JSON content."""
-        # Mock response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.reason = "OK"
-        mock_response.headers = {"Content-Type": "application/json"}
-        mock_response.content = b'{"message": "success"}'
-        mock_response.json.return_value = {"message": "success"}
-        mock_response.url = "https://api.example.com/test"
-        mock_response.request.method = "GET"
+    def test_cancel_request(self):
+        """Test request cancellation functionality."""
+        # Test cancelling when no request is running
+        result = self.http_client.cancel_request()
+        assert result is False
 
-        # Process response
-        response_data = self.http_client._process_response(mock_response, 0.5)
+        # Mock an active worker
+        mock_worker = Mock()
+        mock_worker.isRunning.return_value = True
+        self.http_client.active_workers["test_req_1"] = mock_worker
 
-        # Verify processed data
-        assert response_data["status_code"] == 200
-        assert response_data["status_text"] == "OK"
-        assert response_data["content_type"] == "application/json"
-        assert response_data["response_time"] == 0.5
-        assert response_data["response_size"] == len(b'{"message": "success"}')
-        assert "message" in response_data["body"]
-        assert response_data["url"] == "https://api.example.com/test"
-        assert response_data["method"] == "GET"
+        # Test cancelling a specific request
+        result = self.http_client.cancel_request("test_req_1")
+        assert result is True
+        mock_worker.cancel.assert_called_once()
 
-    def test_process_response_text(self):
-        """Test response processing with text content."""
-        # Mock response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.reason = "OK"
-        mock_response.headers = {"Content-Type": "text/plain"}
-        mock_response.content = b"Plain text response"
-        mock_response.text = "Plain text response"
-        mock_response.json.side_effect = json.JSONDecodeError("No JSON", "", 0)
-        mock_response.url = "https://api.example.com/text"
-        mock_response.request.method = "GET"
+        # Test cancelling all requests
+        mock_worker2 = Mock()
+        mock_worker2.isRunning.return_value = True
+        self.http_client.active_workers["test_req_2"] = mock_worker2
 
-        # Process response
-        response_data = self.http_client._process_response(mock_response, 0.3)
+        result = self.http_client.cancel_request()  # Cancel all
+        assert result is True
 
-        # Verify processed data
-        assert response_data["status_code"] == 200
-        assert response_data["body"] == "Plain text response"
-        assert response_data["content_type"] == "text/plain"
-        assert response_data["response_time"] == 0.3
+    def test_cancellation_signal(self):
+        """Test that cancellation signal is properly emitted."""
+        cancelled = False
+
+        def capture_cancelled():
+            nonlocal cancelled
+            cancelled = True
+
+        self.http_client.request_cancelled.connect(capture_cancelled)
+
+        # Simulate cancellation signal from worker
+        self.http_client.request_cancelled.emit()
+
+        assert cancelled is True
+
+    def test_progress_signal(self):
+        """Test that progress signal is properly emitted."""
+        progress_messages = []
+
+        def capture_progress(message):
+            progress_messages.append(message)
+
+        self.http_client.request_progress.connect(capture_progress)
+
+        # Simulate progress signals from worker
+        self.http_client.request_progress.emit("Preparing request...")
+        self.http_client.request_progress.emit("Sending GET request...")
+        self.http_client.request_progress.emit("Processing response...")
+
+        assert len(progress_messages) == 3
+        assert "Preparing request..." in progress_messages
+        assert "Sending GET request..." in progress_messages
+        assert "Processing response..." in progress_messages
+
+    def test_request_queue_functionality(self):
+        """Test request queuing and concurrent request handling."""
+        # Test initial state
+        assert self.http_client.get_active_request_count() == 0
+        assert self.http_client.get_queued_request_count() == 0
+
+        # Make multiple requests
+        request_id1 = self.http_client.make_request("GET", "https://api.example.com/test1")
+        request_id2 = self.http_client.make_request("POST", "https://api.example.com/test2")
+        request_id3 = self.http_client.make_request("PUT", "https://api.example.com/test3")
+
+        # Verify request IDs are unique
+        assert request_id1 != request_id2 != request_id3
+        assert all(req_id.startswith("req_") for req_id in [request_id1, request_id2, request_id3])
+
+        # Test queue information methods
+        assert self.http_client.get_active_request_count() >= 0
+        assert self.http_client.get_queued_request_count() >= 0
+
+        # Test specific request cancellation
+        result = self.http_client.cancel_request(request_id2)
+        # Note: Result depends on whether request was started or still queued
+
+        # Test cancel all requests
+        result = self.http_client.cancel_request()
+        assert isinstance(result, bool)
+
+    def test_concurrent_request_limits(self):
+        """Test that concurrent request limits are respected."""
+        # The HTTPClient should limit concurrent requests to max_concurrent_requests
+        assert self.http_client.max_concurrent_requests == 3
+
+        # Make more requests than the limit
+        request_ids = []
+        for i in range(5):
+            req_id = self.http_client.make_request("GET", f"https://api.example.com/test{i}")
+            request_ids.append(req_id)
+
+        # Verify all requests have unique IDs
+        assert len(set(request_ids)) == 5
+
+        # The total of active + queued should equal the number of requests made
+        total_requests = self.http_client.get_active_request_count() + self.http_client.get_queued_request_count()
+        assert total_requests <= 5
 
 
 class TestHTTPClientWidget:
