@@ -1,5 +1,6 @@
 import logging
-import shutil
+import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -201,9 +202,9 @@ class UvxRunner(QObject):
         Args:
             cmd: Command and arguments as a list
         """
-        # Check if the command executable exists
-        if not shutil.which(cmd[0]) and cmd[0] != self.uvx_path:
-            error_msg = f"Command not found: {cmd[0]}"
+        # Check if the uvx path exists
+        if not Path(self.uvx_path).exists():
+            error_msg = f"Uvx executable not found: {self.uvx_path}"
             logger.error(error_msg)
             self.command_failed.emit(f"Error: {error_msg}")
             return
@@ -220,13 +221,21 @@ class UvxRunner(QObject):
         self.process.finished.connect(self._handle_finished)
         self.process.errorOccurred.connect(self._handle_error)
 
-        logger.info("Starting command: %s in directory: %s", " ".join(cmd), self.working_directory)
+        # Construct the full command string with proper quoting
+        full_cmd = shlex.join(cmd)
+        shell_cmd = f"{full_cmd}"
+
+        logger.info("Starting command in shell: %s in directory: %s", shell_cmd, self.working_directory)
         self.command_started.emit()
 
-        self.process.start(cmd[0], cmd[1:])
+        # Get user's default shell or fallback to /bin/sh
+        user_shell = os.getenv("SHELL", "/bin/sh")
+
+        # Execute through the user's shell to get full environment
+        self.process.start(user_shell, ["-c", shell_cmd])
 
         if not self.process.waitForStarted(5000):
-            error_msg = f"Failed to start command: {' '.join(cmd)}"
+            error_msg = f"Failed to start shell command: {shell_cmd}"
             logger.error(error_msg)
             self.command_failed.emit(error_msg)
 
