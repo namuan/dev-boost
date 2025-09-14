@@ -32,7 +32,7 @@ test-single: ## Run a single test file (usage: make test-single TEST=test_config
 
 run: ## Run the application
 	@echo "🚀 Testing code: Running $(PROJECTNAME)"
-	@uv run devboost
+	@uv run $(PROJECTNAME)
 
 clean: ## Clean build artifacts
 	@echo "🚀 Removing build artifacts"
@@ -53,6 +53,11 @@ install-macosx: package ## Installs application in users Application folder
 setup: ## One command setup
 	@make install-macosx
 	@echo "Installation completed"
+
+ICON_PNG ?= assets/$(PROJECTNAME)-icon.png
+
+icons: ## Generate ICNS and ICO files from the PNG logo
+	@bash assets/generate-icons.sh $(ICON_PNG)
 
 .PHONY: help
 help:

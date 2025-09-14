@@ -24,6 +24,7 @@ dependencies = [
     "appdirs",
     "Pillow",
     "requests",
+    "radon>=6.0.1",
 ]
 
 [project.urls]
@@ -39,6 +40,8 @@ dev-dependencies = [
     "ruff",
     "pyinstaller",
     "vulture",
+    "radon",
+    "xenon",
 ]
 
 [build-system]
@@ -116,4 +119,4 @@ ignore = [
 preview = true
 
 [project.scripts]
-devboost = "devboost:main"
+dev-boost = "devboost:main"
