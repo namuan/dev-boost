@@ -29,7 +29,7 @@ class TestImageOptimizer(unittest.TestCase):
 
     def test_optimize_image_basic(self):
         """Test basic image optimization."""
-        success, output_path, error_msg, stats = self.optimizer.optimize_image(
+        success, output_path, _error_msg, stats = self.optimizer.optimize_image(
             input_path=self.temp_input_name, quality=85
         )
 
@@ -45,7 +45,7 @@ class TestImageOptimizer(unittest.TestCase):
 
     def test_optimize_image_with_resize(self):
         """Test image optimization with resizing."""
-        success, output_path, error_msg, stats = self.optimizer.optimize_image(
+        success, output_path, _error_msg, _stats = self.optimizer.optimize_image(
             input_path=self.temp_input_name, quality=85, max_width=400, max_height=300
         )
 
@@ -66,7 +66,7 @@ class TestImageOptimizer(unittest.TestCase):
 
         for format_type in formats_to_test:
             with self.subTest(format=format_type):
-                success, output_path, error_msg, stats = self.optimizer.optimize_image(
+                success, output_path, _error_msg, stats = self.optimizer.optimize_image(
                     input_path=self.temp_input_name, quality=85, format_type=format_type
                 )
 
@@ -79,7 +79,7 @@ class TestImageOptimizer(unittest.TestCase):
 
     def test_optimize_image_invalid_input(self):
         """Test optimization with invalid input file."""
-        success, output_path, error_msg, stats = self.optimizer.optimize_image(input_path="nonexistent_file.jpg")
+        success, output_path, error_msg, _stats = self.optimizer.optimize_image(input_path="nonexistent_file.jpg")
 
         self.assertFalse(success)
         self.assertEqual(output_path, "")

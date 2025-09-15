@@ -226,7 +226,7 @@ class TestJSONValidator:
             assert error_message == "Input is empty"
 
             # Empty JSON Path
-            is_valid, result, error_message = self.validator.query_json_path('{"name": "John"}', "")
+            is_valid, _result, error_message = self.validator.query_json_path('{"name": "John"}', "")
             assert is_valid is False
             assert error_message == "JSON Path is empty"
 

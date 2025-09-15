@@ -4,6 +4,7 @@ from .http_client import create_http_client_widget
 from .image_optimizer import create_image_optimizer_widget
 from .json_format_validate import create_json_formatter_widget
 from .jwt_debugger import create_jwt_debugger_widget
+from .llm_client import create_llm_client_widget
 from .lorem_ipsum_generator import create_lorem_ipsum_tool_widget
 from .markdown_viewer import create_markdown_preview_widget
 from .random_string_generator import create_random_string_tool_widget
@@ -25,6 +26,7 @@ __all__ = [
     "create_image_optimizer_widget",
     "create_json_formatter_widget",
     "create_jwt_debugger_widget",
+    "create_llm_client_widget",
     "create_lorem_ipsum_tool_widget",
     "create_markdown_preview_widget",
     "create_random_string_tool_widget",

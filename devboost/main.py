@@ -25,6 +25,7 @@ from .tools import (
     create_image_optimizer_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
+    create_llm_client_widget,
     create_lorem_ipsum_tool_widget,
     create_markdown_preview_widget,
     create_random_string_tool_widget,
@@ -251,6 +252,7 @@ class DevDriverWindow(QMainWindow):
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌍", "TimeZone Converter", "timezone time zone convert world clock city time"),
             ("🌐", "HTTP Client", "http client request api rest get post put delete"),
+            ("🤖", "LLM Client", "llm client ai chat openai anthropic google model"),
             ("📦", "Uvx Runner", "uvx tools runner install execute command line utilities"),
         ]
         logger.info("Defined %d tools for the sidebar", len(self.tools))
@@ -376,6 +378,8 @@ class DevDriverWindow(QMainWindow):
         self.http_client_screen = create_http_client_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Uvx Runner screen")
         self.uvx_runner_screen = create_uvx_runner_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating LLM Client screen")
+        self.llm_client_screen = create_llm_client_widget(self.style, self.scratch_pad_widget)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -395,6 +399,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.timezone_converter_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
+        self.stacked_widget.addWidget(self.llm_client_screen)
         self.stacked_widget.addWidget(self.uvx_runner_screen)
 
         main_content_layout.addWidget(self.top_bar)
@@ -500,6 +505,10 @@ class DevDriverWindow(QMainWindow):
             self.top_bar_title.setText("Uvx Runner")
             self.stacked_widget.setCurrentWidget(self.uvx_runner_screen)
             logger.info("Switched to Uvx Runner view")
+        elif tool_name == "LLM Client":
+            self.top_bar_title.setText("LLM Client")
+            self.stacked_widget.setCurrentWidget(self.llm_client_screen)
+            logger.info("Switched to LLM Client view")
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)

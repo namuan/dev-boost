@@ -1,6 +1,5 @@
 import logging
-import os
-import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -202,13 +201,17 @@ class UvxRunner(QObject):
         Args:
             cmd: Command and arguments as a list
         """
-        # Check if the uvx path exists
-        if not Path(self.uvx_path).exists():
-            error_msg = f"Uvx executable not found: {self.uvx_path}"
-            logger.error(error_msg)
-            self.command_failed.emit(f"Error: {error_msg}")
+        # Validate that the command executable exists or is discoverable
+        exe = cmd[0] if cmd else ""
+        if not exe:
+            self.command_failed.emit("Error: Command not found: ")
+            return
+        exe_path = Path(exe)
+        if not (exe_path.exists() or shutil.which(exe) is not None):
+            self.command_failed.emit(f"Error: Command not found: {exe}")
             return
 
+        # Ensure we don't start if another process is already running
         if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             self.command_failed.emit("Another command is already running. Please wait for it to finish.")
             return
@@ -221,21 +224,15 @@ class UvxRunner(QObject):
         self.process.finished.connect(self._handle_finished)
         self.process.errorOccurred.connect(self._handle_error)
 
-        # Construct the full command string with proper quoting
-        full_cmd = shlex.join(cmd)
-        shell_cmd = f"{full_cmd}"
-
-        logger.info("Starting command in shell: %s in directory: %s", shell_cmd, self.working_directory)
+        # Start the process directly without shell wrapping
+        exe = cmd[0]
+        args = cmd[1:]
+        logger.info("Starting process: %s %s in directory: %s", exe, " ".join(args), self.working_directory)
         self.command_started.emit()
-
-        # Get user's default shell or fallback to /bin/sh
-        user_shell = os.getenv("SHELL", "/bin/sh")
-
-        # Execute through the user's shell to get full environment
-        self.process.start(user_shell, ["-c", shell_cmd])
+        self.process.start(exe, args)
 
         if not self.process.waitForStarted(5000):
-            error_msg = f"Failed to start shell command: {shell_cmd}"
+            error_msg = f"Failed to start command: {exe} {' '.join(args)}"
             logger.error(error_msg)
             self.command_failed.emit(error_msg)
 

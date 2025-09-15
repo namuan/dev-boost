@@ -727,9 +727,9 @@ class TestColorConverter:
         assert result3 is not None
 
         # Should be approximately equal due to hue wrapping
-        r1, g1, b1, a1 = result1
-        r2, g2, b2, a2 = result2
-        r3, g3, b3, a3 = result3
+        r1, _g1, _b1, _a1 = result1
+        r2, _g2, _b2, _a2 = result2
+        r3, _g3, _b3, _a3 = result3
 
         assert abs(r1 - r2) < 0.01
         assert abs(r1 - r3) < 0.01
@@ -737,7 +737,7 @@ class TestColorConverter:
         # Values that need clamping
         result = self.converter.parse_color("hsl(180, 150%, -10%)")
         assert result is not None
-        r, g, b, a = result
+        r, g, b, _a = result
         # Should be clamped to valid ranges
         assert 0 <= r <= 1
         assert 0 <= g <= 1
@@ -770,7 +770,7 @@ class TestColorConverter:
 
         result = self.converter.parse_color("hsla(180, 50%, 50%, -0.5)")
         assert result is not None
-        r, g, b, a = result
+        _r, _g, _b, a = result
         assert a == 0.0  # Clamped from -0.5
 
     def test_hsb_validation(self):
@@ -823,9 +823,9 @@ class TestColorConverter:
         assert result3 is not None
 
         # Should be approximately equal due to hue wrapping
-        r1, g1, b1, a1 = result1
-        r2, g2, b2, a2 = result2
-        r3, g3, b3, a3 = result3
+        r1, _g1, _b1, _a1 = result1
+        r2, _g2, _b2, _a2 = result2
+        r3, _g3, _b3, _a3 = result3
 
         assert abs(r1 - r2) < 0.01
         assert abs(r1 - r3) < 0.01
@@ -833,7 +833,7 @@ class TestColorConverter:
         # Values that need clamping
         result = self.converter.parse_color("hsb(180, 150%, -10%)")
         assert result is not None
-        r, g, b, a = result
+        r, g, b, _a = result
         # Should be clamped to valid ranges
         assert 0 <= r <= 1
         assert 0 <= g <= 1
@@ -864,7 +864,7 @@ class TestColorConverter:
         # Values that need clamping
         result = self.converter.parse_color("hsv(180, 150%, -10%)")
         assert result is not None
-        r, g, b, a = result
+        r, g, b, _a = result
         # Should be clamped to valid ranges
         assert 0 <= r <= 1
         assert 0 <= g <= 1
@@ -901,9 +901,9 @@ class TestColorConverter:
         assert result3 is not None
 
         # Should be approximately equal due to hue wrapping
-        r1, g1, b1, a1 = result1
-        r2, g2, b2, a2 = result2
-        r3, g3, b3, a3 = result3
+        r1, _g1, _b1, _a1 = result1
+        r2, _g2, _b2, _a2 = result2
+        r3, _g3, _b3, _a3 = result3
 
         assert abs(r1 - r2) < 0.01
         assert abs(r1 - r3) < 0.01
@@ -919,7 +919,7 @@ class TestColorConverter:
         # Values that need clamping
         result = self.converter.parse_color("hwb(180, 150%, -10%)")
         assert result is not None
-        r, g, b, a = result
+        r, g, b, _a = result
         # Should be clamped to valid ranges
         assert 0 <= r <= 1
         assert 0 <= g <= 1
@@ -986,5 +986,5 @@ class TestColorConverter:
         # Pure yellow
         result = self.converter.parse_color("cmyk(0%, 0%, 100%, 0%)")
         assert result is not None
-        r, g, b, a = result
+        r, g, b, _a = result
         assert r == 1 and g == 1 and b == 0
