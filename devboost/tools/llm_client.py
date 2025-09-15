@@ -23,6 +23,15 @@ from devboost.styles import get_status_style, get_tool_style
 
 logger = logging.getLogger(__name__)
 
+# Default base URLs per provider (without trailing endpoint paths)
+DEFAULT_BASE_URLS: dict[str, str] = {
+    "OpenAI": "https://api.openai.com",
+    "Anthropic": "https://api.anthropic.com",
+    "Google": "https://generativelanguage.googleapis.com",
+    "Ollama": "http://127.0.0.1:11434",
+    "OpenRouter": "https://openrouter.ai/api",
+}
+
 
 # ----------------------------- Provider Abstractions -----------------------------
 
@@ -63,12 +72,14 @@ class OpenAIProvider(LLMProvider):
         return self._models
 
     def chat(self, messages: list[dict[str, str]], model: str, params: dict[str, Any]) -> str:
-        api_key = os.getenv("OPENAI_API_KEY")
+        # Resolve API key and base URL from user config with sensible fallbacks
+        api_key = get_config("llm_client.providers.OpenAI.api_key", None) or os.getenv("OPENAI_API_KEY")
+        base_url = get_config("llm_client.providers.OpenAI.base_url", DEFAULT_BASE_URLS["OpenAI"])
         if not api_key:
             # Offline-friendly deterministic response for tests
             return f"[OpenAI:{model}] (dry-run) You said: {messages[-1].get('content', '')}"
-        # Minimal compatible call (OpenAI Responses API newer, but keep compat to Chat Completions)
-        url = "https://api.openai.com/v1/chat/completions"
+        # OpenAI-compatible Chat Completions
+        url = f"{base_url.rstrip('/')}/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
             "model": model,
@@ -95,10 +106,11 @@ class AnthropicProvider(LLMProvider):
         return self._models
 
     def chat(self, messages: list[dict[str, str]], model: str, params: dict[str, Any]) -> str:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+        api_key = get_config("llm_client.providers.Anthropic.api_key", None) or os.getenv("ANTHROPIC_API_KEY")
+        base_url = get_config("llm_client.providers.Anthropic.base_url", DEFAULT_BASE_URLS["Anthropic"])
         if not api_key:
             return f"[Anthropic:{model}] (dry-run) You said: {messages[-1].get('content', '')}"
-        url = "https://api.anthropic.com/v1/messages"
+        url = f"{base_url.rstrip('/')}/v1/messages"
         headers = {
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",
@@ -146,11 +158,16 @@ class GoogleProvider(LLMProvider):
         return self._models
 
     def chat(self, messages: list[dict[str, str]], model: str, params: dict[str, Any]) -> str:
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = (
+            get_config("llm_client.providers.Google.api_key", None)
+            or os.getenv("GOOGLE_API_KEY")
+            or os.getenv("GEMINI_API_KEY")
+        )
+        base_url = get_config("llm_client.providers.Google.base_url", DEFAULT_BASE_URLS["Google"])
         if not api_key:
             return f"[Google:{model}] (dry-run) You said: {messages[-1].get('content', '')}"
         # Gemini chat
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        url = f"{base_url.rstrip('/')}/v1beta/models/{model}:generateContent?key={api_key}"
         # Convert messages: Gemini expects role parts in a specific format
         contents = []
         for m in messages:
@@ -183,8 +200,12 @@ class OllamaProvider(LLMProvider):
     ]
 
     def _base_url(self) -> str:
-        # Use localhost default; allow override via env
-        return os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+        # Resolve from user config first, then environment, then default
+        return (
+            get_config("llm_client.providers.Ollama.base_url", None)
+            or os.getenv("OLLAMA_BASE_URL")
+            or DEFAULT_BASE_URLS["Ollama"]
+        )
 
     def list_models(self) -> list[str]:
         # Try querying local Ollama for installed models
@@ -223,12 +244,61 @@ class OllamaProvider(LLMProvider):
             return f"[Ollama:{model}] (dry-run) You said: {messages[-1].get('content', '')}"
 
 
+class OpenRouterProvider(LLMProvider):
+    name = "OpenRouter"
+
+    _fallback_models: ClassVar[list[str]] = [
+        "openrouter/auto",
+        "anthropic/claude-3.5-sonnet",
+        "google/gemini-flash-1.5",
+        "openai/gpt-4o-mini",
+    ]
+
+    def _base_url(self) -> str:
+        return (
+            get_config("llm_client.providers.OpenRouter.base_url", DEFAULT_BASE_URLS["OpenRouter"])
+            or DEFAULT_BASE_URLS["OpenRouter"]
+        )
+
+    def _api_key(self) -> str | None:
+        return get_config("llm_client.providers.OpenRouter.api_key", None) or os.getenv("OPENROUTER_API_KEY")
+
+    def list_models(self) -> list[str]:
+        headers = {"Authorization": f"Bearer {self._api_key()}"} if self._api_key() else {}
+        try:
+            r = requests.get(f"{self._base_url().rstrip('/')}/v1/models", headers=headers, timeout=5)
+            r.raise_for_status()
+            data = r.json()
+            models = [m.get("id", "").strip() for m in data.get("data", []) if m.get("id")]
+            return models or self._fallback_models
+        except Exception:
+            return self._fallback_models
+
+    def chat(self, messages: list[dict[str, str]], model: str, params: dict[str, Any]) -> str:
+        api_key = self._api_key()
+        if not api_key:
+            return f"[OpenRouter:{model}] (dry-run) You said: {messages[-1].get('content', '')}"
+        url = f"{self._base_url().rstrip('/')}/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": float(params.get("temperature", 0.7)),
+            "max_tokens": int(params.get("max_tokens", 256)),
+        }
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("choices", [{}])[0].get("message", {}).get("content", "[No content]")
+
+
 # Registry of providers
 PROVIDERS: dict[str, LLMProvider] = {
     OpenAIProvider.name: OpenAIProvider(),
     AnthropicProvider.name: AnthropicProvider(),
     GoogleProvider.name: GoogleProvider(),
     OllamaProvider.name: OllamaProvider(),
+    OpenRouterProvider.name: OpenRouterProvider(),
 }
 
 
@@ -325,10 +395,6 @@ def create_llm_client_widget(style_func, scratch_pad=None):
             model_combo.setCurrentIndex(0)
             set_config("llm_client.model", model_combo.currentText())
 
-    # Connect after potential initial selection so duplicates of refresh are avoided
-    provider_combo.currentIndexChanged.connect(refresh_models)
-    refresh_models()
-
     temp_label = QLabel("Temperature:")
     temp_input = QLineEdit(str(get_config("llm_client.temperature", 0.7)))
     temp_input.setFixedWidth(60)
@@ -364,6 +430,70 @@ def create_llm_client_widget(style_func, scratch_pad=None):
     top_bar.addWidget(cancel_button)
     # Moved scratch pad button to its own action row to prevent text trimming (align with HTTP Client)
 
+    # Provider configuration row: Base URL and API Key (persisted per provider)
+    config_row = QHBoxLayout()
+    base_url_label = QLabel("Base URL:")
+    base_url_input = QLineEdit()
+    base_url_input.setPlaceholderText("e.g., https://api.openai.com or http://127.0.0.1:11434")
+    api_key_label = QLabel("API Key:")
+    api_key_input = QLineEdit()
+    api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+    reset_overrides_button = QPushButton("Reset Overrides")
+    reset_overrides_button.setToolTip("Clear custom Base URL and API Key for this provider and use defaults")
+
+    config_row.addWidget(base_url_label)
+    config_row.addWidget(base_url_input, 2)
+    config_row.addSpacing(8)
+    config_row.addWidget(api_key_label)
+    config_row.addWidget(api_key_input, 2)
+    config_row.addSpacing(8)
+    config_row.addWidget(reset_overrides_button)
+
+    # Provider settings load/save helpers (now that inputs exist)
+    def load_provider_settings():
+        pname = provider_combo.currentText().strip()
+        default_base = DEFAULT_BASE_URLS.get(pname, "")
+        base_val = get_config(f"llm_client.providers.{pname}.base_url", default_base) or default_base
+        api_val = get_config(f"llm_client.providers.{pname}.api_key", "") or ""
+        base_url_input.setText(str(base_val))
+        api_key_input.setText(str(api_val))
+
+    def save_base_url():
+        pname = provider_combo.currentText().strip()
+        val = (base_url_input.text() or "").strip()
+        if not val:
+            val = DEFAULT_BASE_URLS.get(pname, "")
+        set_config(f"llm_client.providers.{pname}.base_url", val)
+
+    def save_api_key():
+        pname = provider_combo.currentText().strip()
+        val = (api_key_input.text() or "").strip()
+        set_config(f"llm_client.providers.{pname}.api_key", val)
+
+    def reset_overrides():
+        pname = provider_combo.currentText().strip()
+        # Set blank values so UI and providers fall back to defaults
+        set_config(f"llm_client.providers.{pname}.base_url", "")
+        set_config(f"llm_client.providers.{pname}.api_key", "")
+        load_provider_settings()
+
+    def on_provider_changed():
+        # Persist provider selection
+        set_config("llm_client.provider", provider_combo.currentText())
+        # Load settings for this provider before listing models
+        load_provider_settings()
+        refresh_models()
+
+    # Wire up provider change and input persistence
+    provider_combo.currentIndexChanged.connect(on_provider_changed)
+    base_url_input.editingFinished.connect(save_base_url)
+    api_key_input.editingFinished.connect(save_api_key)
+    reset_overrides_button.clicked.connect(reset_overrides)
+
+    # Initialize settings for initially selected provider
+    load_provider_settings()
+    refresh_models()
+
     # Chat area
     chat_area = QVBoxLayout()
 
@@ -397,6 +527,8 @@ def create_llm_client_widget(style_func, scratch_pad=None):
     status_bar.addWidget(progress)
 
     layout.addLayout(top_bar)
+    # Add provider config row beneath top bar
+    layout.addLayout(config_row)
     # Action row for auxiliary buttons (keeps top bar uncluttered, like HTTP Client)
     if send_to_scratch_button:
         action_layout = QHBoxLayout()
