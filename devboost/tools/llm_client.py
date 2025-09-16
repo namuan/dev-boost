@@ -248,10 +248,12 @@ class OpenRouterProvider(LLMProvider):
     name = "OpenRouter"
 
     _fallback_models: ClassVar[list[str]] = [
-        "openrouter/auto",
-        "anthropic/claude-3.5-sonnet",
-        "google/gemini-flash-1.5",
-        "openai/gpt-4o-mini",
+        "openrouter/auto:free",
+        "anthropic/claude-3.5-haiku:free",
+        "google/gemini-flash-1.5:free",
+        "openai/gpt-4o-mini:free",
+        "meta-llama/llama-3.2-3b-instruct:free",
+        "microsoft/phi-3-mini-128k-instruct:free",
     ]
 
     def _base_url(self) -> str:
@@ -264,14 +266,42 @@ class OpenRouterProvider(LLMProvider):
         return get_config("llm_client.providers.OpenRouter.api_key", None) or os.getenv("OPENROUTER_API_KEY")
 
     def list_models(self) -> list[str]:
+        logger.info("Refreshing OpenRouter model list")
         headers = {"Authorization": f"Bearer {self._api_key()}"} if self._api_key() else {}
         try:
             r = requests.get(f"{self._base_url().rstrip('/')}/v1/models", headers=headers, timeout=5)
             r.raise_for_status()
             data = r.json()
-            models = [m.get("id", "").strip() for m in data.get("data", []) if m.get("id")]
-            return models or self._fallback_models
+
+            if "data" not in data or not isinstance(data["data"], list):
+                raise ValueError("Unexpected API response format")
+
+            logger.info("Total models found: %d", len(data["data"]))
+
+            # Filter for free models only using precise float comparison
+            free_models = []
+            for model in data.get("data", []):
+                model_id = model.get("id", "").strip()
+                if not model_id:
+                    continue
+
+                # Check if model has free pricing using the same logic as the reference code
+                if "pricing" in model:
+                    try:
+                        prompt_cost = float(model["pricing"].get("prompt", "0"))
+                        completion_cost = float(model["pricing"].get("completion", "0"))
+
+                        # Model is free if both prompt and completion costs are 0.0
+                        if prompt_cost == 0.0 and completion_cost == 0.0:
+                            free_models.append(model_id)
+                    except (ValueError, TypeError):
+                        # Skip models with invalid pricing data
+                        continue
+
+            logger.info("Free models found: %d", len(free_models))
+            return free_models or self._fallback_models
         except Exception:
+            logger.exception("Error fetching OpenRouter models")
             return self._fallback_models
 
     def chat(self, messages: list[dict[str, str]], model: str, params: dict[str, Any]) -> str:
