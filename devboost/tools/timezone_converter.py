@@ -1209,7 +1209,7 @@ class TimeZoneConverterUI:
         source_city_combo = QComboBox()
         source_city_combo.setEditable(True)
         source_city_combo.setPlaceholderText("Source city (optional)")
-        source_city_combo.setFixedWidth(200)
+        source_city_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
         for city in self.saved_cities:
             source_city_combo.addItem(city["name"], city["timezone"])

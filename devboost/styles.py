@@ -190,30 +190,87 @@ QLabel {{
 }}
 """
 
+# Style Option 4: Subtle Enhanced Original
 COMBOBOX_STYLE = f"""
 QComboBox {{
     background-color: {COLORS["bg_primary"]};
     border: 1px solid {COLORS["border_primary"]};
-    border-radius: 4px;
-    padding: 5px 8px;
+    border-radius: 6px;
+    padding: 5px 12px 5px 8px;
     font-size: 13px;
+    font-weight: 500;
+    color: {COLORS["text_primary"]};
+    selection-background-color: {COLORS["border_focus"]};
+    padding-right: 25px;
 }}
 
 QComboBox:hover {{
     background-color: {COLORS["bg_secondary"]};
+    border-color: {COLORS["info"]};
 }}
 
 QComboBox:focus {{
     border-color: {COLORS["border_focus"]};
+    background-color: {COLORS["bg_primary"]};
 }}
 
 QComboBox::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 22px;
     border: none;
+    border-left: 1px solid {COLORS["border_light"]};
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 {COLORS["bg_secondary"]}, stop: 1 {COLORS["bg_tertiary"]});
+}}
+
+QComboBox::drop-down:hover {{
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 {COLORS["btn_hover"]}, stop: 1 {COLORS["bg_secondary"]});
 }}
 
 QComboBox::down-arrow {{
-    width: 12px;
-    height: 12px;
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid {COLORS["text_muted"]};
+    width: 0;
+    height: 0;
+}}
+
+QComboBox::down-arrow:hover {{
+    border-top-color: {COLORS["info"]};
+}}
+
+QComboBox QAbstractItemView {{
+    background-color: {COLORS["bg_primary"]};
+    border: 1px solid {COLORS["border_secondary"]};
+    border-radius: 6px;
+    selection-background-color: {COLORS["bg_secondary"]};
+    selection-color: {COLORS["text_primary"]};
+    font-size: 13px;
+    padding: 2px;
+    outline: none;
+}}
+
+QComboBox QAbstractItemView::item {{
+    padding: 6px 10px;
+    border-radius: 3px;
+    margin: 1px;
+    border: none;
+}}
+
+QComboBox QAbstractItemView::item:hover {{
+    background-color: {COLORS["bg_tertiary"]};
+    color: {COLORS["text_primary"]};
+}}
+
+QComboBox QAbstractItemView::item:selected {{
+    background-color: {COLORS["info"]};
+    color: white;
+    font-weight: 500;
 }}
 """
 

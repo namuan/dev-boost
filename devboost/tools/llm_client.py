@@ -392,7 +392,7 @@ def create_llm_client_widget(style_func, scratch_pad=None):
 
     provider_label = QLabel("Provider:")
     provider_combo = QComboBox()
-    provider_combo.setMinimumWidth(120)  # Ensure provider names are fully visible
+    provider_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
     provider_combo.addItems(list(PROVIDERS.keys()))
     # Set provider from config if available; otherwise default to Ollama
     saved_provider = get_config("llm_client.provider", None)
@@ -408,6 +408,7 @@ def create_llm_client_widget(style_func, scratch_pad=None):
 
     model_label = QLabel("Model:")
     model_combo = QComboBox()
+    model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
     def refresh_models():
         provider_name = provider_combo.currentText()

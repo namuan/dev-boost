@@ -1056,7 +1056,7 @@ def create_http_client_widget(style_func, scratch_pad=None):
     method_combo = QComboBox()
     methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
     method_combo.addItems(methods)
-    method_combo.setFixedWidth(120)  # Expanded from 100 to 120
+    method_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
     url_layout.addWidget(method_combo)
 
     # URL input
