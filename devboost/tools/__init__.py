@@ -1,5 +1,6 @@
 from .base64_string_encodec import create_base64_string_encodec_widget
 from .color_converter import create_color_converter_widget
+from .graphql_client import create_graphql_client_widget
 from .http_client import create_http_client_widget
 from .image_optimizer import create_image_optimizer_widget
 from .json_format_validate import create_json_formatter_widget
@@ -22,6 +23,7 @@ from .yaml_to_json import create_yaml_to_json_widget
 __all__ = [
     "create_base64_string_encodec_widget",
     "create_color_converter_widget",
+    "create_graphql_client_widget",
     "create_http_client_widget",
     "create_image_optimizer_widget",
     "create_json_formatter_widget",

@@ -21,6 +21,7 @@ from .styles import get_main_app_style
 from .tools import (
     create_base64_string_encodec_widget,
     create_color_converter_widget,
+    create_graphql_client_widget,
     create_http_client_widget,
     create_image_optimizer_widget,
     create_json_formatter_widget,
@@ -252,6 +253,7 @@ class DevDriverWindow(QMainWindow):
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌍", "TimeZone Converter", "timezone time zone convert world clock city time"),
             ("🌐", "HTTP Client", "http client request api rest get post put delete"),
+            ("🔗", "GraphQL Client", "graphql client query mutation subscription schema introspection"),
             ("🤖", "LLM Client", "llm client ai chat openai anthropic google model"),
             ("📦", "Uvx Runner", "uvx tools runner install execute command line utilities"),
         ]
@@ -376,6 +378,8 @@ class DevDriverWindow(QMainWindow):
         self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating HTTP Client screen")
         self.http_client_screen = create_http_client_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating GraphQL Client screen")
+        self.graphql_client_screen = create_graphql_client_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Uvx Runner screen")
         self.uvx_runner_screen = create_uvx_runner_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating LLM Client screen")
@@ -399,6 +403,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.timezone_converter_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
+        self.stacked_widget.addWidget(self.graphql_client_screen)
         self.stacked_widget.addWidget(self.llm_client_screen)
         self.stacked_widget.addWidget(self.uvx_runner_screen)
 
@@ -429,86 +434,45 @@ class DevDriverWindow(QMainWindow):
         logger.info("Welcome screen creation completed")
         return center_stage
 
-    # ruff: noqa: C901
     def _on_tool_selected(self, item):
+        """Handle tool selection from the sidebar."""
         tool_name = item.data(Qt.ItemDataRole.UserRole)
         logger.info("Tool selected: %s", tool_name)
-        if tool_name == "Unix Time Converter":
-            self.top_bar_title.setText("Unix Time Converter")
-            self.stacked_widget.setCurrentWidget(self.unix_time_converter_screen)
-            logger.info("Switched to Unix Time Converter view")
-        elif tool_name == "JSON Format/Validate":
-            self.top_bar_title.setText("JSON Format/Validate")
-            self.stacked_widget.setCurrentWidget(self.json_format_validate_screen)
-            logger.info("Switched to JSON Format/Validate view")
-        elif tool_name == "Base64 String Encode/Decode":
-            self.top_bar_title.setText("Base64 String Encode/Decode")
-            self.stacked_widget.setCurrentWidget(self.base64_string_encodec_screen)
-            logger.info("Switched to Base64 String Encode/Decode view")
-        elif tool_name == "JWT Debugger":
-            self.top_bar_title.setText("JWT Debugger")
-            self.stacked_widget.setCurrentWidget(self.jwt_debugger_screen)
-            logger.info("Switched to JWT Debugger view")
-        elif tool_name == "RegExp Tester":
-            self.top_bar_title.setText("RegExp Tester")
-            self.stacked_widget.setCurrentWidget(self.regexp_tester_screen)
-            logger.info("Switched to RegExp Tester view")
-        elif tool_name == "URL Encode/Decode":
-            self.top_bar_title.setText("URL Encode/Decode")
-            self.stacked_widget.setCurrentWidget(self.url_codec_screen)
-            logger.info("Switched to URL Encode/Decode view")
-        elif tool_name == "UUID/ULID Generate/Decode":
-            self.top_bar_title.setText("UUID/ULID Generate/Decode")
-            self.stacked_widget.setCurrentWidget(self.uuid_ulid_generator_screen)
-            logger.info("Switched to UUID/ULID Generate/Decode view")
-        elif tool_name == "XML Beautifier":
-            self.top_bar_title.setText("XML Beautifier")
-            self.stacked_widget.setCurrentWidget(self.xml_formatter_screen)
-            logger.info("Switched to XML Beautifier view")
-        elif tool_name == "YAML to JSON":
-            self.top_bar_title.setText("YAML to JSON")
-            self.stacked_widget.setCurrentWidget(self.yaml_to_json_screen)
-            logger.info("Switched to YAML to JSON view")
-        elif tool_name == "String Case Converter":
-            self.top_bar_title.setText("String Case Converter")
-            self.stacked_widget.setCurrentWidget(self.string_case_converter_screen)
-            logger.info("Switched to String Case Converter view")
-        elif tool_name == "Color Converter":
-            self.top_bar_title.setText("Color Converter")
-            self.stacked_widget.setCurrentWidget(self.color_converter_screen)
-            logger.info("Switched to Color Converter view")
-        elif tool_name == "Lorem Ipsum Generator":
-            self.top_bar_title.setText("Lorem Ipsum Generator")
-            self.stacked_widget.setCurrentWidget(self.lorem_ipsum_generator_screen)
-            logger.info("Switched to Lorem Ipsum Generator view")
-        elif tool_name == "Markdown Viewer":
-            self.top_bar_title.setText("Markdown Viewer")
-            self.stacked_widget.setCurrentWidget(self.markdown_viewer_screen)
-            logger.info("Switched to Markdown Viewer view")
-        elif tool_name == "Random String Generator":
-            self.top_bar_title.setText("Random String Generator")
-            self.stacked_widget.setCurrentWidget(self.random_string_generator_screen)
-            logger.info("Switched to Random String Generator view")
-        elif tool_name == "TimeZone Converter":
-            self.top_bar_title.setText("TimeZone Converter")
-            self.stacked_widget.setCurrentWidget(self.timezone_converter_screen)
-            logger.info("Switched to TimeZone Converter view")
-        elif tool_name == "Image Optimizer":
-            self.top_bar_title.setText("Image Optimizer")
-            self.stacked_widget.setCurrentWidget(self.image_optimizer_screen)
-            logger.info("Switched to Image Optimizer view")
-        elif tool_name == "HTTP Client":
-            self.top_bar_title.setText("HTTP Client")
-            self.stacked_widget.setCurrentWidget(self.http_client_screen)
-            logger.info("Switched to HTTP Client view")
-        elif tool_name == "Uvx Runner":
-            self.top_bar_title.setText("Uvx Runner")
-            self.stacked_widget.setCurrentWidget(self.uvx_runner_screen)
-            logger.info("Switched to Uvx Runner view")
-        elif tool_name == "LLM Client":
-            self.top_bar_title.setText("LLM Client")
-            self.stacked_widget.setCurrentWidget(self.llm_client_screen)
-            logger.info("Switched to LLM Client view")
+
+        # Map tool names to their corresponding widgets
+        tool_widgets = {
+            "Unix Time Converter": self.unix_time_converter_screen,
+            "JSON Format/Validate": self.json_format_validate_screen,
+            "Base64 String Encode/Decode": self.base64_string_encodec_screen,
+            "JWT Debugger": self.jwt_debugger_screen,
+            "RegExp Tester": self.regexp_tester_screen,
+            "URL Encode/Decode": self.url_codec_screen,
+            "UUID/ULID Generate/Decode": self.uuid_ulid_generator_screen,
+            "XML Beautifier": self.xml_formatter_screen,
+            "YAML to JSON": self.yaml_to_json_screen,
+            "String Case Converter": self.string_case_converter_screen,
+            "Color Converter": self.color_converter_screen,
+            "Lorem Ipsum Generator": self.lorem_ipsum_generator_screen,
+            "Markdown Viewer": self.markdown_viewer_screen,
+            "Random String Generator": self.random_string_generator_screen,
+            "TimeZone Converter": self.timezone_converter_screen,
+            "Image Optimizer": self.image_optimizer_screen,
+            "HTTP Client": self.http_client_screen,
+            "GraphQL Client": self.graphql_client_screen,
+            "Uvx Runner": self.uvx_runner_screen,
+            "LLM Client": self.llm_client_screen,
+        }
+
+        self._switch_to_tool(tool_name, tool_widgets)
+
+    def _switch_to_tool(self, tool_name: str, tool_widgets: dict):
+        """Switch to the selected tool widget."""
+        widget = tool_widgets.get(tool_name)
+
+        if widget:
+            self.top_bar_title.setText(tool_name)
+            self.stacked_widget.setCurrentWidget(widget)
+            logger.info("Switched to %s view", tool_name)
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
