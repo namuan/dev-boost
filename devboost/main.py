@@ -21,6 +21,7 @@ from .styles import get_main_app_style
 from .tools import (
     create_base64_string_encodec_widget,
     create_color_converter_widget,
+    create_cron_expression_editor_widget,
     create_graphql_client_widget,
     create_http_client_widget,
     create_image_optimizer_widget,
@@ -247,6 +248,7 @@ class DevDriverWindow(QMainWindow):
             ("⇄", "YAML to JSON", "yaml json convert transform"),
             ("✏️", "String Case Converter", "string case convert upper lower camel snake"),
             ("🎨", "Color Converter", "color convert hex rgb hsl css"),
+            ("⏰", "Cron Expression Editor", "cron expression schedule job task automation time"),
             ("📝", "Lorem Ipsum Generator", "lorem ipsum text placeholder dummy"),
             ("📋", "Markdown Viewer", "markdown preview render view md"),
             ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
@@ -366,6 +368,8 @@ class DevDriverWindow(QMainWindow):
         self.string_case_converter_screen = create_string_case_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Color Converter screen")
         self.color_converter_screen = create_color_converter_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating Cron Expression Editor screen")
+        self.cron_expression_editor_screen = create_cron_expression_editor_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Lorem Ipsum Generator screen")
         self.lorem_ipsum_generator_screen = create_lorem_ipsum_tool_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Markdown Viewer screen")
@@ -397,6 +401,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.yaml_to_json_screen)
         self.stacked_widget.addWidget(self.string_case_converter_screen)
         self.stacked_widget.addWidget(self.color_converter_screen)
+        self.stacked_widget.addWidget(self.cron_expression_editor_screen)
         self.stacked_widget.addWidget(self.lorem_ipsum_generator_screen)
         self.stacked_widget.addWidget(self.markdown_viewer_screen)
         self.stacked_widget.addWidget(self.random_string_generator_screen)
@@ -452,6 +457,7 @@ class DevDriverWindow(QMainWindow):
             "YAML to JSON": self.yaml_to_json_screen,
             "String Case Converter": self.string_case_converter_screen,
             "Color Converter": self.color_converter_screen,
+            "Cron Expression Editor": self.cron_expression_editor_screen,
             "Lorem Ipsum Generator": self.lorem_ipsum_generator_screen,
             "Markdown Viewer": self.markdown_viewer_screen,
             "Random String Generator": self.random_string_generator_screen,
