@@ -354,7 +354,7 @@ class UvxRunner(QObject):
             self.process = None
 
 
-def create_uvx_runner_widget(style_func, scratch_pad=None):  # noqa: C901
+def create_uvx_runner_widget(style_func, scratch_pad=None):
     """
     Creates the main widget for the Uvx Runner tool.
 

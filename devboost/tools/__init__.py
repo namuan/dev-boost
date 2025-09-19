@@ -15,6 +15,7 @@ from .regex_tester import create_regexp_tester_widget
 from .scratch_pad import create_scratch_pad_widget
 from .string_case_converter import create_case_converter_widget as create_string_case_converter_widget
 from .timezone_converter import create_timezone_converter_widget
+from .unit_converter import create_unit_converter_widget
 from .unix_time_converter import create_unix_time_converter_widget
 from .url_encode_decode import create_url_codec_widget
 from .uuid_ulid_generator import create_uuid_ulid_tool_widget
@@ -40,6 +41,7 @@ __all__ = [
     "create_scratch_pad_widget",
     "create_string_case_converter_widget",
     "create_timezone_converter_widget",
+    "create_unit_converter_widget",
     "create_unix_time_converter_widget",
     "create_url_codec_widget",
     "create_uuid_ulid_tool_widget",

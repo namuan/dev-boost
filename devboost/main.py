@@ -36,6 +36,7 @@ from .tools import (
     create_scratch_pad_widget,
     create_string_case_converter_widget,
     create_timezone_converter_widget,
+    create_unit_converter_widget,
     create_unix_time_converter_widget,
     create_url_codec_widget,
     create_uuid_ulid_tool_widget,
@@ -255,6 +256,7 @@ class DevDriverWindow(QMainWindow):
             ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌍", "TimeZone Converter", "timezone time zone convert world clock city time"),
+            ("📐", "Unit Converter", "unit convert measurement length weight temperature volume"),
             ("🌐", "HTTP Client", "http client request api rest get post put delete"),
             ("🔗", "GraphQL Client", "graphql client query mutation subscription schema introspection"),
             ("🤖", "LLM Client", "llm client ai chat openai anthropic google model"),
@@ -380,6 +382,8 @@ class DevDriverWindow(QMainWindow):
         self.random_string_generator_screen = create_random_string_tool_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating TimeZone Converter screen")
         self.timezone_converter_screen = create_timezone_converter_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating Unit Converter screen")
+        self.unit_converter_screen = create_unit_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Image Optimizer screen")
         self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating HTTP Client screen")
@@ -410,6 +414,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.markdown_viewer_screen)
         self.stacked_widget.addWidget(self.random_string_generator_screen)
         self.stacked_widget.addWidget(self.timezone_converter_screen)
+        self.stacked_widget.addWidget(self.unit_converter_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
         self.stacked_widget.addWidget(self.graphql_client_screen)
@@ -467,6 +472,7 @@ class DevDriverWindow(QMainWindow):
             "Markdown Viewer": self.markdown_viewer_screen,
             "Random String Generator": self.random_string_generator_screen,
             "TimeZone Converter": self.timezone_converter_screen,
+            "Unit Converter": self.unit_converter_screen,
             "Image Optimizer": self.image_optimizer_screen,
             "HTTP Client": self.http_client_screen,
             "GraphQL Client": self.graphql_client_screen,
