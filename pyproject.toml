@@ -26,6 +26,7 @@ dependencies = [
     "requests",
     "radon>=6.0.1",
     "croniter>=6.0.0",
+    "openapi-spec-validator>=0.7.2",
 ]
 
 [project.urls]

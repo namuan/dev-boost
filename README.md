@@ -21,7 +21,10 @@ Tools to boost developer productivity and improve workflows
 - **Markdown Viewer**: Render and preview Markdown content in a clean, formatted view.
 - **Image Optimizer**: Compress and optimize images with quality control, format conversion, and resizing options. Supports JPEG, PNG, and WEBP formats.
 - **HTTP Client**: Make HTTP requests with support for all common methods (GET, POST, PUT, DELETE, etc.). Features intelligent header autocomplete, request/response body handling, response timing, and tabbed response view with headers, body, and statistics.
+- **GraphQL Client**: Execute GraphQL queries and mutations with schema introspection, query validation, and response formatting.
+- **LLM Client**: Interact with various Large Language Models including OpenAI, Anthropic, and Google models for AI-powered assistance.
 - **Uvx Runner**: Install and run uvx tools with a GUI interface. Features dropdown selection of predefined tools (pgcli, req2toml, restview, yt-dlp, videogrep), dynamic help display, argument input, real-time output capture, and integration with scratch pad for output management.
+- **OpenAPI Mock Server**: Generate mock HTTP servers from OpenAPI/Swagger specifications. Features automatic endpoint discovery, dynamic response generation based on schemas, CORS support, configurable latency simulation, and real-time server management with detailed logging.
 
 ## Installation
 

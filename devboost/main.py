@@ -30,6 +30,7 @@ from .tools import (
     create_llm_client_widget,
     create_lorem_ipsum_tool_widget,
     create_markdown_preview_widget,
+    create_openapi_mock_server_widget,
     create_random_string_tool_widget,
     create_regexp_tester_widget,
     create_scratch_pad_widget,
@@ -258,6 +259,7 @@ class DevDriverWindow(QMainWindow):
             ("🔗", "GraphQL Client", "graphql client query mutation subscription schema introspection"),
             ("🤖", "LLM Client", "llm client ai chat openai anthropic google model"),
             ("📦", "Uvx Runner", "uvx tools runner install execute command line utilities"),
+            ("🎭", "OpenAPI Mock Server", "openapi mock server api swagger spec endpoint response"),
         ]
         logger.info("Defined %d tools for the sidebar", len(self.tools))
 
@@ -388,6 +390,8 @@ class DevDriverWindow(QMainWindow):
         self.uvx_runner_screen = create_uvx_runner_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating LLM Client screen")
         self.llm_client_screen = create_llm_client_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating OpenAPI Mock Server screen")
+        self.openapi_mock_server_screen = create_openapi_mock_server_widget(self.style, self.scratch_pad_widget)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
@@ -411,6 +415,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.graphql_client_screen)
         self.stacked_widget.addWidget(self.llm_client_screen)
         self.stacked_widget.addWidget(self.uvx_runner_screen)
+        self.stacked_widget.addWidget(self.openapi_mock_server_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -467,6 +472,7 @@ class DevDriverWindow(QMainWindow):
             "GraphQL Client": self.graphql_client_screen,
             "Uvx Runner": self.uvx_runner_screen,
             "LLM Client": self.llm_client_screen,
+            "OpenAPI Mock Server": self.openapi_mock_server_screen,
         }
 
         self._switch_to_tool(tool_name, tool_widgets)

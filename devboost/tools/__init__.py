@@ -9,6 +9,7 @@ from .jwt_debugger import create_jwt_debugger_widget
 from .llm_client import create_llm_client_widget
 from .lorem_ipsum_generator import create_lorem_ipsum_tool_widget
 from .markdown_viewer import create_markdown_preview_widget
+from .openapi_mock_server import create_openapi_mock_server_widget
 from .random_string_generator import create_random_string_tool_widget
 from .regex_tester import create_regexp_tester_widget
 from .scratch_pad import create_scratch_pad_widget
@@ -33,6 +34,7 @@ __all__ = [
     "create_llm_client_widget",
     "create_lorem_ipsum_tool_widget",
     "create_markdown_preview_widget",
+    "create_openapi_mock_server_widget",
     "create_random_string_tool_widget",
     "create_regexp_tester_widget",
     "create_scratch_pad_widget",
