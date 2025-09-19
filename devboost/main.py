@@ -25,6 +25,7 @@ from .tools import (
     create_graphql_client_widget,
     create_http_client_widget,
     create_image_optimizer_widget,
+    create_ip_subnet_calculator_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
     create_llm_client_widget,
@@ -254,6 +255,7 @@ class DevDriverWindow(QMainWindow):
             ("📝", "Lorem Ipsum Generator", "lorem ipsum text placeholder dummy"),
             ("📋", "Markdown Viewer", "markdown preview render view md"),
             ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
+            ("🌐", "IP Subnet Calculator", "ip subnet calculator cidr network ipv4 ipv6 subnetting"),
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌍", "TimeZone Converter", "timezone time zone convert world clock city time"),
             ("📐", "Unit Converter", "unit convert measurement length weight temperature volume"),
@@ -386,6 +388,8 @@ class DevDriverWindow(QMainWindow):
         self.unit_converter_screen = create_unit_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Image Optimizer screen")
         self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating IP Subnet Calculator screen")
+        self.ip_subnet_calculator_screen = create_ip_subnet_calculator_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating HTTP Client screen")
         self.http_client_screen = create_http_client_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating GraphQL Client screen")
@@ -416,6 +420,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.timezone_converter_screen)
         self.stacked_widget.addWidget(self.unit_converter_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
+        self.stacked_widget.addWidget(self.ip_subnet_calculator_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
         self.stacked_widget.addWidget(self.graphql_client_screen)
         self.stacked_widget.addWidget(self.llm_client_screen)
@@ -474,6 +479,7 @@ class DevDriverWindow(QMainWindow):
             "TimeZone Converter": self.timezone_converter_screen,
             "Unit Converter": self.unit_converter_screen,
             "Image Optimizer": self.image_optimizer_screen,
+            "IP Subnet Calculator": self.ip_subnet_calculator_screen,
             "HTTP Client": self.http_client_screen,
             "GraphQL Client": self.graphql_client_screen,
             "Uvx Runner": self.uvx_runner_screen,
