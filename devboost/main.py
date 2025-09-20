@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from devboost.tools.file_rename import create_file_rename_widget
+
 from .styles import get_main_app_style
 from .tools import (
     create_base64_string_encodec_widget,
@@ -259,6 +261,7 @@ class DevDriverWindow(QMainWindow):
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌍", "TimeZone Converter", "timezone time zone convert world clock city time"),
             ("📐", "Unit Converter", "unit convert measurement length weight temperature volume"),
+            ("📁", "File Rename Tool", "file rename batch slugify transliterate numbering date pattern"),
             ("🌐", "HTTP Client", "http client request api rest get post put delete"),
             ("🔗", "GraphQL Client", "graphql client query mutation subscription schema introspection"),
             ("🤖", "LLM Client", "llm client ai chat openai anthropic google model"),
@@ -386,6 +389,8 @@ class DevDriverWindow(QMainWindow):
         self.timezone_converter_screen = create_timezone_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Unit Converter screen")
         self.unit_converter_screen = create_unit_converter_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating File Rename Tool screen")
+        self.file_rename_tool_screen = create_file_rename_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Image Optimizer screen")
         self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating IP Subnet Calculator screen")
@@ -419,6 +424,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.random_string_generator_screen)
         self.stacked_widget.addWidget(self.timezone_converter_screen)
         self.stacked_widget.addWidget(self.unit_converter_screen)
+        self.stacked_widget.addWidget(self.file_rename_tool_screen)
         self.stacked_widget.addWidget(self.image_optimizer_screen)
         self.stacked_widget.addWidget(self.ip_subnet_calculator_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
@@ -478,6 +484,7 @@ class DevDriverWindow(QMainWindow):
             "Random String Generator": self.random_string_generator_screen,
             "TimeZone Converter": self.timezone_converter_screen,
             "Unit Converter": self.unit_converter_screen,
+            "File Rename Tool": self.file_rename_tool_screen,
             "Image Optimizer": self.image_optimizer_screen,
             "IP Subnet Calculator": self.ip_subnet_calculator_screen,
             "HTTP Client": self.http_client_screen,
