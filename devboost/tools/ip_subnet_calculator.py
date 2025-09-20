@@ -370,7 +370,30 @@ class IPSubnetCalculator:
 
         except Exception:
             logger.exception("Error creating supernet")
-            return None
+            return result
+
+    def get_sample_subnet_data(self) -> str:
+        """Get sample subnet data for demonstration."""
+        return "192.168.1.0/24"
+
+    def get_sample_converter_data(self) -> str:
+        """Get sample IP converter data for demonstration."""
+        return "192.168.1.100"
+
+    def get_sample_splitter_data(self) -> dict[str, str]:
+        """Get sample splitter data for demonstration."""
+        return {"network": "10.0.0.0/22", "subnets": "24"}
+
+    def get_sample_summarizer_data(self) -> str:
+        """Get sample summarizer data for demonstration."""
+        return """192.168.0.0/24
+192.168.1.0/24
+192.168.2.0/24
+192.168.3.0/24"""
+
+    def get_sample_classifier_data(self) -> str:
+        """Get sample classifier data for demonstration."""
+        return "10.0.0.1"
 
     def _find_common_supernet_ipv4(self, networks: list[ipaddress.IPv4Network]) -> ipaddress.IPv4Network | None:
         """Find common supernet for IPv4 networks."""
@@ -683,8 +706,17 @@ def _create_subnet_tab(subnet_calculator, scratch_pad):
     ip_input.setPlaceholderText("Enter IP address or network (e.g., 192.168.1.0/24, 2001:db8::/32)")
     input_layout.addWidget(ip_input)
 
+    # Input buttons
+    input_buttons_layout = QHBoxLayout()
+    sample_btn = QPushButton("Sample")
+    clear_btn = QPushButton("Clear")
     calculate_btn = QPushButton("Calculate")
-    input_layout.addWidget(calculate_btn)
+
+    input_buttons_layout.addWidget(sample_btn)
+    input_buttons_layout.addWidget(clear_btn)
+    input_buttons_layout.addWidget(calculate_btn)
+
+    input_layout.addLayout(input_buttons_layout)
 
     layout.addLayout(input_layout)
 
@@ -756,9 +788,22 @@ def _create_subnet_tab(subnet_calculator, scratch_pad):
             QApplication.clipboard().setText(info_text)
             logger.info("Copied all network info to clipboard")
 
+    def load_sample():
+        """Load sample subnet data."""
+        sample_data = subnet_calculator.get_sample_subnet_data()
+        ip_input.setText(sample_data)
+        logger.info("Loaded sample subnet data: %s", sample_data)
+
+    def clear_input():
+        """Clear the input field."""
+        ip_input.clear()
+        logger.info("Cleared subnet input field")
+
     # Connect events
     calculate_btn.clicked.connect(calculate_subnet)
     ip_input.returnPressed.connect(calculate_subnet)
+    sample_btn.clicked.connect(load_sample)
+    clear_btn.clicked.connect(clear_input)
     copy_network_btn.clicked.connect(copy_network)
     copy_broadcast_btn.clicked.connect(copy_broadcast)
     copy_all_btn.clicked.connect(copy_all)
@@ -781,8 +826,17 @@ def _create_converter_tab(ip_converter, scratch_pad):
     ip_input.setPlaceholderText("Enter IP address, integer, or hex value")
     input_layout.addWidget(ip_input)
 
+    # Input buttons
+    input_buttons_layout = QHBoxLayout()
+    sample_btn = QPushButton("Sample")
+    clear_btn = QPushButton("Clear")
     convert_btn = QPushButton("Convert")
-    input_layout.addWidget(convert_btn)
+
+    input_buttons_layout.addWidget(sample_btn)
+    input_buttons_layout.addWidget(clear_btn)
+    input_buttons_layout.addWidget(convert_btn)
+
+    input_layout.addLayout(input_buttons_layout)
 
     layout.addLayout(input_layout)
 
@@ -826,9 +880,25 @@ def _create_converter_tab(ip_converter, scratch_pad):
             QApplication.clipboard().setText(formats_text)
             logger.info("Copied all IP formats to clipboard")
 
+    def load_sample():
+        """Load sample converter data."""
+        from devboost.tools.ip_subnet_calculator import IPSubnetCalculator
+
+        calculator = IPSubnetCalculator()
+        sample_data = calculator.get_sample_converter_data()
+        ip_input.setText(sample_data)
+        logger.info("Loaded sample converter data: %s", sample_data)
+
+    def clear_input():
+        """Clear the input field."""
+        ip_input.clear()
+        logger.info("Cleared converter input field")
+
     # Connect events
     convert_btn.clicked.connect(convert_ip)
     ip_input.returnPressed.connect(convert_ip)
+    sample_btn.clicked.connect(load_sample)
+    clear_btn.clicked.connect(clear_input)
     copy_all_btn.clicked.connect(copy_all_formats)
 
     return converter_tab
@@ -850,6 +920,15 @@ def _create_splitter_tab(subnet_calculator, scratch_pad):
     network_input = QLineEdit()
     network_input.setPlaceholderText("Enter network (e.g., 192.168.1.0/24)")
     network_layout.addWidget(network_input)
+
+    # Network input buttons
+    network_buttons_layout = QHBoxLayout()
+    sample_btn = QPushButton("Sample")
+    clear_btn = QPushButton("Clear")
+    network_buttons_layout.addWidget(sample_btn)
+    network_buttons_layout.addWidget(clear_btn)
+    network_layout.addLayout(network_buttons_layout)
+
     input_layout.addLayout(network_layout)
 
     # Split options
@@ -922,10 +1001,28 @@ def _create_splitter_tab(subnet_calculator, scratch_pad):
             QApplication.clipboard().setText(subnets_text)
             logger.info("Copied all subnets to clipboard")
 
+    def load_sample():
+        """Load sample splitter data."""
+        from devboost.tools.ip_subnet_calculator import IPSubnetCalculator
+
+        calculator = IPSubnetCalculator()
+        sample_data = calculator.get_sample_splitter_data()
+        network_input.setText(sample_data["network"])
+        prefix_input.setText(sample_data["subnets"])
+        logger.info("Loaded sample splitter data: %s", sample_data)
+
+    def clear_inputs():
+        """Clear the input fields."""
+        network_input.clear()
+        prefix_input.clear()
+        logger.info("Cleared splitter input fields")
+
     # Connect events
     split_btn.clicked.connect(split_network)
     network_input.returnPressed.connect(split_network)
     prefix_input.returnPressed.connect(split_network)
+    sample_btn.clicked.connect(load_sample)
+    clear_btn.clicked.connect(clear_inputs)
     copy_subnets_btn.clicked.connect(copy_all_subnets)
 
     return splitter_tab
@@ -948,6 +1045,16 @@ def _create_summarizer_tab(subnet_calculator, scratch_pad):
     networks_input.setPlaceholderText("Enter networks, one per line:\n192.168.1.0/24\n192.168.2.0/24\n192.168.3.0/24")
     networks_input.setMaximumHeight(120)
     networks_layout.addWidget(networks_input)
+
+    # Networks input buttons
+    networks_buttons_layout = QHBoxLayout()
+    sample_btn = QPushButton("Sample")
+    clear_btn = QPushButton("Clear")
+    networks_buttons_layout.addWidget(sample_btn)
+    networks_buttons_layout.addWidget(clear_btn)
+    networks_buttons_layout.addStretch()
+    networks_layout.addLayout(networks_buttons_layout)
+
     input_layout.addLayout(networks_layout)
 
     # Summarize button
@@ -1010,8 +1117,24 @@ def _create_summarizer_tab(subnet_calculator, scratch_pad):
             QApplication.clipboard().setText(str(summarize_networks.current_supernet))
             logger.info("Copied supernet to clipboard")
 
+    def load_sample():
+        """Load sample summarizer data."""
+        from devboost.tools.ip_subnet_calculator import IPSubnetCalculator
+
+        calculator = IPSubnetCalculator()
+        sample_data = calculator.get_sample_summarizer_data()
+        networks_input.setPlainText(sample_data)
+        logger.info("Loaded sample summarizer data")
+
+    def clear_input():
+        """Clear the input field."""
+        networks_input.clear()
+        logger.info("Cleared summarizer input field")
+
     # Connect events
     summarize_btn.clicked.connect(summarize_networks)
+    sample_btn.clicked.connect(load_sample)
+    clear_btn.clicked.connect(clear_input)
     copy_supernet_btn.clicked.connect(copy_supernet)
 
     return summarizer_tab
@@ -1154,6 +1277,15 @@ def _create_classifier_tab(subnet_calculator, scratch_pad):
     ip_input = QLineEdit()
     ip_input.setPlaceholderText("Enter IP address (e.g., 192.168.1.1, 2001:db8::1)")
     ip_layout.addWidget(ip_input)
+
+    # IP input buttons
+    ip_buttons_layout = QHBoxLayout()
+    sample_btn = QPushButton("Sample")
+    clear_btn = QPushButton("Clear")
+    ip_buttons_layout.addWidget(sample_btn)
+    ip_buttons_layout.addWidget(clear_btn)
+    ip_layout.addLayout(ip_buttons_layout)
+
     input_layout.addLayout(ip_layout)
 
     # Classify button
@@ -1212,9 +1344,25 @@ def _create_classifier_tab(subnet_calculator, scratch_pad):
             QApplication.clipboard().setText(classification_text)
             logger.info("Copied IP classification to clipboard")
 
+    def load_sample():
+        """Load sample classifier data."""
+        from devboost.tools.ip_subnet_calculator import IPSubnetCalculator
+
+        calculator = IPSubnetCalculator()
+        sample_data = calculator.get_sample_classifier_data()
+        ip_input.setText(sample_data)
+        logger.info("Loaded sample classifier data: %s", sample_data)
+
+    def clear_input():
+        """Clear the input field."""
+        ip_input.clear()
+        logger.info("Cleared classifier input field")
+
     # Connect events
     classify_btn.clicked.connect(classify_ip)
     ip_input.returnPressed.connect(classify_ip)
+    sample_btn.clicked.connect(load_sample)
+    clear_btn.clicked.connect(clear_input)
     copy_classification_btn.clicked.connect(copy_classification)
 
     return classifier_tab
