@@ -167,8 +167,167 @@ class IPSubnetCalculator:
             logger.exception("Error splitting subnet")
             return []
 
+    def classify_ip_address(self, ip_input: str) -> dict[str, str]:
+        """Classify an IP address with comprehensive information."""
+        try:
+            # Parse the IP input
+            if not ip_input.strip():
+                return {"Error": "No IP address provided"}
+
+            # Try to parse as address first
+            try:
+                if ":" in ip_input:
+                    addr = ipaddress.IPv6Address(ip_input.strip())
+                    return self._classify_ipv6_address(addr)
+                addr = ipaddress.IPv4Address(ip_input.strip())
+                return self._classify_ipv4_address(addr)
+            except ipaddress.AddressValueError:
+                # Try to parse as network and get network address
+                network = self.parse_ip_input(ip_input)
+                if network:
+                    if isinstance(network, ipaddress.IPv6Network):
+                        return self._classify_ipv6_address(network.network_address)
+                    return self._classify_ipv4_address(network.network_address)
+                return {"Error": f"Invalid IP address format: {ip_input}"}
+
+        except Exception as e:
+            logger.exception("Error classifying IP address")
+            return {"Error": f"Classification error: {e!s}"}
+
+    def _classify_ipv4_address(self, addr: ipaddress.IPv4Address) -> dict[str, str]:
+        """Classify IPv4 address with detailed information."""
+        classification = {}
+
+        # Basic info
+        classification["IP Address"] = str(addr)
+        classification["IP Version"] = "IPv4"
+        classification["Address Class"] = self._get_ipv4_class(addr)
+
+        # RFC classifications
+        classification["Is Private"] = "Yes" if addr.is_private else "No"
+        classification["Is Public"] = "No" if addr.is_private else "Yes"
+        classification["Is Loopback"] = "Yes" if addr.is_loopback else "No"
+        classification["Is Multicast"] = "Yes" if addr.is_multicast else "No"
+        classification["Is Link Local"] = "Yes" if addr.is_link_local else "No"
+        classification["Is Reserved"] = "Yes" if addr.is_reserved else "No"
+
+        # Detailed private network classification
+        if addr.is_private:
+            classification["Private Network Type"] = self._get_private_network_type_ipv4(addr)
+
+        # Special address ranges
+        classification["Special Range"] = self._get_special_range_ipv4(addr)
+
+        # Binary and decimal representations
+        classification["Binary"] = self._ip_to_binary(addr)
+        classification["Decimal"] = str(int(addr))
+        classification["Hexadecimal"] = hex(int(addr))
+
+        return classification
+
+    def _classify_ipv6_address(self, addr: ipaddress.IPv6Address) -> dict[str, str]:
+        """Classify IPv6 address with detailed information."""
+        classification = {}
+
+        # Basic info
+        classification["IP Address"] = str(addr)
+        classification["IP Version"] = "IPv6"
+        classification["Compressed"] = str(addr.compressed)
+        classification["Exploded"] = str(addr.exploded)
+
+        # RFC classifications
+        classification["Is Private"] = "Yes" if addr.is_private else "No"
+        classification["Is Public"] = "No" if addr.is_private else "Yes"
+        classification["Is Loopback"] = "Yes" if addr.is_loopback else "No"
+        classification["Is Multicast"] = "Yes" if addr.is_multicast else "No"
+        classification["Is Link Local"] = "Yes" if addr.is_link_local else "No"
+        classification["Is Global"] = "Yes" if addr.is_global else "No"
+        classification["Is Reserved"] = "Yes" if addr.is_reserved else "No"
+
+        # IPv6 specific classifications
+        classification["Is Site Local"] = "Yes" if addr.is_site_local else "No"
+        classification["Is Unspecified"] = "Yes" if addr.is_unspecified else "No"
+
+        # Detailed private network classification
+        if addr.is_private:
+            classification["Private Network Type"] = self._get_private_network_type_ipv6(addr)
+
+        # Special address ranges
+        classification["Special Range"] = self._get_special_range_ipv6(addr)
+
+        return classification
+
+    def _get_private_network_type_ipv4(self, addr: ipaddress.IPv4Address) -> str:
+        """Get specific private network type for IPv4."""
+        # RFC 1918 private networks
+        if ipaddress.IPv4Address("10.0.0.0") <= addr <= ipaddress.IPv4Address("10.255.255.255"):
+            return "RFC 1918 - Class A Private (10.0.0.0/8)"
+        if ipaddress.IPv4Address("172.16.0.0") <= addr <= ipaddress.IPv4Address("172.31.255.255"):
+            return "RFC 1918 - Class B Private (172.16.0.0/12)"
+        if ipaddress.IPv4Address("192.168.0.0") <= addr <= ipaddress.IPv4Address("192.168.255.255"):
+            return "RFC 1918 - Class C Private (192.168.0.0/16)"
+
+        # RFC 3927 Link-Local
+        if ipaddress.IPv4Address("169.254.0.0") <= addr <= ipaddress.IPv4Address("169.254.255.255"):
+            return "RFC 3927 - Link-Local (169.254.0.0/16)"
+
+        # RFC 6598 Carrier-Grade NAT
+        if ipaddress.IPv4Address("100.64.0.0") <= addr <= ipaddress.IPv4Address("100.127.255.255"):
+            return "RFC 6598 - Carrier-Grade NAT (100.64.0.0/10)"
+
+        return "Unknown Private Range"
+
+    def _get_private_network_type_ipv6(self, addr: ipaddress.IPv6Address) -> str:
+        """Get specific private network type for IPv6."""
+        addr_str = str(addr)
+
+        if addr_str.startswith("fc") or addr_str.startswith("fd"):
+            return "RFC 4193 - Unique Local Address (fc00::/7)"
+        if addr_str.startswith("fe80"):
+            return "RFC 4291 - Link Local (fe80::/10)"
+
+        return "Other private range"
+
+    def _get_special_range_ipv4(self, addr: ipaddress.IPv4Address) -> str:
+        """Get special address range information for IPv4."""
+        # Special ranges
+        if ipaddress.IPv4Address("127.0.0.0") <= addr <= ipaddress.IPv4Address("127.255.255.255"):
+            return "RFC 1122 - Loopback (127.0.0.0/8)"
+        if ipaddress.IPv4Address("169.254.0.0") <= addr <= ipaddress.IPv4Address("169.254.255.255"):
+            return "RFC 3927 - Link Local (169.254.0.0/16)"
+        if ipaddress.IPv4Address("224.0.0.0") <= addr <= ipaddress.IPv4Address("239.255.255.255"):
+            return "RFC 3171 - Multicast Class D (224.0.0.0/4)"
+        if ipaddress.IPv4Address("240.0.0.0") <= addr <= ipaddress.IPv4Address("255.255.255.255"):
+            return "RFC 1112 - Reserved Class E (240.0.0.0/4)"
+        if addr == ipaddress.IPv4Address("255.255.255.255"):
+            return "RFC 919 - Limited Broadcast"
+
+        return ""
+
+    def _get_special_range_ipv6(self, addr: ipaddress.IPv6Address) -> str:
+        """Get special address range information for IPv6."""
+        addr_str = str(addr.compressed)
+
+        if addr_str == "::":
+            return "RFC 4291 - Unspecified Address"
+        if addr_str == "::1":
+            return "RFC 4291 - Loopback Address"
+        if addr_str.startswith("::ffff:"):
+            return "RFC 4291 - IPv4-mapped IPv6 Address"
+        if addr_str.startswith("2001:db8"):
+            return "RFC 3849 - Documentation (2001:db8::/32)"
+        if addr_str.startswith("ff"):
+            return "RFC 4291 - Multicast (ff00::/8)"
+        if addr_str.startswith("fe80"):
+            return "RFC 4291 - Link Local (fe80::/10)"
+        if addr_str.startswith("fc") or addr_str.startswith("fd"):
+            return "RFC 4193 - Unique Local (fc00::/7)"
+        if addr_str.startswith("2001:"):
+            return "RFC 4291 - Global Unicast"
+
+        return "Standard unicast range"
+
     def supernet_summary(self, networks: list[str]) -> ipaddress.IPv4Network | ipaddress.IPv6Network | None:
-        """Summarize multiple networks into a supernet."""
         try:
             if not networks:
                 return None
@@ -498,11 +657,13 @@ def create_ip_subnet_calculator_widget(style_func, scratch_pad=None):
     converter_tab = _create_converter_tab(ip_converter, scratch_pad)
     splitter_tab = _create_splitter_tab(subnet_calculator, scratch_pad)
     summarizer_tab = _create_summarizer_tab(subnet_calculator, scratch_pad)
+    classifier_tab = _create_classifier_tab(subnet_calculator, scratch_pad)
 
     tabs.addTab(subnet_tab, "Subnet Calculator")
     tabs.addTab(converter_tab, "IP Converter")
     tabs.addTab(splitter_tab, "Subnet Splitter")
     tabs.addTab(summarizer_tab, "Supernet Summarizer")
+    tabs.addTab(classifier_tab, "IP Classifier")
 
     return main_widget
 
@@ -975,6 +1136,168 @@ def _show_error_in_results(layout, error_message):
     error_label.setStyleSheet("color: #d32f2f; font-weight: bold; padding: 10px;")
     layout.addWidget(error_label)
     layout.addStretch()
+
+
+def _create_classifier_tab(subnet_calculator, scratch_pad):
+    """Create the IP address classifier tab."""
+    classifier_tab = QWidget()
+    layout = QVBoxLayout(classifier_tab)
+    layout.setContentsMargins(10, 10, 10, 10)
+    layout.setSpacing(10)
+
+    # Input section
+    input_layout = QVBoxLayout()
+
+    # IP address input
+    ip_layout = QHBoxLayout()
+    ip_layout.addWidget(QLabel("IP Address:"))
+    ip_input = QLineEdit()
+    ip_input.setPlaceholderText("Enter IP address (e.g., 192.168.1.1, 2001:db8::1)")
+    ip_layout.addWidget(ip_input)
+    input_layout.addLayout(ip_layout)
+
+    # Classify button
+    classify_layout = QHBoxLayout()
+    classify_btn = QPushButton("Classify IP Address")
+    classify_layout.addWidget(classify_btn)
+    classify_layout.addStretch()
+    input_layout.addLayout(classify_layout)
+
+    layout.addLayout(input_layout)
+
+    # Results area
+    results_scroll = QScrollArea()
+    results_scroll.setWidgetResizable(True)
+    results_widget = QWidget()
+    results_layout = QVBoxLayout(results_widget)
+    results_scroll.setWidget(results_widget)
+    layout.addWidget(results_scroll)
+
+    # Copy button
+    copy_layout = QHBoxLayout()
+    copy_classification_btn = QPushButton("Copy Classification")
+    copy_layout.addWidget(copy_classification_btn)
+    copy_layout.addStretch()
+    layout.addLayout(copy_layout)
+
+    # Event handlers
+    def classify_ip():
+        """Classify the IP address."""
+        try:
+            ip_address = ip_input.text().strip()
+            if not ip_address:
+                return
+
+            classification = subnet_calculator.classify_ip_address(ip_address)
+            if "Error" in classification:
+                _show_error_in_results(results_layout, classification["Error"])
+                return
+
+            # Display classification results
+            _display_ip_classification(results_layout, classification)
+
+            # Store current classification for copy operation
+            classify_ip.current_classification = classification
+
+        except Exception as e:
+            logger.exception("Error classifying IP address")
+            _show_error_in_results(results_layout, f"Error: {e!s}")
+
+    def copy_classification():
+        """Copy classification to clipboard."""
+        if hasattr(classify_ip, "current_classification"):
+            classification_text = "\n".join([
+                f"{key}: {value}" for key, value in classify_ip.current_classification.items()
+            ])
+            QApplication.clipboard().setText(classification_text)
+            logger.info("Copied IP classification to clipboard")
+
+    # Connect events
+    classify_btn.clicked.connect(classify_ip)
+    ip_input.returnPressed.connect(classify_ip)
+    copy_classification_btn.clicked.connect(copy_classification)
+
+    return classifier_tab
+
+
+def _display_ip_classification(layout, classification):
+    """Display IP address classification results."""
+    # Clear previous results
+    _clear_layout(layout)
+
+    # Classification header
+    ip_address = classification.get("IP Address", "Unknown")
+    header = QLabel(f"IP Classification: {ip_address}")
+    header.setStyleSheet("font-weight: bold; font-size: 16px; color: #2196F3; margin-bottom: 10px;")
+    layout.addWidget(header)
+
+    # Basic information section
+    basic_info = ["IP Address", "IP Version", "Address Class", "Compressed", "Exploded"]
+    basic_section = _create_classification_section("Basic Information", classification, basic_info)
+    layout.addWidget(basic_section)
+
+    # Classification section
+    classification_info = [
+        "Is Private",
+        "Is Public",
+        "Is Loopback",
+        "Is Multicast",
+        "Is Link Local",
+        "Is Reserved",
+        "Is Global",
+        "Is Site Local",
+        "Is Unspecified",
+    ]
+    classification_section = _create_classification_section(
+        "Address Classification", classification, classification_info
+    )
+    layout.addWidget(classification_section)
+
+    # Network type section
+    network_info = ["Private Network Type", "Special Range"]
+    network_section = _create_classification_section("Network Information", classification, network_info)
+    layout.addWidget(network_section)
+
+    # Technical details section
+    technical_info = ["Binary", "Decimal", "Hexadecimal"]
+    technical_section = _create_classification_section("Technical Details", classification, technical_info)
+    layout.addWidget(technical_section)
+
+    layout.addStretch()
+
+
+def _create_classification_section(title, classification, keys):
+    """Create a section widget for classification results."""
+    section_widget = QWidget()
+    section_layout = QVBoxLayout(section_widget)
+    section_layout.setContentsMargins(0, 5, 0, 15)
+
+    # Section title
+    title_label = QLabel(title)
+    title_label.setStyleSheet("font-weight: bold; color: #666; font-size: 14px; margin-bottom: 5px;")
+    section_layout.addWidget(title_label)
+
+    # Create grid for section info
+    grid = QGridLayout()
+    row = 0
+    for key in keys:
+        if key in classification:
+            label = QLabel(f"{key}:")
+            label.setStyleSheet("font-weight: bold; color: #2196F3; margin-left: 10px;")
+            value_label = QLabel(str(classification[key]))
+            value_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            value_label.setStyleSheet("font-family: monospace;")
+
+            grid.addWidget(label, row, 0)
+            grid.addWidget(value_label, row, 1)
+            row += 1
+
+    if row > 0:  # Only add grid if there are items
+        grid_widget = QWidget()
+        grid_widget.setLayout(grid)
+        section_layout.addWidget(grid_widget)
+
+    return section_widget
 
 
 def _clear_layout(layout):
