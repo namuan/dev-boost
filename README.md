@@ -25,6 +25,13 @@ Tools to boost developer productivity and improve workflows
 - **LLM Client**: Interact with various Large Language Models including OpenAI, Anthropic, and Google models for AI-powered assistance.
 - **Uvx Runner**: Install and run uvx tools with a GUI interface. Features dropdown selection of predefined tools (pgcli, req2toml, restview, yt-dlp, videogrep), dynamic help display, argument input, real-time output capture, and integration with scratch pad for output management.
 - **OpenAPI Mock Server**: Generate mock HTTP servers from OpenAPI/Swagger specifications. Features automatic endpoint discovery, dynamic response generation based on schemas, CORS support, configurable latency simulation, and real-time server management with detailed logging.
+- **Cron Expression Editor**: Build, validate, and explain cron expressions with human-readable descriptions, common presets, and a preview of upcoming execution times.
+- **File Rename**: Batch-rename files using flexible patterns (numbering, dates, slugify/transliteration). Includes preview, optional backups, and one-click rollback.
+- **IP Subnet Calculator**: Analyze IPv4/IPv6 networks. Compute network/broadcast/host ranges, convert formats, split subnets, summarize/supernet networks, and classify addresses.
+- **Random String Generator**: Generate random strings with configurable length and character sets (letters, digits, symbols), with quick copy to clipboard.
+- **Scratch Pad**: Lightweight persistent notes area with autosave and clipboard support for quick copy.
+- **Timezone Converter**: Convert times across time zones with DST awareness and handy presets.
+- **Unit Converter**: Convert units across categories (length, mass, temperature, speed, storage, and more) with live results.
 
 ## Installation
 
