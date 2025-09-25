@@ -438,6 +438,8 @@ def create_llm_client_widget(style_func, scratch_pad=None):
     send_button = QPushButton("Send")
     cancel_button = QPushButton("Cancel")
     cancel_button.setEnabled(False)
+    clear_button = QPushButton("Clear")
+    clear_button.setToolTip("Clear all input and output fields")
 
     # Optional scratch pad button (mirrors HTTP Client behavior)
     send_to_scratch_button = QPushButton("Send to Scratch Pad") if scratch_pad else None
@@ -460,6 +462,7 @@ def create_llm_client_widget(style_func, scratch_pad=None):
     top_bar.addSpacing(12)
     top_bar.addWidget(send_button)
     top_bar.addWidget(cancel_button)
+    top_bar.addWidget(clear_button)
     # Moved scratch pad button to its own action row to prevent text trimming (align with HTTP Client)
 
     # Provider configuration row: Base URL and API Key (persisted per provider)
@@ -705,8 +708,17 @@ def create_llm_client_widget(style_func, scratch_pad=None):
         )
         send_to_scratch_pad_local(scratch_pad, formatted)
 
+    def clear_all_fields():
+        """Clear all input and output fields in the LLM Client."""
+        logger.info("Clearing all LLM Client fields")
+        system_input.clear()
+        user_input.clear()
+        output_view.clear()
+        set_status("idle", "Idle")
+
     send_button.clicked.connect(start_request)
     cancel_button.clicked.connect(cancel_request)
+    clear_button.clicked.connect(clear_all_fields)
     if send_to_scratch_button:
         send_to_scratch_button.clicked.connect(send_output_to_scratch)
 
