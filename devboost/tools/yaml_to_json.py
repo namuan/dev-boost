@@ -125,7 +125,6 @@ active: true
 salary: 75000.50"""
 
 
-# ruff: noqa: C901
 def create_yaml_to_json_widget(style_func, scratch_pad=None):
     """
     Creates and returns the YAML to JSON converter widget.

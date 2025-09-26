@@ -213,7 +213,6 @@ class JWTDebugger:
             return False, "Invalid expiration claim format"
 
 
-# ruff: noqa: C901
 def create_jwt_debugger_widget(style_func, scratch_pad=None):
     """
     Creates the main JWT Debugger widget.

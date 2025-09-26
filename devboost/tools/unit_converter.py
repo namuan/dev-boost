@@ -345,7 +345,7 @@ def _create_units_tab(unit_converter):
     category_combo, from_unit_combo = _create_category_selection(units_layout, unit_converter)
     input_field, precision_spin = _create_input_section(units_layout)
     iec_checkbox, bits_bytes_checkbox = _create_data_rate_controls(units_layout)
-    results_scroll, results_layout = _create_results_area(units_layout)
+    _results_scroll, results_layout = _create_results_area(units_layout)
 
     # Set up event handlers and initialize
     units_event_handlers = _setup_units_event_handlers(

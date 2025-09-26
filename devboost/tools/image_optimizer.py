@@ -190,7 +190,6 @@ class ImageProcessingError(Exception):
     pass
 
 
-# ruff: noqa: C901
 def create_image_optimizer_widget(style_func, scratch_pad=None):
     """
     Creates the main widget for the image optimization tool.

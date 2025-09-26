@@ -1610,7 +1610,6 @@ class TimeZoneConverterUI:
             logger.info("Pasted from clipboard: %s", clipboard_text)
             self.update_results()
 
-    # ruff: noqa: C901
     def add_city_from_input(self):
         """Add a city from the input field."""
         add_city_input = self.results_widgets["add_city_input"]

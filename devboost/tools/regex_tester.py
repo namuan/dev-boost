@@ -291,7 +291,6 @@ class RegexTester:
         return r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
 
 
-# ruff: noqa: C901
 def create_regexp_tester_widget(style_func, scratch_pad=None):
     """
     Creates and returns the RegExp Tester widget.

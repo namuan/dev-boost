@@ -25,7 +25,6 @@ from devboost.styles import get_tool_style
 logger = logging.getLogger(__name__)
 
 
-# ruff: noqa: C901
 def create_base64_string_encodec_widget(style_func, scratch_pad=None):
     """
     Creates and returns the Base64 String Encode/Decode widget.

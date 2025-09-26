@@ -64,7 +64,6 @@ class XMLProcessor(QObject):
 </data>"""
 
 
-# ruff: noqa: C901
 def create_xml_formatter_widget(style_func, scratch_pad=None):
     """Creates the main widget for the XML formatter tool."""
     xml_processor = XMLProcessor()

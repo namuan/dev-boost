@@ -24,6 +24,7 @@ from .tools import (
     create_base64_string_encodec_widget,
     create_color_converter_widget,
     create_cron_expression_editor_widget,
+    create_file_optimization_widget,
     create_graphql_client_widget,
     create_http_client_widget,
     create_image_optimizer_widget,
@@ -257,6 +258,7 @@ class DevDriverWindow(QMainWindow):
             ("📝", "Lorem Ipsum Generator", "lorem ipsum text placeholder dummy"),
             ("📋", "Markdown Viewer", "markdown preview render view md"),
             ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
+            ("🗂️", "File Optimization Tool", "file optimize compression pdf image video batch drag drop"),
             ("🌐", "IP Subnet Calculator", "ip subnet calculator cidr network ipv4 ipv6 subnetting"),
             ("🎲", "Random String Generator", "random string generator password characters"),
             ("🌍", "TimeZone Converter", "timezone time zone convert world clock city time"),
@@ -403,6 +405,8 @@ class DevDriverWindow(QMainWindow):
         self.uvx_runner_screen = create_uvx_runner_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating LLM Client screen")
         self.llm_client_screen = create_llm_client_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating File Optimization Tool screen")
+        self.file_optimization_tool_screen = create_file_optimization_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating OpenAPI Mock Server screen")
         self.openapi_mock_server_screen = create_openapi_mock_server_widget(self.style, self.scratch_pad_widget)
 
@@ -431,6 +435,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.graphql_client_screen)
         self.stacked_widget.addWidget(self.llm_client_screen)
         self.stacked_widget.addWidget(self.uvx_runner_screen)
+        self.stacked_widget.addWidget(self.file_optimization_tool_screen)
         self.stacked_widget.addWidget(self.openapi_mock_server_screen)
 
         main_content_layout.addWidget(self.top_bar)
@@ -486,6 +491,7 @@ class DevDriverWindow(QMainWindow):
             "Unit Converter": self.unit_converter_screen,
             "File Rename Tool": self.file_rename_tool_screen,
             "Image Optimizer": self.image_optimizer_screen,
+            "File Optimization Tool": self.file_optimization_tool_screen,
             "IP Subnet Calculator": self.ip_subnet_calculator_screen,
             "HTTP Client": self.http_client_screen,
             "GraphQL Client": self.graphql_client_screen,

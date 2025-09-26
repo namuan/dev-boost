@@ -155,7 +155,6 @@ class JSONValidator(QObject):
             return False, "", error_msg
 
 
-# ruff: noqa: C901
 def create_json_formatter_widget(style_func, scratch_pad=None):
     """
     Creates the main widget for the JSON formatter tool.

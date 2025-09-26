@@ -112,7 +112,6 @@ class RandomStringProcessor:
         return str(int(time.time() * 1000))
 
 
-# ruff: noqa: C901
 def create_random_string_tool_widget(style=None, scratch_pad=None) -> QWidget:
     """
     Creates the Random String Generator tool widget.
@@ -306,7 +305,6 @@ def create_random_string_tool_widget(style=None, scratch_pad=None) -> QWidget:
         seed_input.setText(new_seed)
         generate_and_display()
 
-    # ruff: noqa: C901
     def apply_preset(preset_name):
         if preset_name == "(Click to Select)":
             return

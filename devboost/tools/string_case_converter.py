@@ -151,7 +151,6 @@ class StringCaseConverter:
         return text
 
 
-# ruff: noqa: C901
 def create_case_converter_widget(style_func, scratch_pad=None):
     """
     Creates and returns the String Case Converter widget.

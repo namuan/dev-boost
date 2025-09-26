@@ -369,7 +369,6 @@ class LLMWorkerThread(QThread):
 # ----------------------------- UI Factory -----------------------------
 
 
-# ruff: noqa: C901
 def create_llm_client_widget(style_func, scratch_pad=None):
     """Create the LLM Client widget.
 

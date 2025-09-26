@@ -1,6 +1,7 @@
 from .base64_string_encodec import create_base64_string_encodec_widget
 from .color_converter import create_color_converter_widget
 from .cron_expression_editor import create_cron_expression_editor_widget
+from .file_optimization import create_file_optimization_widget
 from .file_rename import create_file_rename_widget
 from .graphql_client import create_graphql_client_widget
 from .http_client import create_http_client_widget
@@ -29,6 +30,7 @@ __all__ = [
     "create_base64_string_encodec_widget",
     "create_color_converter_widget",
     "create_cron_expression_editor_widget",
+    "create_file_optimization_widget",
     "create_file_rename_widget",
     "create_graphql_client_widget",
     "create_http_client_widget",

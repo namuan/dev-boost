@@ -25,8 +25,8 @@ Tools to boost developer productivity and improve workflows
   and CMYK. Generates code presets for CSS, Swift, Java, and other languages.
 - **Lorem Ipsum Generator**: Generate placeholder text (Lorem Ipsum) for design and testing purposes.
 - **Markdown Viewer**: Render and preview Markdown content in a clean, formatted view.
-- **Image Optimizer**: Compress and optimize images with quality control, format conversion, and resizing options.
-  Supports JPEG, PNG, and WEBP formats.
+- **File Optimization Tool**: Comprehensive file optimization with drag-and-drop interface supporting images, videos, and PDFs. Features batch processing, real-time progress tracking, quality presets (Maximum, High, Medium, Low, Minimum), custom settings, backup creation, and detailed results reporting. Supports multiple optimization engines including PIL/Pillow, pngquant, jpegoptim, gifsicle, libvips for images; ffmpeg and gifski for videos; and ghostscript for PDFs. Includes format conversion, resizing, compression ratio analysis, and processing time metrics.
+- **Image Optimizer**: Legacy image compression tool with basic quality control and format conversion for JPEG, PNG, and WEBP formats.
 - **HTTP Client**: Make HTTP requests with support for all common methods (GET, POST, PUT, DELETE, etc.). Features
   intelligent header autocomplete, request/response body handling, response timing, and tabbed response view with
   headers, body, and statistics.
@@ -55,13 +55,13 @@ Tools to boost developer productivity and improve workflows
 
 ## Installation
 
-To install HttpRider from source:
+To install from source:
 
 1. **Clone the repository or download the ZIP file:**
 
    ```bash
-   git clone https://github.com/namuan/http-rider.git
-   cd http-rider
+   git clone https://github.com/namuan/dev-boost.git
+   cd dev-boost
    ```
 
 2. **Run the installation script (macOS):**

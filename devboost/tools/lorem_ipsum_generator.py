@@ -23,7 +23,6 @@ class LoremIpsumProcessor:
     def __init__(self):
         self.fake = Faker()
 
-    # ruff: noqa: C901
     def generate(self, text_type: str, count: int) -> str:
         """Generates the specified type of text."""
         results = []

@@ -62,7 +62,6 @@ hello_world()```
 """
 
 
-# ruff: noqa: C901
 def create_markdown_preview_widget(style_func=None, scratch_pad=None):
     """
     Creates and returns the Markdown Preview widget.

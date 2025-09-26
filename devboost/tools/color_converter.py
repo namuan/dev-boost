@@ -34,7 +34,6 @@ class ColorConverter:
         """Initialize the ColorConverter."""
         logger.info("Initializing ColorConverter")
 
-    # ruff: noqa: C901
     def parse_color(self, color_input: str) -> tuple[float, float, float, float] | None:
         """Parse color input and return RGBA values (0-1 range).
 
@@ -1298,7 +1297,6 @@ class ColorConverter:
         }
 
 
-# ruff: noqa: C901
 def create_color_converter_widget(style_func, scratch_pad=None):
     """
     Creates the Color Converter widget.

@@ -229,7 +229,6 @@ def create_field_row(name: str, style_func) -> tuple[QWidget, QLineEdit, QPushBu
     return widget, line_edit, copy_button
 
 
-# ruff: noqa: C901
 def create_uuid_ulid_tool_widget(style_func, scratch_pad=None) -> QWidget:
     """
     Creates the UUID/ULID Generate/Decode widget.

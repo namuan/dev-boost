@@ -22,12 +22,13 @@ dependencies = [
     "pyqt6",
     "pyyaml",
     "appdirs",
-    "Pillow",
+    "pillow",
     "requests",
     "radon>=6.0.1",
     "croniter>=6.0.0",
     "openapi-spec-validator>=0.7.2",
     "unidecode>=1.4.0",
+    "pyvips>=3.0.0",
 ]
 
 [project.urls]
@@ -114,6 +115,7 @@ ignore = [
     "TRY301",
     "E741",
     "C901",
+    "S108",
 ]
 
 [tool.ruff.lint.per-file-ignores]

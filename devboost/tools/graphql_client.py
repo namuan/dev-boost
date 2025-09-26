@@ -545,7 +545,6 @@ class GraphQLClient(QObject):
         return request_id in self.active_workers
 
 
-# ruff: noqa: C901
 def create_graphql_client_widget(style_func, scratch_pad=None):
     """
     Creates the main widget for the GraphQL client tool.

@@ -222,7 +222,6 @@ class UnixTimeConverter:
         ]
 
 
-# ruff: noqa: C901
 def create_unix_time_converter_widget(style_func, scratch_pad=None):
     """Create and return the Unix Time Converter widget.
 
