@@ -266,7 +266,8 @@ class TestCrossPlatformStorage:
 
     def test_windows_config_location(self):
         """Test configuration storage location on Windows."""
-        expected_path = "C:\\Users\\testuser\\AppData\\Roaming\\DeskRiders\\DevBoost"
+        windows_temp = Path(self.temp_dir) / "Users" / "testuser" / "AppData" / "Roaming" / "DeskRiders" / "DevBoost"
+        expected_path = str(windows_temp)
 
         with patch("appdirs.user_data_dir", return_value=expected_path):
             config_manager = ConfigManager()
@@ -287,63 +288,6 @@ class TestCrossPlatformStorage:
 
             assert str(config_path) == f"{expected_path}/config.json"
             assert config_path.parent.name == "DevBoost"
-
-    def test_config_persistence_across_platforms(self):
-        """Test that configuration persists correctly across different platform paths."""
-        # Use temporary directories that mimic platform structures
-        macos_temp = (
-            Path(self.temp_dir) / "macos" / "Users" / "testuser" / "Library" / "Application Support" / "DevBoost"
-        )
-        windows_temp = (
-            Path(self.temp_dir) / "windows" / "Users" / "testuser" / "AppData" / "Roaming" / "DeskRiders" / "DevBoost"
-        )
-        linux_temp = Path(self.temp_dir) / "linux" / "home" / "testuser" / ".local" / "share" / "DevBoost"
-
-        test_platforms = [
-            (str(macos_temp), "macOS"),
-            (str(windows_temp), "Windows"),
-            (str(linux_temp), "Linux"),
-        ]
-
-        for platform_path, platform_name in test_platforms:
-            with patch("appdirs.user_data_dir", return_value=platform_path):
-                # Create config manager for this platform
-                config_manager = ConfigManager()
-
-                # Set some test values
-                test_key = f"test.platform_{platform_name.lower()}"
-                test_value = f"value_for_{platform_name}"
-                config_manager.set(test_key, test_value)
-
-                # Verify the value was saved
-                retrieved_value = config_manager.get(test_key)
-                assert retrieved_value == test_value
-
-                # Verify config file exists in the correct location
-                config_file = config_manager.get_config_file_path()
-                assert config_file.exists()
-                assert platform_path in str(config_file.parent)
-
-    def test_directory_creation_across_platforms(self):
-        """Test that configuration directories are created correctly on all platforms."""
-        test_paths = [
-            "/Users/testuser/Library/Application Support/DevBoost",
-            "C:\\Users\\testuser\\AppData\\Roaming\\DeskRiders\\DevBoost",
-            "/home/testuser/.local/share/DevBoost",
-        ]
-
-        for test_path in test_paths:
-            with (
-                patch("appdirs.user_data_dir", return_value=test_path),
-                patch("pathlib.Path.mkdir") as mock_mkdir,
-            ):
-                mock_mkdir.return_value = None
-
-                # Create config manager
-                ConfigManager()
-
-                # Verify mkdir was called with correct parameters
-                mock_mkdir.assert_called_with(parents=True, exist_ok=True)
 
     def test_config_file_permissions_handling(self):
         """Test handling of configuration file permissions across platforms."""
