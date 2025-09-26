@@ -1458,6 +1458,16 @@ class VideoOptimizationEngine:
         # Get video info first
         video_info = self._get_video_info(input_path)
 
+        # Check if input and output paths are the same (in-place editing)
+        temp_output = None
+        actual_output_path = output_path
+
+        if input_path.resolve() == output_path.resolve():
+            # Create temporary output file to avoid FFmpeg in-place editing error
+            temp_output = output_path.with_suffix(f".tmp{output_path.suffix}")
+            actual_output_path = temp_output
+            self.logger.debug("Using temporary output file to avoid in-place editing: %s", temp_output)
+
         # Build ffmpeg command
         cmd = ["ffmpeg", "-i", str(input_path)]
 
@@ -1499,7 +1509,7 @@ class VideoOptimizationEngine:
         # Output settings
         cmd.extend(["-movflags", "+faststart"])  # Optimize for web streaming
         cmd.extend(["-y"])  # Overwrite output file
-        cmd.append(str(output_path))
+        cmd.append(str(actual_output_path))
 
         try:
             self.logger.debug("Running ffmpeg command: %s", " ".join(cmd))
@@ -1508,6 +1518,11 @@ class VideoOptimizationEngine:
 
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg failed: {result.stderr}")
+
+            # If we used a temporary file, replace the original
+            if temp_output and temp_output.exists():
+                self.logger.debug("Replacing original file with optimized version")
+                shutil.move(str(temp_output), str(output_path))
 
             return {
                 "method": "ffmpeg",
@@ -1615,6 +1630,16 @@ class VideoOptimizationEngine:
         """Convert video to GIF using ffmpeg as fallback."""
         self.logger.debug("Using ffmpeg for GIF conversion (fallback)")
 
+        # Check if input and output paths are the same (in-place editing)
+        temp_output = None
+        actual_output_path = output_path
+
+        if input_path.resolve() == output_path.resolve():
+            # Create temporary output file to avoid FFmpeg in-place editing error
+            temp_output = output_path.with_suffix(f".tmp{output_path.suffix}")
+            actual_output_path = temp_output
+            self.logger.debug("Using temporary output file to avoid in-place editing: %s", temp_output)
+
         cmd = ["ffmpeg", "-i", str(input_path)]
 
         # Build filter for GIF conversion
@@ -1637,7 +1662,7 @@ class VideoOptimizationEngine:
         filters.append("[s1][p]paletteuse")
 
         cmd.extend(["-vf", ",".join(filters)])
-        cmd.extend(["-y", str(output_path)])
+        cmd.extend(["-y", str(actual_output_path)])
 
         try:
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
@@ -1645,6 +1670,11 @@ class VideoOptimizationEngine:
 
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg GIF conversion failed: {result.stderr}")
+
+            # If we used a temporary file, replace the original
+            if temp_output and temp_output.exists():
+                self.logger.debug("Replacing original file with optimized version")
+                shutil.move(str(temp_output), str(output_path))
 
             return {
                 "method": "ffmpeg",
@@ -2902,6 +2932,7 @@ class FileOptimizationWidget(QWidget):
         self.settings_manager = SettingsManager()
         self.current_files: list[FileInfo] = []
         self.resize_percentage = None  # For percentage-based scaling
+        self.batch_progress = None  # Store current batch progress for results dialog
 
         # Initialize optimization engines
         self.image_engine = ImageOptimizationEngine()
@@ -4202,7 +4233,7 @@ class FileOptimizationWidget(QWidget):
             file_paths = [file_info.path for file_info in self.current_files]
 
             # Start batch optimization using OptimizationManager
-            self.optimization_manager.optimize_batch(file_paths, settings)
+            self.optimization_manager.optimize_batch(file_paths, None, settings)
 
         except Exception as e:
             logger.exception("Error starting batch optimization")
@@ -4558,6 +4589,9 @@ class FileOptimizationWidget(QWidget):
     # Signal handlers for OptimizationManager
     def _on_batch_progress_updated(self, progress: BatchProgress):
         """Handle batch progress updates with enhanced display."""
+        # Store the current batch progress for use in results dialog
+        self.batch_progress = progress
+
         # Update progress bar
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(int(progress.progress_percentage))
@@ -4590,7 +4624,11 @@ class FileOptimizationWidget(QWidget):
 
     def _on_file_started(self, file_path: Path):
         """Handle file processing start."""
-        logger.info("Started processing: %s", file_path.name)
+        # Handle both Path objects and strings
+        if isinstance(file_path, Path):
+            logger.info("Started processing: %s", file_path.name)
+        else:
+            logger.info("Started processing: %s", Path(file_path).name)
 
     def _on_file_completed(self, result: BatchOperationResult):
         """Handle file processing completion with detailed logging."""
