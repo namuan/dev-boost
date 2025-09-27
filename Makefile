@@ -22,13 +22,13 @@ upgrade: ## Upgrade all dependencies to their latest versions
 	@echo "🚀 Upgrading all dependencies"
 	@uv lock --upgrade
 
-test: ## Run all unit tests
-	@echo "🚀 Running unit tests"
-	@uv run pytest -v
-
-test-single: ## Run a single test file (usage: make test-single TEST=test_config.py)
-	@echo "🚀 Running single test: $(TEST)"
-	@uv run pytest -v tests/$(TEST)
+test: ## Run all unit tests or a specific test with ARGS (usage: make test ARGS="tests/test_file.py::TestClass::test_method -v -s")
+	@echo "🚀 Running tests"
+	@if [ -n "$(ARGS)" ]; then \
+		uv run pytest $(ARGS); \
+	else \
+		uv run pytest -v; \
+	fi
 
 run: ## Run the application
 	@echo "🚀 Testing code: Running $(PROJECTNAME)"
