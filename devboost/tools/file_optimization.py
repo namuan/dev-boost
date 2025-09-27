@@ -2389,21 +2389,43 @@ class PDFOptimizationEngine:
                         estimated_pages = min(int(elapsed / 1.5), total_pages)  # ~1.5 sec per page
                         pages_processed = max(pages_processed, estimated_pages)
 
-                    # Update progress
+                    # Update progress with enhanced stage indicators
                     remaining_pages = total_pages - pages_processed
                     estimated_remaining = remaining_pages * 1.5  # Estimate 1.5 seconds per remaining page
 
-                    stage = "Compressing and optimizing"
-                    if pages_processed == 0:
-                        stage = "Analyzing PDF structure"
-                    elif pages_processed >= total_pages * 0.8:
+                    # Determine compression stage based on progress
+                    progress_pct = (pages_processed / total_pages) * 100 if total_pages > 0 else 0
+
+                    if progress_pct == 0:
+                        stage = "Initializing PDF compression"
+                        compression_stage = "Analyzing PDF structure and metadata"
+                    elif progress_pct < 10:
+                        stage = "Starting PDF processing"
+                        compression_stage = "Reading PDF pages and resources"
+                    elif progress_pct < 25:
+                        stage = "Processing PDF content"
+                        compression_stage = "Compressing images and fonts"
+                    elif progress_pct < 50:
+                        stage = "Optimizing PDF structure"
+                        compression_stage = "Removing redundant objects"
+                    elif progress_pct < 75:
+                        stage = "Compressing PDF pages"
+                        compression_stage = "Applying compression algorithms"
+                    elif progress_pct < 90:
                         stage = "Finalizing compression"
+                        compression_stage = "Optimizing cross-reference table"
+                    elif progress_pct < 100:
+                        stage = "Completing PDF optimization"
+                        compression_stage = "Writing final PDF structure"
+                    else:
+                        stage = "PDF compression completed"
+                        compression_stage = "Optimization finished successfully"
 
                     progress_callback({
-                        "pdf_stage": f"Processing PDF pages ({pages_processed}/{total_pages})",
+                        "pdf_stage": stage,
                         "pdf_pages_processed": pages_processed,
                         "pdf_total_pages": total_pages,
-                        "pdf_compression_stage": stage,
+                        "pdf_compression_stage": compression_stage,
                         "pdf_estimated_remaining": max(0.0, estimated_remaining),
                     })
 
@@ -2419,11 +2441,24 @@ class PDFOptimizationEngine:
                         remaining_pages = total_pages - pages_processed
                         estimated_remaining = remaining_pages * 1.5
 
+                        # Determine stage based on progress for fallback mode
+                        progress_pct = (pages_processed / total_pages) * 100 if total_pages > 0 else 0
+
+                        if progress_pct < 25:
+                            stage = "Processing PDF content"
+                            compression_stage = "Compressing images and fonts"
+                        elif progress_pct < 75:
+                            stage = "Compressing PDF pages"
+                            compression_stage = "Applying compression algorithms"
+                        else:
+                            stage = "Finalizing compression"
+                            compression_stage = "Optimizing PDF structure"
+
                         progress_callback({
-                            "pdf_stage": f"Processing PDF pages ({pages_processed}/{total_pages})",
+                            "pdf_stage": stage,
                             "pdf_pages_processed": pages_processed,
                             "pdf_total_pages": total_pages,
-                            "pdf_compression_stage": "Compressing and optimizing",
+                            "pdf_compression_stage": compression_stage,
                             "pdf_estimated_remaining": estimated_remaining,
                         })
 
@@ -2431,10 +2466,10 @@ class PDFOptimizationEngine:
 
             # Final update
             progress_callback({
-                "pdf_stage": "PDF compression completed",
+                "pdf_stage": "PDF compression completed successfully",
                 "pdf_pages_processed": total_pages,
                 "pdf_total_pages": total_pages,
-                "pdf_compression_stage": "Finalizing output",
+                "pdf_compression_stage": "Optimization finished successfully",
                 "pdf_estimated_remaining": 0.0,
             })
 
