@@ -2164,9 +2164,9 @@ class PDFOptimizationEngine:
 
             return result
 
-        except Exception as e:
+        except Exception:
             self.logger.exception("Failed to optimize PDF")
-            raise RuntimeError(f"PDF optimization failed: {e!s}") from e
+            raise RuntimeError("PDF optimization failed") from None
 
     def _optimize_with_ghostscript(
         self, input_path: Path, output_path: Path, settings: OptimizationSettings, progress_callback=None
@@ -2220,13 +2220,16 @@ class PDFOptimizationEngine:
 
             # Emit progress signal before starting process
             if progress_callback:
-                progress_callback({
-                    "pdf_stage": "Starting PDF compression",
-                    "pdf_pages_processed": 0,
-                    "pdf_total_pages": total_pages,
-                    "pdf_compression_stage": "Launching Ghostscript process",
-                    "pdf_estimated_remaining": 0.0,
-                })
+                try:
+                    progress_callback({
+                        "pdf_stage": "Starting PDF compression",
+                        "pdf_pages_processed": 0,
+                        "pdf_total_pages": total_pages,
+                        "pdf_compression_stage": "Launching Ghostscript process",
+                        "pdf_estimated_remaining": 0.0,
+                    })
+                except Exception:
+                    self.logger.exception("Error in PDF progress callback")
 
             # Use Popen for real-time progress tracking
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False)  # noqa: S603
@@ -2241,13 +2244,16 @@ class PDFOptimizationEngine:
             if process.returncode != 0:
                 # Emit error progress signal
                 if progress_callback:
-                    progress_callback({
-                        "pdf_stage": "PDF compression failed",
-                        "pdf_pages_processed": 0,
-                        "pdf_total_pages": total_pages,
-                        "pdf_compression_stage": f"Error: {stderr[:100]}...",
-                        "pdf_estimated_remaining": 0.0,
-                    })
+                    try:
+                        progress_callback({
+                            "pdf_stage": "PDF compression failed",
+                            "pdf_pages_processed": 0,
+                            "pdf_total_pages": total_pages,
+                            "pdf_compression_stage": f"Error: {stderr[:100]}...",
+                            "pdf_estimated_remaining": 0.0,
+                        })
+                    except Exception:
+                        self.logger.exception("Error in PDF progress callback")
 
                 self.logger.error("Ghostscript command failed with return code %d", process.returncode)
                 self.logger.error("Ghostscript stderr: %s", stderr)
@@ -2256,13 +2262,16 @@ class PDFOptimizationEngine:
 
             # Emit completion progress signal
             if progress_callback:
-                progress_callback({
-                    "pdf_stage": "PDF compression completed successfully",
-                    "pdf_pages_processed": total_pages,
-                    "pdf_total_pages": total_pages,
-                    "pdf_compression_stage": "Finalizing output file",
-                    "pdf_estimated_remaining": 0.0,
-                })
+                try:
+                    progress_callback({
+                        "pdf_stage": "PDF compression completed successfully",
+                        "pdf_pages_processed": total_pages,
+                        "pdf_total_pages": total_pages,
+                        "pdf_compression_stage": "Finalizing output file",
+                        "pdf_estimated_remaining": 0.0,
+                    })
+                except Exception:
+                    self.logger.exception("Error in PDF progress callback")
 
             self.logger.info("Ghostscript command completed successfully")
             if stdout:
@@ -2280,13 +2289,16 @@ class PDFOptimizationEngine:
         except subprocess.TimeoutExpired as e:
             # Emit timeout progress signal
             if progress_callback:
-                progress_callback({
-                    "pdf_stage": "PDF compression timed out",
-                    "pdf_pages_processed": 0,
-                    "pdf_total_pages": total_pages,
-                    "pdf_compression_stage": "Process exceeded 2 minute timeout",
-                    "pdf_estimated_remaining": 0.0,
-                })
+                try:
+                    progress_callback({
+                        "pdf_stage": "PDF compression timed out",
+                        "pdf_pages_processed": 0,
+                        "pdf_total_pages": total_pages,
+                        "pdf_compression_stage": "Process exceeded 2 minute timeout",
+                        "pdf_estimated_remaining": 0.0,
+                    })
+                except Exception:
+                    self.logger.exception("Error in PDF progress callback")
             raise RuntimeError("PDF optimization timed out (2 minutes)") from e
 
     def _track_pdf_progress(self, process, total_pages: int, progress_callback):
@@ -2302,179 +2314,237 @@ class PDFOptimizationEngine:
             pages_processed = 0
             start_time = time.time()
 
-            # Update initial progress
-            progress_callback({
-                "pdf_stage": "Initializing PDF compression",
-                "pdf_pages_processed": 0,
-                "pdf_total_pages": total_pages,
-                "pdf_compression_stage": "Starting Ghostscript",
-                "pdf_estimated_remaining": 0.0,
-            })
-
-            # Set up non-blocking reading from stdout and stderr
-            if hasattr(process.stdout, "fileno") and hasattr(process.stderr, "fileno"):
-                stdout_fd = process.stdout.fileno()
-                stderr_fd = process.stderr.fileno()
-
-                # Make file descriptors non-blocking
-                import fcntl
-
-                fcntl.fcntl(stdout_fd, fcntl.F_SETFL, os.O_NONBLOCK)
-                fcntl.fcntl(stderr_fd, fcntl.F_SETFL, os.O_NONBLOCK)
-
-                output_buffer = ""
-                error_buffer = ""
-
-                while process.poll() is None:
-                    # Use select to check for available data
-                    ready, _, _ = select.select([stdout_fd, stderr_fd], [], [], 0.1)
-
-                    for fd in ready:
-                        try:
-                            if fd == stdout_fd:
-                                data = os.read(fd, 1024).decode("utf-8", errors="ignore")
-                                output_buffer += data
-                            elif fd == stderr_fd:
-                                data = os.read(fd, 1024).decode("utf-8", errors="ignore")
-                                error_buffer += data
-                        except (OSError, BlockingIOError):
-                            # No data available right now
-                            continue
-
-                    # Parse output for progress indicators
-                    # Look for various Ghostscript progress patterns
-                    combined_output = output_buffer + error_buffer
-
-                    # Pattern 1: Page processing (most common)
-                    page_matches = re.findall(r"Page\s+(\d+)", combined_output, re.IGNORECASE)
-
-                    # Pattern 2: Processing page X of Y
-                    page_of_matches = re.findall(r"Processing page (\d+) of (\d+)", combined_output, re.IGNORECASE)
-
-                    # Pattern 3: Ghostscript verbose output patterns
-                    gs_page_matches = re.findall(r">>showpage, press <return> to continue<<", combined_output)
-
-                    # Pattern 4: PDF page count indicators
-                    pdf_page_matches = re.findall(r"%%Page:\s*(\d+)", combined_output)
-
-                    # Pattern 5: Compression progress indicators
-                    compression_matches = re.findall(r"Compressing page (\d+)", combined_output, re.IGNORECASE)
-
-                    # Determine pages processed from various patterns
-                    detected_pages = 0
-
-                    if page_matches:
-                        detected_pages = max(int(match) for match in page_matches)
-                    elif page_of_matches:
-                        # Use the first number (current page) from "Processing page X of Y"
-                        detected_pages = max(int(match[0]) for match in page_of_matches)
-                    elif pdf_page_matches:
-                        detected_pages = max(int(match) for match in pdf_page_matches)
-                    elif compression_matches:
-                        detected_pages = max(int(match) for match in compression_matches)
-                    elif gs_page_matches:
-                        # Each showpage indicates one page processed
-                        detected_pages = len(gs_page_matches)
-
-                    # Update pages processed if we detected progress
-                    if detected_pages > pages_processed:
-                        pages_processed = min(detected_pages, total_pages)
-                        self.logger.debug(
-                            "PDF progress: detected %d pages processed from Ghostscript output", detected_pages
-                        )
-
-                    # Also estimate based on time if no explicit page info
-                    elapsed = time.time() - start_time
-                    if pages_processed == 0 and elapsed > 2:  # After 2 seconds, start estimating
-                        estimated_pages = min(int(elapsed / 1.5), total_pages)  # ~1.5 sec per page
-                        pages_processed = max(pages_processed, estimated_pages)
-
-                    # Update progress with enhanced stage indicators
-                    remaining_pages = total_pages - pages_processed
-                    estimated_remaining = remaining_pages * 1.5  # Estimate 1.5 seconds per remaining page
-
-                    # Determine compression stage based on progress
-                    progress_pct = (pages_processed / total_pages) * 100 if total_pages > 0 else 0
-
-                    if progress_pct == 0:
-                        stage = "Initializing PDF compression"
-                        compression_stage = "Analyzing PDF structure and metadata"
-                    elif progress_pct < 10:
-                        stage = "Starting PDF processing"
-                        compression_stage = "Reading PDF pages and resources"
-                    elif progress_pct < 25:
-                        stage = "Processing PDF content"
-                        compression_stage = "Compressing images and fonts"
-                    elif progress_pct < 50:
-                        stage = "Optimizing PDF structure"
-                        compression_stage = "Removing redundant objects"
-                    elif progress_pct < 75:
-                        stage = "Compressing PDF pages"
-                        compression_stage = "Applying compression algorithms"
-                    elif progress_pct < 90:
-                        stage = "Finalizing compression"
-                        compression_stage = "Optimizing cross-reference table"
-                    elif progress_pct < 100:
-                        stage = "Completing PDF optimization"
-                        compression_stage = "Writing final PDF structure"
-                    else:
-                        stage = "PDF compression completed"
-                        compression_stage = "Optimization finished successfully"
-
+            try:
+                # Update initial progress
+                try:
                     progress_callback({
-                        "pdf_stage": stage,
-                        "pdf_pages_processed": pages_processed,
+                        "pdf_stage": "Initializing PDF compression",
+                        "pdf_pages_processed": 0,
                         "pdf_total_pages": total_pages,
-                        "pdf_compression_stage": compression_stage,
-                        "pdf_estimated_remaining": max(0.0, estimated_remaining),
+                        "pdf_compression_stage": "Starting Ghostscript",
+                        "pdf_estimated_remaining": 0.0,
                     })
+                except Exception:
+                    self.logger.exception("Error in PDF progress callback")
 
-                    time.sleep(0.2)  # Update every 200ms for more responsive feedback
-            else:
-                # Fallback to time-based estimation if we can't read output
-                while process.poll() is None:
-                    elapsed = time.time() - start_time
-                    estimated_pages = min(int(elapsed / 1.5), total_pages)
+                # Set up non-blocking reading from stdout and stderr
+                if hasattr(process.stdout, "fileno") and hasattr(process.stderr, "fileno"):
+                    stdout_fd = process.stdout.fileno()
+                    stderr_fd = process.stderr.fileno()
 
-                    if estimated_pages > pages_processed:
-                        pages_processed = estimated_pages
-                        remaining_pages = total_pages - pages_processed
-                        estimated_remaining = remaining_pages * 1.5
+                    # Make file descriptors non-blocking
+                    import fcntl
 
-                        # Determine stage based on progress for fallback mode
-                        progress_pct = (pages_processed / total_pages) * 100 if total_pages > 0 else 0
+                    fcntl.fcntl(stdout_fd, fcntl.F_SETFL, os.O_NONBLOCK)
+                    fcntl.fcntl(stderr_fd, fcntl.F_SETFL, os.O_NONBLOCK)
 
-                        if progress_pct < 25:
-                            stage = "Processing PDF content"
-                            compression_stage = "Compressing images and fonts"
-                        elif progress_pct < 75:
-                            stage = "Compressing PDF pages"
-                            compression_stage = "Applying compression algorithms"
-                        else:
-                            stage = "Finalizing compression"
-                            compression_stage = "Optimizing PDF structure"
+                    output_buffer = ""
+                    error_buffer = ""
 
-                        progress_callback({
-                            "pdf_stage": stage,
-                            "pdf_pages_processed": pages_processed,
-                            "pdf_total_pages": total_pages,
-                            "pdf_compression_stage": compression_stage,
-                            "pdf_estimated_remaining": estimated_remaining,
-                        })
+                    while process.poll() is None:
+                        try:
+                            # Use select to check for available data
+                            ready, _, _ = select.select([stdout_fd, stderr_fd], [], [], 0.1)
 
-                    time.sleep(0.5)
+                            for fd in ready:
+                                try:
+                                    if fd == stdout_fd:
+                                        data = os.read(fd, 1024).decode("utf-8", errors="ignore")
+                                        output_buffer += data
+                                    elif fd == stderr_fd:
+                                        data = os.read(fd, 1024).decode("utf-8", errors="ignore")
+                                        error_buffer += data
+                                except (OSError, BlockingIOError):
+                                    # No data available right now
+                                    continue
 
-            # Final update
-            progress_callback({
-                "pdf_stage": "PDF compression completed successfully",
-                "pdf_pages_processed": total_pages,
-                "pdf_total_pages": total_pages,
-                "pdf_compression_stage": "Optimization finished successfully",
-                "pdf_estimated_remaining": 0.0,
-            })
+                            # Parse output for progress indicators
+                            # Look for various Ghostscript progress patterns
+                            combined_output = output_buffer + error_buffer
 
-        # Start monitoring in a separate thread
-        monitor_thread = threading.Thread(target=monitor_output, daemon=True)
+                            # Pattern 1: Page processing (most common)
+                            page_matches = re.findall(r"Page\s+(\d+)", combined_output, re.IGNORECASE)
+
+                            # Pattern 2: Processing page X of Y
+                            page_of_matches = re.findall(
+                                r"Processing page (\d+) of (\d+)", combined_output, re.IGNORECASE
+                            )
+
+                            # Pattern 3: Ghostscript verbose output patterns
+                            gs_page_matches = re.findall(r">>showpage, press <return> to continue<<", combined_output)
+
+                            # Pattern 4: PDF page count indicators
+                            pdf_page_matches = re.findall(r"%%Page:\s*(\d+)", combined_output)
+
+                            # Pattern 5: Compression progress indicators
+                            compression_matches = re.findall(r"Compressing page (\d+)", combined_output, re.IGNORECASE)
+
+                            # Determine pages processed from various patterns
+                            detected_pages = 0
+
+                            if page_matches:
+                                detected_pages = max(int(match) for match in page_matches)
+                            elif page_of_matches:
+                                # Use the first number (current page) from "Processing page X of Y"
+                                detected_pages = max(int(match[0]) for match in page_of_matches)
+                            elif pdf_page_matches:
+                                detected_pages = max(int(match) for match in pdf_page_matches)
+                            elif compression_matches:
+                                detected_pages = max(int(match) for match in compression_matches)
+                            elif gs_page_matches:
+                                # Each showpage indicates one page processed
+                                detected_pages = len(gs_page_matches)
+
+                            # Update pages processed if we detected progress
+                            if detected_pages > pages_processed:
+                                pages_processed = min(detected_pages, total_pages)
+                                self.logger.debug(
+                                    "PDF progress: detected %d pages processed from Ghostscript output", detected_pages
+                                )
+
+                            # Also estimate based on time if no explicit page info
+                            elapsed = time.time() - start_time
+                            if pages_processed == 0 and elapsed > 2:  # After 2 seconds, start estimating
+                                estimated_pages = min(int(elapsed / 1.5), total_pages)  # ~1.5 sec per page
+                                pages_processed = max(pages_processed, estimated_pages)
+
+                            # Update progress with enhanced stage indicators
+                            remaining_pages = total_pages - pages_processed
+                            estimated_remaining = remaining_pages * 1.5  # Estimate 1.5 seconds per remaining page
+
+                            # Determine compression stage based on progress
+                            progress_pct = (pages_processed / total_pages) * 100 if total_pages > 0 else 0
+
+                            if progress_pct == 0:
+                                stage = "Initializing PDF compression"
+                                compression_stage = "Analyzing PDF structure and metadata"
+                            elif progress_pct < 10:
+                                stage = "Starting PDF processing"
+                                compression_stage = "Reading PDF pages and resources"
+                            elif progress_pct < 25:
+                                stage = "Processing PDF content"
+                                compression_stage = "Compressing images and fonts"
+                            elif progress_pct < 50:
+                                stage = "Optimizing PDF structure"
+                                compression_stage = "Removing redundant objects"
+                            elif progress_pct < 75:
+                                stage = "Compressing PDF pages"
+                                compression_stage = "Applying compression algorithms"
+                            elif progress_pct < 90:
+                                stage = "Finalizing compression"
+                                compression_stage = "Optimizing cross-reference table"
+                            elif progress_pct < 100:
+                                stage = "Completing PDF optimization"
+                                compression_stage = "Writing final PDF structure"
+                            else:
+                                stage = "PDF compression completed"
+                                compression_stage = "Optimization finished successfully"
+
+                            try:
+                                progress_callback({
+                                    "pdf_stage": stage,
+                                    "pdf_pages_processed": pages_processed,
+                                    "pdf_total_pages": total_pages,
+                                    "pdf_compression_stage": compression_stage,
+                                    "pdf_estimated_remaining": max(0.0, estimated_remaining),
+                                })
+                            except Exception:
+                                self.logger.exception("Error in PDF progress callback")
+
+                            time.sleep(0.2)  # Update every 200ms for more responsive feedback
+
+                        except OSError as e:
+                            self.logger.warning("Error during progress monitoring: %s", e)
+                            # Fall back to time-based estimation
+                            break
+
+                else:
+                    # Fallback to time-based estimation if we can't read output
+                    while process.poll() is None:
+                        try:
+                            elapsed = time.time() - start_time
+                            estimated_pages = min(int(elapsed / 1.5), total_pages)
+
+                            if estimated_pages > pages_processed:
+                                pages_processed = estimated_pages
+                                remaining_pages = total_pages - pages_processed
+                                estimated_remaining = remaining_pages * 1.5
+
+                                # Determine stage based on progress for fallback mode
+                                progress_pct = (pages_processed / total_pages) * 100 if total_pages > 0 else 0
+
+                                if progress_pct < 25:
+                                    stage = "Processing PDF content"
+                                    compression_stage = "Compressing images and fonts"
+                                elif progress_pct < 75:
+                                    stage = "Compressing PDF pages"
+                                    compression_stage = "Applying compression algorithms"
+                                else:
+                                    stage = "Finalizing compression"
+                                    compression_stage = "Optimizing PDF structure"
+
+                                try:
+                                    progress_callback({
+                                        "pdf_stage": stage,
+                                        "pdf_pages_processed": pages_processed,
+                                        "pdf_total_pages": total_pages,
+                                        "pdf_compression_stage": compression_stage,
+                                        "pdf_estimated_remaining": estimated_remaining,
+                                    })
+                                except Exception:
+                                    self.logger.exception("Error in PDF progress callback")
+
+                            time.sleep(0.5)
+
+                        except Exception as e:
+                            self.logger.warning("Error in fallback progress tracking: %s", e)
+                            break
+
+                # Final update
+                try:
+                    progress_callback({
+                        "pdf_stage": "PDF compression completed successfully",
+                        "pdf_pages_processed": total_pages,
+                        "pdf_total_pages": total_pages,
+                        "pdf_compression_stage": "Optimization finished successfully",
+                        "pdf_estimated_remaining": 0.0,
+                    })
+                except Exception as e:
+                    self.logger.warning("Error sending final progress update: %s", e)
+
+            except Exception:
+                self.logger.exception("Critical error in PDF progress tracking")
+                # Send error progress update
+            try:
+                progress_callback({
+                    "pdf_stage": "Progress tracking error",
+                    "pdf_pages_processed": pages_processed,
+                    "pdf_total_pages": total_pages,
+                    "pdf_compression_stage": "Error occurred",
+                    "pdf_estimated_remaining": 0.0,
+                })
+            except Exception:
+                # If even the error callback fails, just log it
+                self.logger.exception("Failed to send error progress update")
+
+        # Start monitoring in a separate thread with error handling
+        try:
+            monitor_thread = threading.Thread(target=monitor_output, daemon=True)
+            monitor_thread.start()
+        except Exception:
+            self.logger.exception("Failed to start progress monitoring thread")
+            # Send a basic progress update indicating monitoring failed
+            try:
+                progress_callback({
+                    "pdf_stage": "Progress monitoring unavailable",
+                    "pdf_pages_processed": 0,
+                    "pdf_total_pages": total_pages,
+                    "pdf_compression_stage": "Processing without progress updates",
+                    "pdf_estimated_remaining": 0.0,
+                })
+            except Exception:
+                self.logger.exception("Failed to send fallback progress update")
+
         monitor_thread.start()
 
     def get_pdf_info(self, pdf_path: Path) -> dict[str, Any]:
