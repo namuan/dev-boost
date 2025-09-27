@@ -2178,6 +2178,16 @@ class PDFOptimizationEngine:
         pdf_info = self.get_pdf_info(input_path)
         total_pages = pdf_info.get("pages", 0)
 
+        # Emit initial progress signal
+        if progress_callback:
+            progress_callback({
+                "pdf_stage": "Initializing PDF compression",
+                "pdf_pages_processed": 0,
+                "pdf_total_pages": total_pages,
+                "pdf_compression_stage": "Preparing Ghostscript command",
+                "pdf_estimated_remaining": 0.0,
+            })
+
         # Build ghostscript command
         cmd = [self._gs_command]
 
@@ -2208,6 +2218,16 @@ class PDFOptimizationEngine:
             self.logger.info("Executing Ghostscript command: %s", cmd_str)
             self.logger.debug("Running ghostscript command: %s", cmd_str)
 
+            # Emit progress signal before starting process
+            if progress_callback:
+                progress_callback({
+                    "pdf_stage": "Starting PDF compression",
+                    "pdf_pages_processed": 0,
+                    "pdf_total_pages": total_pages,
+                    "pdf_compression_stage": "Launching Ghostscript process",
+                    "pdf_estimated_remaining": 0.0,
+                })
+
             # Use Popen for real-time progress tracking
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False)  # noqa: S603
 
@@ -2219,10 +2239,30 @@ class PDFOptimizationEngine:
             stdout, stderr = process.communicate(timeout=120)
 
             if process.returncode != 0:
+                # Emit error progress signal
+                if progress_callback:
+                    progress_callback({
+                        "pdf_stage": "PDF compression failed",
+                        "pdf_pages_processed": 0,
+                        "pdf_total_pages": total_pages,
+                        "pdf_compression_stage": f"Error: {stderr[:100]}...",
+                        "pdf_estimated_remaining": 0.0,
+                    })
+
                 self.logger.error("Ghostscript command failed with return code %d", process.returncode)
                 self.logger.error("Ghostscript stderr: %s", stderr)
                 self.logger.error("Ghostscript stdout: %s", stdout)
                 raise RuntimeError(f"Ghostscript failed: {stderr}")
+
+            # Emit completion progress signal
+            if progress_callback:
+                progress_callback({
+                    "pdf_stage": "PDF compression completed successfully",
+                    "pdf_pages_processed": total_pages,
+                    "pdf_total_pages": total_pages,
+                    "pdf_compression_stage": "Finalizing output file",
+                    "pdf_estimated_remaining": 0.0,
+                })
 
             self.logger.info("Ghostscript command completed successfully")
             if stdout:
@@ -2238,6 +2278,15 @@ class PDFOptimizationEngine:
             }
 
         except subprocess.TimeoutExpired as e:
+            # Emit timeout progress signal
+            if progress_callback:
+                progress_callback({
+                    "pdf_stage": "PDF compression timed out",
+                    "pdf_pages_processed": 0,
+                    "pdf_total_pages": total_pages,
+                    "pdf_compression_stage": "Process exceeded 2 minute timeout",
+                    "pdf_estimated_remaining": 0.0,
+                })
             raise RuntimeError("PDF optimization timed out (2 minutes)") from e
 
     def _track_pdf_progress(self, process, total_pages: int, progress_callback):
