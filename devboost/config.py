@@ -92,6 +92,9 @@ class ConfigManager:
                 "tools_list": [],
             },
             "scratch_pad": {"auto_save": True, "font_size": 12},
+            "file_optimization": {
+                "ghostscript_path": "",  # Empty string means auto-detect
+            },
             "global": {"theme": "default", "last_used_tool": ""},
         }
 

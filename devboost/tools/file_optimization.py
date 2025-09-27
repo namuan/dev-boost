@@ -10,8 +10,10 @@ import json
 import logging
 import mimetypes
 import os
+import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.parse
@@ -40,6 +42,7 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QProgressBar,
@@ -57,6 +60,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from devboost.config import get_config
 from devboost.styles import COLORS, get_status_style, get_tool_style
 
 logger = logging.getLogger(__name__)
@@ -700,11 +704,7 @@ class OptimizationManager(QObject):
             )
 
         try:
-            # Create backup if requested
-            if settings.create_backup and input_path == output_path:
-                backup_path = input_path.with_suffix(f"{input_path.suffix}.backup")
-                shutil.copy2(input_path, backup_path)
-                self.logger.info("Created backup: %s", backup_path)
+            # No backup creation - always create new compressed file
 
             # Choose appropriate engine and optimize
             result = None
@@ -798,8 +798,11 @@ class OptimizationManager(QObject):
                 if self._cancel_requested:
                     break
 
-                # Determine output path
-                output_path = output_dir / file_path.name if output_dir else file_path
+                # Determine output path - always create new file with -compressed suffix
+                if output_dir:
+                    output_path = output_dir / f"{file_path.stem}-compressed{file_path.suffix}"
+                else:
+                    output_path = file_path.parent / f"{file_path.stem}-compressed{file_path.suffix}"
 
                 # Submit optimization task
                 future = self._thread_pool.submit(
@@ -1788,6 +1791,52 @@ class PDFOptimizationEngine:
         self.logger = logging.getLogger(__name__)
         self._available_tools = self._detect_available_tools()
 
+    def set_ghostscript_path(self, path: str) -> bool:
+        """
+        Set a custom Ghostscript path and save it to user configuration.
+
+        Args:
+            path: Path to the Ghostscript executable
+
+        Returns:
+            bool: True if the path is valid and working, False otherwise
+        """
+        from devboost.config import set_config
+
+        if not path.strip():
+            # Clear the custom path
+            set_config("file_optimization.ghostscript_path", "")
+            self.logger.info("Cleared custom Ghostscript path, will use auto-detection")
+            # Re-detect available tools
+            self._available_tools = self._detect_available_tools()
+            return True
+
+        # Test if the provided path works
+        try:
+            resolved = self._resolve_executable(path)
+            if resolved and self._verify_ghostscript(resolved):
+                # Save to configuration
+                set_config("file_optimization.ghostscript_path", path)
+                self.logger.info("Set custom Ghostscript path: %s", path)
+                # Re-detect available tools to update status
+                self._available_tools = self._detect_available_tools()
+                return True
+            self.logger.error("Invalid Ghostscript path: %s", path)
+            return False
+        except Exception:
+            self.logger.exception("Error setting Ghostscript path '%s'", path)
+            return False
+
+    def get_ghostscript_path(self) -> str:
+        """
+        Get the currently configured Ghostscript path.
+
+        Returns:
+            str: The configured path, or empty string if using auto-detection
+        """
+        path = get_config("file_optimization.ghostscript_path", "")
+        return path if path is not None else ""
+
     def _detect_available_tools(self) -> dict[str, bool]:
         """Detect which PDF optimization tools are available on the system."""
         tools = {
@@ -1798,31 +1847,167 @@ class PDFOptimizationEngine:
         return tools
 
     def _check_ghostscript_available(self) -> bool:
-        """Check if ghostscript is available."""
-        # Try common ghostscript command names and paths
-        gs_commands = ["gs", "ghostscript", "/usr/bin/gs", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]
+        """Check if ghostscript is available, preferring user-configured path and explicit Homebrew path."""
+        # First check if user has configured a custom Ghostscript path
+        if self._check_custom_ghostscript_path():
+            return True
 
-        for cmd in gs_commands:
-            try:
-                # Use 'command -v' to avoid shell aliases
-                result = subprocess.run(  # noqa: S603
-                    ["sh", "-c", f"command -v {cmd}"],  # noqa: S607
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
+        # Compatibility: quick PATH-based check
+        if self._check_ghostscript_in_path():
+            return True
+
+        # Check environment variables and common paths
+        return self._check_ghostscript_candidates()
+
+    def _check_custom_ghostscript_path(self) -> bool:
+        """Check user-configured custom Ghostscript path."""
+        custom_gs_path_raw = get_config("file_optimization.ghostscript_path", "")
+        custom_gs_path = custom_gs_path_raw.strip() if custom_gs_path_raw else ""
+
+        if not custom_gs_path:
+            return False
+
+        try:
+            resolved = self._resolve_executable(custom_gs_path)
+            if resolved and self._verify_ghostscript(resolved):
+                self._gs_command = resolved
+                self.logger.info(
+                    "Using user-configured Ghostscript: command=%s version=%s", self._gs_command, self._gs_version
                 )
-                if result.returncode == 0:
-                    # Test if it's actually ghostscript by running version command
-                    version_result = subprocess.run(  # noqa: S603
-                        [cmd, "--version"], capture_output=True, text=True, timeout=5
-                    )
-                    if version_result.returncode == 0:
-                        self._gs_command = cmd
-                        return True
-            except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
-                continue
+                return True
+            self.logger.warning("User-configured Ghostscript path is invalid or not working: %s", custom_gs_path)
+        except Exception as e:
+            self.logger.warning("Error checking user-configured Ghostscript path '%s': %s", custom_gs_path, e)
 
         return False
+
+    def _check_ghostscript_in_path(self) -> bool:
+        """Check for Ghostscript using PATH-based lookup."""
+        try:
+            cmd_check = subprocess.run(  # noqa: S602
+                "command -v gs",  # noqa: S607
+                capture_output=True,
+                text=True,
+                timeout=5,
+                shell=True,
+            )
+            if cmd_check.returncode == 0:
+                return self._verify_gs_command()
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            self.logger.debug("PATH-based gs check failed: %s", e)
+
+        return False
+
+    def _verify_gs_command(self) -> bool:
+        """Verify the 'gs' command works and get version."""
+        try:
+            version_proc = subprocess.run(  # noqa: S603
+                ["gs", "--version"],  # noqa: S607
+                capture_output=True,
+                text=True,
+                timeout=5,
+                shell=False,
+            )
+            if version_proc.returncode == 0:
+                stdout_text = version_proc.stdout.strip() if version_proc.stdout else ""
+                stderr_text = version_proc.stderr.strip() if version_proc.stderr else ""
+                version_text = stdout_text if stdout_text else stderr_text
+                self._gs_command = "gs"
+                self._gs_version = version_text if version_text else None
+                self.logger.info(
+                    "Ghostscript detected via PATH: command=%s version=%s", self._gs_command, self._gs_version
+                )
+                return True
+            self.logger.debug("gs --version returned non-zero: %s", version_proc.returncode)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+            self.logger.debug("Ghostscript version check failed: %s", e)
+
+        return False
+
+    def _check_ghostscript_candidates(self) -> bool:
+        """Check environment variables and common installation paths."""
+        # Allow explicit override via environment variables
+        env_override = os.environ.get("DEVBOOST_GS") or os.environ.get("GHOSTSCRIPT_PATH")
+
+        candidates: list[str] = []
+        if env_override:
+            candidates.append(env_override)
+
+        # Prefer Homebrew on Apple Silicon first, then common absolute paths, then names resolved via PATH
+        candidates.extend([
+            "/opt/homebrew/bin/gs",
+            "/usr/local/bin/gs",
+            "/usr/bin/gs",
+            "/opt/local/bin/gs",
+            "gs",
+            "ghostscript",
+        ])
+
+        checked: list[str] = []
+        for cand in candidates:
+            try:
+                resolved = self._resolve_executable(cand)
+                checked.append(cand if resolved is None else resolved)
+                if not resolved:
+                    self.logger.debug("Ghostscript candidate not found or not executable: %s", cand)
+                    continue
+
+                if self._verify_ghostscript(resolved):
+                    self._gs_command = resolved
+                    self.logger.info("Ghostscript detected: command=%s version=%s", self._gs_command, self._gs_version)
+                    return True
+
+            except (subprocess.TimeoutExpired, FileNotFoundError, PermissionError) as e:
+                self.logger.debug("Error probing ghostscript candidate '%s': %s", cand, e)
+                continue
+
+        self.logger.warning("Ghostscript not found. Checked candidates: %s", checked)
+        return False
+
+    def _resolve_executable(self, path_like: str) -> str | None:
+        """Resolve executable path, handling both absolute paths and PATH lookups."""
+        # If it looks like a path, verify it; otherwise resolve via PATH using shutil.which
+        if os.path.sep in path_like:
+            p = Path(path_like)
+            if p.is_file() and os.access(str(p), os.X_OK):
+                return str(p.resolve())
+            return None
+        resolved = shutil.which(path_like)
+        return str(Path(resolved).resolve()) if resolved else None
+
+    def _verify_ghostscript(self, executable_path: str) -> bool:
+        """Verify that the given executable is a working Ghostscript installation."""
+        try:
+            # Verify by checking version/help output; avoid invoking shell aliases by passing list and shell=False
+            version_proc = subprocess.run(  # noqa: S603
+                [executable_path, "--version"], capture_output=True, text=True, timeout=5, shell=False
+            )
+            help_proc = subprocess.run([executable_path, "-h"], capture_output=True, text=True, timeout=5, shell=False)  # noqa: S603
+
+            if version_proc.returncode == 0 or help_proc.returncode == 0:
+                stdout_text = version_proc.stdout.strip() if version_proc.stdout else ""
+                stderr_text = version_proc.stderr.strip() if version_proc.stderr else ""
+                version_text = stdout_text if stdout_text else stderr_text
+                if self._looks_like_ghostscript(version_text, help_proc.stdout, help_proc.stderr):
+                    self._gs_version = version_text if version_text else None
+                    return True
+
+            self.logger.debug(
+                "Candidate failed ghostscript verification: %s (version_rc=%s help_rc=%s)",
+                executable_path,
+                version_proc.returncode,
+                help_proc.returncode,
+            )
+            return False
+        except (subprocess.TimeoutExpired, FileNotFoundError, PermissionError) as e:
+            self.logger.debug("Error verifying ghostscript candidate '%s': %s", executable_path, e)
+            return False
+
+    def _looks_like_ghostscript(self, version_out: str, help_out: str, help_err: str) -> bool:
+        """Check if the output looks like it's from Ghostscript."""
+        version_ok = bool(re.match(r"^\d+(?:\.\d+)+$", version_out.strip()))
+        mentions_gs = ("Ghostscript" in help_out) or ("Ghostscript" in help_err)
+        return version_ok or mentions_gs
 
     def get_supported_formats(self) -> dict[str, list[str]]:
         """Get supported PDF formats for optimization."""
@@ -1882,76 +2067,50 @@ class PDFOptimizationEngine:
         # Build ghostscript command
         cmd = [self._gs_command]
 
-        # Basic ghostscript options
+        # Minimal ghostscript options for reliable PDF compression
         cmd.extend([
             "-sDEVICE=pdfwrite",
             "-dCompatibilityLevel=1.4",
-            "-dPDFSETTINGS=/default",
             "-dNOPAUSE",
-            "-dQUIET",
             "-dBATCH",
         ])
 
-        # Quality settings based on preset
-        quality = settings.get_quality_for_type("pdf")
-
-        if quality >= 90:
-            # Maximum quality - use /prepress
-            cmd[cmd.index("-dPDFSETTINGS=/default")] = "-dPDFSETTINGS=/prepress"
-        elif quality >= 80:
-            # High quality - use /printer
-            cmd[cmd.index("-dPDFSETTINGS=/default")] = "-dPDFSETTINGS=/printer"
-        elif quality >= 60:
-            # Medium quality - use /ebook
-            cmd[cmd.index("-dPDFSETTINGS=/default")] = "-dPDFSETTINGS=/ebook"
-        else:
-            # Low quality - use /screen
-            cmd[cmd.index("-dPDFSETTINGS=/default")] = "-dPDFSETTINGS=/screen"
-
-        # Custom DPI if specified
-        if settings.pdf_dpi and settings.pdf_dpi > 0:
-            cmd.extend([
-                f"-dColorImageResolution={settings.pdf_dpi}",
-                f"-dGrayImageResolution={settings.pdf_dpi}",
-                f"-dMonoImageResolution={settings.pdf_dpi}",
-            ])
-
-        # Compression settings
-        cmd.extend([
-            "-dCompressFonts=true",
-            "-dSubsetFonts=true",
-            "-dCompressPages=true",
-            "-dUseFlateCompression=true",
-        ])
-
-        # Metadata preservation
-        if settings.preserve_metadata:
-            cmd.extend([
-                "-dPreserveAnnots=true",
-                "-dPreserveMarkedContent=true",
-            ])
-        else:
-            cmd.extend([
-                "-dPreserveAnnots=false",
-                "-dPreserveMarkedContent=false",
-            ])
+        # Add quality-based settings
+        if settings.quality_preset == QualityPreset.HIGH:
+            cmd.extend(["-dPDFSETTINGS=/prepress"])
+        elif settings.quality_preset == QualityPreset.MEDIUM:
+            cmd.extend(["-dPDFSETTINGS=/printer"])
+        elif settings.quality_preset == QualityPreset.LOW:
+            cmd.extend(["-dPDFSETTINGS=/ebook"])
+        elif settings.quality_preset == QualityPreset.MINIMUM:
+            cmd.extend(["-dPDFSETTINGS=/screen"])
 
         # Output file
         cmd.extend([f"-sOutputFile={output_path}", str(input_path)])
 
         try:
-            self.logger.debug("Running ghostscript command: %s", " ".join(cmd))
+            # Log the full command for debugging
+            cmd_str = " ".join(cmd)
+            self.logger.info("Executing Ghostscript command: %s", cmd_str)
+            self.logger.debug("Running ghostscript command: %s", cmd_str)
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, shell=False)  # noqa: S603
 
             if result.returncode != 0:
+                self.logger.error("Ghostscript command failed with return code %d", result.returncode)
+                self.logger.error("Ghostscript stderr: %s", result.stderr)
+                self.logger.error("Ghostscript stdout: %s", result.stdout)
                 raise RuntimeError(f"Ghostscript failed: {result.stderr}")
+
+            self.logger.info("Ghostscript command completed successfully")
+            if result.stdout:
+                self.logger.debug("Ghostscript stdout: %s", result.stdout)
 
             return {
                 "method": "ghostscript",
                 "success": True,
                 "format": ".pdf",
-                "quality_setting": quality,
+                "quality_setting": "minimal",
                 "dpi": settings.pdf_dpi,
                 "metadata_preserved": settings.preserve_metadata,
             }
@@ -1993,8 +2152,9 @@ class PDFOptimizationEngine:
 
             try:
                 info_result = subprocess.run(info_cmd, capture_output=True, text=True, timeout=15, shell=False)  # noqa: S603
-                if info_result.returncode == 0 and info_result.stdout.strip().isdigit():
-                    info["pages"] = int(info_result.stdout.strip())
+                stdout_text = info_result.stdout.strip() if info_result.stdout else ""
+                if info_result.returncode == 0 and stdout_text.isdigit():
+                    info["pages"] = int(stdout_text)
             except (subprocess.TimeoutExpired, ValueError):
                 pass
 
@@ -2009,6 +2169,7 @@ class PDFOptimizationEngine:
             "available_tools": self._available_tools,
             "supported_formats": self.get_supported_formats(),
             "ghostscript_command": getattr(self, "_gs_command", None),
+            "ghostscript_version": getattr(self, "_gs_version", None),
             "quality_presets": {
                 "maximum": "/prepress - Best quality for printing",
                 "high": "/printer - High quality for printing",
@@ -3648,6 +3809,73 @@ class FileOptimizationWidget(QWidget):
 
         layout.addWidget(self.pdf_dpi_spin, 1, 1)
 
+        # Ghostscript path configuration
+        layout.addWidget(QLabel("Ghostscript Path:"), 2, 0)
+
+        ghostscript_layout = QHBoxLayout()
+
+        self.ghostscript_path_edit = QLineEdit()
+        self.ghostscript_path_edit.setPlaceholderText("Auto-detect (leave empty for default)")
+        self.ghostscript_path_edit.setText(self.pdf_engine.get_ghostscript_path())
+        self.ghostscript_path_edit.textChanged.connect(self._on_ghostscript_path_changed)
+        self.ghostscript_path_edit.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {COLORS["bg_secondary"]};
+                border: 1px solid {COLORS["border_secondary"]};
+                border-radius: 4px;
+                padding: 4px;
+                color: {COLORS["text_primary"]};
+            }}
+            QLineEdit:focus {{
+                border-color: {COLORS["info"]};
+            }}
+        """)
+
+        self.ghostscript_browse_btn = QPushButton("Browse...")
+        self.ghostscript_browse_btn.clicked.connect(self._browse_ghostscript_path)
+        self.ghostscript_browse_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS["btn_bg"]};
+                border: 1px solid {COLORS["border_primary"]};
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS["btn_hover"]};
+            }}
+        """)
+
+        self.ghostscript_test_btn = QPushButton("Test")
+        self.ghostscript_test_btn.clicked.connect(self._test_ghostscript_path)
+        self.ghostscript_test_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS["btn_bg"]};
+                border: 1px solid {COLORS["border_primary"]};
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS["btn_hover"]};
+            }}
+        """)
+
+        ghostscript_layout.addWidget(self.ghostscript_path_edit, 1)
+        ghostscript_layout.addWidget(self.ghostscript_browse_btn)
+        ghostscript_layout.addWidget(self.ghostscript_test_btn)
+
+        layout.addLayout(ghostscript_layout, 2, 1)
+
+        # Ghostscript status label
+        self.ghostscript_status_label = QLabel()
+        self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        self.ghostscript_status_label.setWordWrap(True)
+        layout.addWidget(self.ghostscript_status_label, 3, 0, 1, 2)
+
+        # Update status initially
+        self._update_ghostscript_status()
+
         return group
 
     def _create_resize_group(self) -> QGroupBox:
@@ -3918,32 +4146,6 @@ class FileOptimizationWidget(QWidget):
 
         layout = QVBoxLayout(group)
         layout.setSpacing(8)
-
-        # Create backup checkbox
-        self.create_backup_checkbox = QCheckBox("Create backup of original files")
-        self.create_backup_checkbox.setChecked(True)
-        self.create_backup_checkbox.stateChanged.connect(self._on_settings_changed)
-        self.create_backup_checkbox.setStyleSheet(f"""
-            QCheckBox {{
-                color: {COLORS["text_primary"]};
-            }}
-            QCheckBox::indicator {{
-                width: 16px;
-                height: 16px;
-            }}
-            QCheckBox::indicator:unchecked {{
-                border: 1px solid {COLORS["border_secondary"]};
-                background-color: {COLORS["bg_secondary"]};
-                border-radius: 3px;
-            }}
-            QCheckBox::indicator:checked {{
-                border: 1px solid {COLORS["info"]};
-                background-color: {COLORS["info"]};
-                border-radius: 3px;
-            }}
-        """)
-
-        layout.addWidget(self.create_backup_checkbox)
 
         # Preserve metadata checkbox
         self.preserve_metadata_checkbox = QCheckBox("Preserve file metadata")
@@ -4353,6 +4555,63 @@ class FileOptimizationWidget(QWidget):
             settings.quality_preset = quality_presets[value]
             self.settings_manager.set_current_settings(settings)
 
+    def _on_ghostscript_path_changed(self):
+        """Handle Ghostscript path changes."""
+        path = self.ghostscript_path_edit.text().strip()
+        self.pdf_engine.set_ghostscript_path(path)
+        self._update_ghostscript_status()
+
+    def _browse_ghostscript_path(self):
+        """Browse for Ghostscript executable."""
+        from PyQt6.QtWidgets import QFileDialog
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Ghostscript Executable",
+            "",
+            "Executable files (*)" if sys.platform != "win32" else "Executable files (*.exe)",
+        )
+
+        if file_path:
+            self.ghostscript_path_edit.setText(file_path)
+
+    def _test_ghostscript_path(self):
+        """Test the current Ghostscript path."""
+        try:
+            # Force re-check of Ghostscript availability
+            self.pdf_engine._gs_command = None
+            self.pdf_engine._gs_version = None
+            available = self.pdf_engine._check_ghostscript_available()
+
+            if available:
+                self.ghostscript_status_label.setText("✓ Ghostscript is working correctly")
+                self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['success']}; font-size: 11px;")
+            else:
+                self.ghostscript_status_label.setText("✗ Ghostscript not found or not working")
+                self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['error']}; font-size: 11px;")
+
+        except Exception as e:
+            self.ghostscript_status_label.setText(f"✗ Error testing Ghostscript: {e!s}")
+            self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['error']}; font-size: 11px;")
+
+    def _update_ghostscript_status(self):
+        """Update the Ghostscript status display."""
+        try:
+            # Check if Ghostscript is available
+            available = self.pdf_engine._check_ghostscript_available()
+
+            if available:
+                gs_path = getattr(self.pdf_engine, "_gs_command", None) or "gs (system path)"
+                self.ghostscript_status_label.setText(f"✓ Using: {gs_path}")
+                self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['success']}; font-size: 11px;")
+            else:
+                self.ghostscript_status_label.setText("⚠ Ghostscript not found - PDF optimization unavailable")
+                self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['warning']}; font-size: 11px;")
+
+        except Exception as e:
+            self.ghostscript_status_label.setText(f"⚠ Error checking Ghostscript: {e!s}")
+            self.ghostscript_status_label.setStyleSheet(f"color: {COLORS['warning']}; font-size: 11px;")
+
             # Reset custom quality when preset changes
             self.custom_quality_spin.setValue(0)
 
@@ -4367,7 +4626,7 @@ class FileOptimizationWidget(QWidget):
         settings = self.settings_manager.get_current_settings()
 
         # Update settings from UI controls
-        settings.create_backup = self.create_backup_checkbox.isChecked()
+        settings.create_backup = False  # Always disabled - create new compressed files
         settings.preserve_metadata = self.preserve_metadata_checkbox.isChecked()
         settings.progressive_jpeg = self.progressive_checkbox.isChecked()
 
@@ -4423,7 +4682,7 @@ class FileOptimizationWidget(QWidget):
         self.custom_quality_spin.setValue(settings.image_quality or 0)
 
         # Checkboxes
-        self.create_backup_checkbox.setChecked(settings.create_backup)
+        # create_backup_checkbox removed - always create new compressed files
         self.preserve_metadata_checkbox.setChecked(settings.preserve_metadata)
         self.progressive_checkbox.setChecked(settings.progressive_jpeg)
 
