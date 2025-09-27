@@ -5206,7 +5206,7 @@ class FileOptimizationWidget(QWidget):
 
     # Signal handlers for OptimizationManager
     def _on_batch_progress_updated(self, progress: BatchProgress):
-        """Handle batch progress updates with enhanced display."""
+        """Handle batch progress updates with enhanced display and PDF-specific information."""
         # Store the current batch progress for use in results dialog
         self.batch_progress = progress
 
@@ -5217,28 +5217,66 @@ class FileOptimizationWidget(QWidget):
         # Get detailed status information
         status_info = progress.get_detailed_status()
 
-        # Update main status message
+        # Update main status message with PDF-specific information
         current_file_name = status_info["current_file"]
         operation = status_info["operation"]
-        status_msg = f"{operation}: {current_file_name} ({status_info['progress']})"
+
+        # Check if we have PDF-specific progress information
+        if hasattr(progress, "get_pdf_status_message") and progress.pdf_stage:
+            pdf_status = progress.get_pdf_status_message()
+            status_msg = f"{operation}: {current_file_name} - {pdf_status}"
+        else:
+            status_msg = f"{operation}: {current_file_name} ({status_info['progress']})"
+
         self.update_status(status_msg, "info")
 
-        # Update progress info label
-        progress_text = f"⏱️ {status_info['elapsed']} | 🔮 {status_info['remaining']} | 📊 {status_info['compression']}"
+        # Update progress info label with PDF-specific details
+        if hasattr(progress, "get_pdf_progress_details") and progress.pdf_stage:
+            pdf_details = progress.get_pdf_progress_details()
+            progress_text = (
+                f"⏱️ {status_info['elapsed']} | 🔮 {status_info['remaining']} | "
+                f"📊 {status_info['compression']} | 📄 {pdf_details['stage_description']}"
+            )
+
+            # Add page progress if available
+            if pdf_details["page_progress"]:
+                progress_text += f" | 📖 {pdf_details['page_progress']}"
+        else:
+            progress_text = (
+                f"⏱️ {status_info['elapsed']} | 🔮 {status_info['remaining']} | 📊 {status_info['compression']}"
+            )
+
         self.progress_info_label.setText(progress_text)
         self.progress_info_label.setVisible(True)
 
-        # Update detailed stats
+        # Update detailed stats with PDF compression stage if available
         stats_text = (
             f"✅ {status_info['success_rate']} | "
             f"⚡ {status_info['speed']} | "
             f"💾 {status_info['data_processed']} | "
             f"🚀 {status_info['data_speed']}"
         )
+
+        # Add PDF compression stage indicator
+        if hasattr(progress, "pdf_compression_stage") and progress.pdf_compression_stage:
+            stats_text += f" | 🔧 {progress.pdf_compression_stage}"
+
         self.stats_label.setText(stats_text)
         self.stats_label.setVisible(True)
 
-        logger.info("Progress: %s - %s", status_info["progress"], status_info["compression"])
+        # Log PDF-specific progress if available
+        if hasattr(progress, "pdf_stage") and progress.pdf_stage:
+            logger.info(
+                "PDF Progress: %s - %s | Stage: %s | Compression: %s | Pages: %d/%d",
+                status_info["progress"],
+                progress.pdf_stage,
+                progress.pdf_compression_stage or "N/A",
+                status_info["compression"],
+                progress.pdf_pages_processed or 0,
+                progress.pdf_total_pages or 0,
+            )
+        else:
+            logger.info("Progress: %s - %s", status_info["progress"], status_info["compression"])
 
     def _on_file_started(self, file_path: Path):
         """Handle file processing start."""
