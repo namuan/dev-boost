@@ -2231,12 +2231,46 @@ class PDFOptimizationEngine:
                             continue
 
                     # Parse output for progress indicators
-                    # Look for page processing patterns in Ghostscript output
-                    page_matches = re.findall(r"Page\s+(\d+)", output_buffer + error_buffer, re.IGNORECASE)
+                    # Look for various Ghostscript progress patterns
+                    combined_output = output_buffer + error_buffer
+
+                    # Pattern 1: Page processing (most common)
+                    page_matches = re.findall(r"Page\s+(\d+)", combined_output, re.IGNORECASE)
+
+                    # Pattern 2: Processing page X of Y
+                    page_of_matches = re.findall(r"Processing page (\d+) of (\d+)", combined_output, re.IGNORECASE)
+
+                    # Pattern 3: Ghostscript verbose output patterns
+                    gs_page_matches = re.findall(r">>showpage, press <return> to continue<<", combined_output)
+
+                    # Pattern 4: PDF page count indicators
+                    pdf_page_matches = re.findall(r"%%Page:\s*(\d+)", combined_output)
+
+                    # Pattern 5: Compression progress indicators
+                    compression_matches = re.findall(r"Compressing page (\d+)", combined_output, re.IGNORECASE)
+
+                    # Determine pages processed from various patterns
+                    detected_pages = 0
+
                     if page_matches:
-                        latest_page = max(int(match) for match in page_matches)
-                        if latest_page > pages_processed:
-                            pages_processed = min(latest_page, total_pages)
+                        detected_pages = max(int(match) for match in page_matches)
+                    elif page_of_matches:
+                        # Use the first number (current page) from "Processing page X of Y"
+                        detected_pages = max(int(match[0]) for match in page_of_matches)
+                    elif pdf_page_matches:
+                        detected_pages = max(int(match) for match in pdf_page_matches)
+                    elif compression_matches:
+                        detected_pages = max(int(match) for match in compression_matches)
+                    elif gs_page_matches:
+                        # Each showpage indicates one page processed
+                        detected_pages = len(gs_page_matches)
+
+                    # Update pages processed if we detected progress
+                    if detected_pages > pages_processed:
+                        pages_processed = min(detected_pages, total_pages)
+                        self.logger.debug(
+                            "PDF progress: detected %d pages processed from Ghostscript output", detected_pages
+                        )
 
                     # Also estimate based on time if no explicit page info
                     elapsed = time.time() - start_time
