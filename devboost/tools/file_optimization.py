@@ -211,13 +211,75 @@ class BatchProgress:
         if self.pdf_stage:
             status["pdf_stage"] = self.pdf_stage
         if self.pdf_total_pages > 0:
-            status["pdf_pages"] = f"{self.pdf_pages_processed}/{self.pdf_total_pages} pages"
+            pdf_progress_pct = (self.pdf_pages_processed / self.pdf_total_pages) * 100
+            status["pdf_pages"] = f"{self.pdf_pages_processed}/{self.pdf_total_pages} pages ({pdf_progress_pct:.1f}%)"
         if self.pdf_compression_stage:
             status["pdf_compression"] = self.pdf_compression_stage
         if self.pdf_estimated_remaining > 0:
             status["pdf_remaining"] = self.format_time(self.pdf_estimated_remaining)
 
         return status
+
+    def get_pdf_status_message(self) -> str:
+        """Get a comprehensive PDF-specific status message."""
+        if not self.pdf_stage:
+            return "No PDF processing active"
+
+        messages = []
+
+        # Main stage message
+        messages.append(self.pdf_stage)
+
+        # Page progress if available
+        if self.pdf_total_pages > 0:
+            pdf_progress_pct = (self.pdf_pages_processed / self.pdf_total_pages) * 100
+            messages.append(
+                f"Progress: {self.pdf_pages_processed}/{self.pdf_total_pages} pages ({pdf_progress_pct:.1f}%)"
+            )
+
+        # Compression stage details
+        if self.pdf_compression_stage:
+            messages.append(f"Stage: {self.pdf_compression_stage}")
+
+        # Time estimation
+        if self.pdf_estimated_remaining > 0:
+            remaining_str = self.format_time(self.pdf_estimated_remaining)
+            messages.append(f"Est. remaining: {remaining_str}")
+
+        return " | ".join(messages)
+
+    def get_pdf_progress_details(self) -> dict[str, any]:
+        """Get detailed PDF progress information for UI components."""
+        if not self.pdf_stage:
+            return {}
+
+        details = {
+            "stage": self.pdf_stage,
+            "compression_stage": self.pdf_compression_stage or "Processing",
+            "pages_processed": self.pdf_pages_processed,
+            "total_pages": self.pdf_total_pages,
+            "pages_progress_pct": (self.pdf_pages_processed / self.pdf_total_pages * 100)
+            if self.pdf_total_pages > 0
+            else 0,
+            "estimated_remaining_seconds": self.pdf_estimated_remaining,
+            "estimated_remaining_formatted": self.format_time(self.pdf_estimated_remaining)
+            if self.pdf_estimated_remaining > 0
+            else "Unknown",
+            "is_active": True,
+        }
+
+        # Add stage-specific information
+        if "Initializing" in self.pdf_stage:
+            details["stage_description"] = "Setting up PDF compression parameters"
+        elif "Processing" in self.pdf_stage:
+            details["stage_description"] = "Compressing PDF pages using Ghostscript"
+        elif "completed" in self.pdf_stage.lower():
+            details["stage_description"] = "PDF compression finished successfully"
+            details["is_active"] = False
+        else:
+            details["stage_description"] = "Processing PDF file"
+
+        return details
 
 
 class QualityPreset(Enum):
