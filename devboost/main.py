@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from devboost.config import get_config, set_config
 from devboost.tools.file_rename import create_file_rename_widget
 
 from .styles import get_main_app_style
@@ -124,6 +125,10 @@ class DevDriverWindow(QMainWindow):
         # Setup keyboard shortcuts
         self._setup_keyboard_shortcuts()
         logger.info("Keyboard shortcuts initialized")
+
+        # Load last opened tool or show welcome screen
+        self._load_last_opened_tool()
+        logger.info("Last opened tool loaded or welcome screen displayed")
 
         logger.info("DevDriverWindow initialization completed successfully")
 
@@ -509,7 +514,9 @@ class DevDriverWindow(QMainWindow):
         if widget:
             self.top_bar_title.setText(tool_name)
             self.stacked_widget.setCurrentWidget(widget)
-            logger.info("Switched to %s view", tool_name)
+            # Save the last opened tool to configuration
+            set_config("global.last_used_tool", tool_name)
+            logger.info("Switched to %s view and saved to config", tool_name)
         else:
             self.top_bar_title.setText("Work in Progress 🚧")
             self.stacked_widget.setCurrentWidget(self.welcome_screen)
@@ -548,6 +555,68 @@ class DevDriverWindow(QMainWindow):
             current_content = self.scratch_pad_widget.get_content()
             new_content = f"{current_content}\n\n---\n{content}" if current_content else content
             self.scratch_pad_widget.set_content(new_content)
+
+    def _load_last_opened_tool(self):
+        """Load the last opened tool from configuration or show welcome screen."""
+        last_tool = get_config("global.last_used_tool", "")
+        logger.info("Loading last opened tool from config: '%s'", last_tool)
+
+        if last_tool:
+            # Map tool names to their corresponding widgets
+            tool_widgets = {
+                "Unix Time Converter": self.unix_time_converter_screen,
+                "JSON Format/Validate": self.json_format_validate_screen,
+                "Base64 String Encode/Decode": self.base64_string_encodec_screen,
+                "JWT Debugger": self.jwt_debugger_screen,
+                "RegExp Tester": self.regexp_tester_screen,
+                "URL Encode/Decode": self.url_codec_screen,
+                "UUID/ULID Generate/Decode": self.uuid_ulid_generator_screen,
+                "XML Beautifier": self.xml_formatter_screen,
+                "YAML to JSON": self.yaml_to_json_screen,
+                "String Case Converter": self.string_case_converter_screen,
+                "Color Converter": self.color_converter_screen,
+                "Cron Expression Editor": self.cron_expression_editor_screen,
+                "Lorem Ipsum Generator": self.lorem_ipsum_generator_screen,
+                "Markdown Viewer": self.markdown_viewer_screen,
+                "Random String Generator": self.random_string_generator_screen,
+                "TimeZone Converter": self.timezone_converter_screen,
+                "Unit Converter": self.unit_converter_screen,
+                "File Rename Tool": self.file_rename_tool_screen,
+                "Image Optimizer": self.image_optimizer_screen,
+                "File Optimization Tool": self.file_optimization_tool_screen,
+                "IP Subnet Calculator": self.ip_subnet_calculator_screen,
+                "HTTP Client": self.http_client_screen,
+                "GraphQL Client": self.graphql_client_screen,
+                "Uvx Runner": self.uvx_runner_screen,
+                "LLM Client": self.llm_client_screen,
+                "OpenAPI Mock Server": self.openapi_mock_server_screen,
+            }
+
+            widget = tool_widgets.get(last_tool)
+            if widget:
+                self.top_bar_title.setText(last_tool)
+                self.stacked_widget.setCurrentWidget(widget)
+
+                # Also select the corresponding item in the tool list
+                for i in range(self.tool_list.count()):
+                    item = self.tool_list.item(i)
+                    if item.data(Qt.ItemDataRole.UserRole) == last_tool:
+                        self.tool_list.setCurrentItem(item)
+                        break
+
+                logger.info("Successfully loaded last opened tool: %s", last_tool)
+            else:
+                logger.info("Last opened tool '%s' not found, showing welcome screen", last_tool)
+                self._show_welcome_screen()
+        else:
+            logger.info("No last opened tool found, showing welcome screen")
+            self._show_welcome_screen()
+
+    def _show_welcome_screen(self):
+        """Show the welcome screen."""
+        self.top_bar_title.setText("")
+        self.stacked_widget.setCurrentWidget(self.welcome_screen)
+        self.tool_list.clearSelection()
 
 
 def main():
