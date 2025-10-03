@@ -22,6 +22,7 @@ from devboost.tools.file_rename import create_file_rename_widget
 
 from .styles import get_main_app_style
 from .tools import (
+    create_api_inspector_widget,
     create_base64_string_encodec_widget,
     create_color_converter_widget,
     create_cron_expression_editor_widget,
@@ -247,6 +248,7 @@ class DevDriverWindow(QMainWindow):
         logger.info("Navigable tool list widget created")
 
         self.tools = [
+            ("🔍", "API Inspector", "api inspector http request capture monitor debug network traffic"),
             ("🕒", "Unix Time Converter", "timestamp epoch time date convert unix"),
             ("{}", "JSON Format/Validate", "json format validate pretty print beautify"),
             ("64", "Base64 String Encode/Decode", "base64 encode decode string text"),
@@ -360,6 +362,8 @@ class DevDriverWindow(QMainWindow):
 
         logger.info("Creating welcome screen")
         self.welcome_screen = self._create_welcome_screen()
+        logger.info("Creating API Inspector screen")
+        self.api_inspector_screen = create_api_inspector_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Unix Time Converter screen")
         self.unix_time_converter_screen = create_unix_time_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating JSON Format/Validate screen")
@@ -412,6 +416,7 @@ class DevDriverWindow(QMainWindow):
         self.openapi_mock_server_screen = create_openapi_mock_server_widget(self.style, self.scratch_pad_widget)
 
         self.stacked_widget.addWidget(self.welcome_screen)
+        self.stacked_widget.addWidget(self.api_inspector_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
         self.stacked_widget.addWidget(self.json_format_validate_screen)
         self.stacked_widget.addWidget(self.base64_string_encodec_screen)
@@ -472,6 +477,7 @@ class DevDriverWindow(QMainWindow):
 
         # Map tool names to their corresponding widgets
         tool_widgets = {
+            "API Inspector": self.api_inspector_screen,
             "Unix Time Converter": self.unix_time_converter_screen,
             "JSON Format/Validate": self.json_format_validate_screen,
             "Base64 String Encode/Decode": self.base64_string_encodec_screen,
@@ -558,6 +564,7 @@ class DevDriverWindow(QMainWindow):
         if last_tool:
             # Map tool names to their corresponding widgets
             tool_widgets = {
+                "API Inspector": self.api_inspector_screen,
                 "Unix Time Converter": self.unix_time_converter_screen,
                 "JSON Format/Validate": self.json_format_validate_screen,
                 "Base64 String Encode/Decode": self.base64_string_encodec_screen,
