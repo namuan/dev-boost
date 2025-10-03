@@ -28,7 +28,6 @@ from .tools import (
     create_file_optimization_widget,
     create_graphql_client_widget,
     create_http_client_widget,
-    create_image_optimizer_widget,
     create_ip_subnet_calculator_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
@@ -262,7 +261,6 @@ class DevDriverWindow(QMainWindow):
             ("⏰", "Cron Expression Editor", "cron expression schedule job task automation time"),
             ("📝", "Lorem Ipsum Generator", "lorem ipsum text placeholder dummy"),
             ("📋", "Markdown Viewer", "markdown preview render view md"),
-            ("🗜️", "Image Optimizer", "image optimize compression quality reduce size"),
             ("🗂️", "File Optimization Tool", "file optimize compression pdf image video batch drag drop"),
             ("🌐", "IP Subnet Calculator", "ip subnet calculator cidr network ipv4 ipv6 subnetting"),
             ("🎲", "Random String Generator", "random string generator password characters"),
@@ -398,8 +396,6 @@ class DevDriverWindow(QMainWindow):
         self.unit_converter_screen = create_unit_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating File Rename Tool screen")
         self.file_rename_tool_screen = create_file_rename_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Image Optimizer screen")
-        self.image_optimizer_screen = create_image_optimizer_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating IP Subnet Calculator screen")
         self.ip_subnet_calculator_screen = create_ip_subnet_calculator_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating HTTP Client screen")
@@ -434,7 +430,6 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.timezone_converter_screen)
         self.stacked_widget.addWidget(self.unit_converter_screen)
         self.stacked_widget.addWidget(self.file_rename_tool_screen)
-        self.stacked_widget.addWidget(self.image_optimizer_screen)
         self.stacked_widget.addWidget(self.ip_subnet_calculator_screen)
         self.stacked_widget.addWidget(self.http_client_screen)
         self.stacked_widget.addWidget(self.graphql_client_screen)
@@ -495,7 +490,6 @@ class DevDriverWindow(QMainWindow):
             "TimeZone Converter": self.timezone_converter_screen,
             "Unit Converter": self.unit_converter_screen,
             "File Rename Tool": self.file_rename_tool_screen,
-            "Image Optimizer": self.image_optimizer_screen,
             "File Optimization Tool": self.file_optimization_tool_screen,
             "IP Subnet Calculator": self.ip_subnet_calculator_screen,
             "HTTP Client": self.http_client_screen,
@@ -582,7 +576,6 @@ class DevDriverWindow(QMainWindow):
                 "TimeZone Converter": self.timezone_converter_screen,
                 "Unit Converter": self.unit_converter_screen,
                 "File Rename Tool": self.file_rename_tool_screen,
-                "Image Optimizer": self.image_optimizer_screen,
                 "File Optimization Tool": self.file_optimization_tool_screen,
                 "IP Subnet Calculator": self.ip_subnet_calculator_screen,
                 "HTTP Client": self.http_client_screen,

@@ -11,7 +11,7 @@ start-work: ## Start working on a new feature
 	@echo "🚀 Starting work on a new feature"
 	@mob start -i -b "$(FEATURE)"
 
-check: ## Run code quality tools.
+check: test ## Run code quality tools.
 	@echo "🚀 Checking lock file consistency with 'pyproject.toml'"
 	@uv lock --locked
 	@echo "🚀 Linting code: Running pre-commit"

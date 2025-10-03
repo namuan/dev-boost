@@ -5,7 +5,6 @@ from .file_optimization import create_file_optimization_widget
 from .file_rename import create_file_rename_widget
 from .graphql_client import create_graphql_client_widget
 from .http_client import create_http_client_widget
-from .image_optimizer import create_image_optimizer_widget
 from .ip_subnet_calculator import create_ip_subnet_calculator_widget
 from .json_format_validate import create_json_formatter_widget
 from .jwt_debugger import create_jwt_debugger_widget
@@ -34,7 +33,6 @@ __all__ = [
     "create_file_rename_widget",
     "create_graphql_client_widget",
     "create_http_client_widget",
-    "create_image_optimizer_widget",
     "create_ip_subnet_calculator_widget",
     "create_json_formatter_widget",
     "create_jwt_debugger_widget",
