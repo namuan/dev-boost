@@ -25,4 +25,5 @@ __pycache__/
 !main.spec
 !main_cli.py
 !QWEN.md
+!GEMINI.md
 !install.command
