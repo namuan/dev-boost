@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -434,12 +433,15 @@ class OpenAPIMockServerWidget(QWidget):
         logger.debug("Setting up OpenAPIMockServerWidget UI")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # File upload section
         file_frame = QFrame()
+        file_frame.setFrameStyle(QFrame.Shape.StyledPanel)
         file_layout = QVBoxLayout(file_frame)
+        file_layout.setContentsMargins(10, 10, 10, 10)
+        file_layout.setSpacing(8)
 
         file_label = QLabel("OpenAPI Specification:")
         file_label.setStyleSheet("font-weight: bold; margin-bottom: 5px;")
@@ -466,33 +468,36 @@ class OpenAPIMockServerWidget(QWidget):
 
         # Server configuration section
         config_frame = QFrame()
-        config_layout = QGridLayout(config_frame)
+        config_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        config_layout = QHBoxLayout(config_frame)
+        config_layout.setContentsMargins(10, 10, 10, 10)
+        config_layout.setSpacing(15)
 
         # Port configuration
-        config_layout.addWidget(QLabel("Port:"), 0, 0)
+        config_layout.addWidget(QLabel("Port:"))
         self.port_spinbox = QSpinBox()
         self.port_spinbox.setRange(1024, 65535)
         self.port_spinbox.setValue(8090)
-        config_layout.addWidget(self.port_spinbox, 0, 1)
+        self.port_spinbox.setMaximumWidth(80)
+        config_layout.addWidget(self.port_spinbox)
 
         # CORS toggle
         self.cors_checkbox = QCheckBox("Enable CORS")
         self.cors_checkbox.setChecked(True)
-        config_layout.addWidget(self.cors_checkbox, 0, 2)
+        config_layout.addWidget(self.cors_checkbox)
 
         # Latency simulation
-        config_layout.addWidget(QLabel("Latency (ms):"), 1, 0)
+        config_layout.addWidget(QLabel("Latency (ms):"))
         self.latency_spinbox = QSpinBox()
         self.latency_spinbox.setRange(0, 5000)
         self.latency_spinbox.setValue(0)
-        config_layout.addWidget(self.latency_spinbox, 1, 1)
+        self.latency_spinbox.setMaximumWidth(80)
+        config_layout.addWidget(self.latency_spinbox)
 
-        layout.addWidget(config_frame)
+        # Add stretch to push everything to the left
+        config_layout.addStretch()
 
-        # Server controls section
-        controls_frame = QFrame()
-        controls_layout = QHBoxLayout(controls_frame)
-
+        # Add server controls to the same row
         self.start_button = QPushButton("Start Server")
         self.start_button.setEnabled(False)
         self.start_button.setStyleSheet("""
@@ -511,7 +516,7 @@ class OpenAPIMockServerWidget(QWidget):
                 background-color: #6c757d;
             }
         """)
-        controls_layout.addWidget(self.start_button)
+        config_layout.addWidget(self.start_button)
 
         self.stop_button = QPushButton("Stop Server")
         self.stop_button.setEnabled(False)
@@ -531,42 +536,52 @@ class OpenAPIMockServerWidget(QWidget):
                 background-color: #6c757d;
             }
         """)
-        controls_layout.addWidget(self.stop_button)
+        config_layout.addWidget(self.stop_button)
 
         # Server status
         self.status_label = QLabel("Server stopped")
         self.status_label.setStyleSheet("color: #dc3545; font-weight: bold; margin-left: 20px;")
-        controls_layout.addWidget(self.status_label)
+        config_layout.addWidget(self.status_label)
 
-        controls_layout.addStretch()
-        layout.addWidget(controls_frame)
+        layout.addWidget(config_frame)
 
-        # Endpoints section
+        # Main content section - side by side layout for endpoints and logs
+        main_content_frame = QFrame()
+        main_content_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        main_content_layout = QHBoxLayout(main_content_frame)
+        main_content_layout.setContentsMargins(10, 10, 10, 10)
+        main_content_layout.setSpacing(15)
+
+        # Endpoints section (left side)
         endpoints_frame = QFrame()
         endpoints_layout = QVBoxLayout(endpoints_frame)
+        endpoints_layout.setContentsMargins(0, 0, 0, 0)
+        endpoints_layout.setSpacing(8)
 
         endpoints_label = QLabel("Available Endpoints:")
         endpoints_label.setStyleSheet("font-weight: bold; margin-bottom: 5px;")
         endpoints_layout.addWidget(endpoints_label)
 
         self.endpoints_text = QTextEdit()
-        self.endpoints_text.setMaximumHeight(150)
+        self.endpoints_text.setMinimumHeight(500)  # Increased from 400 to 500
         self.endpoints_text.setReadOnly(True)
         self.endpoints_text.setPlaceholderText("Load an OpenAPI specification to see available endpoints")
         endpoints_layout.addWidget(self.endpoints_text)
 
-        layout.addWidget(endpoints_frame)
+        main_content_layout.addWidget(endpoints_frame)
 
-        # Request logs section
+        # Request logs section (right side)
         logs_frame = QFrame()
         logs_layout = QVBoxLayout(logs_frame)
+        logs_layout.setContentsMargins(0, 0, 0, 0)
+        logs_layout.setSpacing(8)
 
         logs_label = QLabel("Request Logs:")
         logs_label.setStyleSheet("font-weight: bold; margin-bottom: 5px;")
         logs_layout.addWidget(logs_label)
 
         self.logs_text = QTextEdit()
-        self.logs_text.setMaximumHeight(200)
+        self.logs_text.setMinimumHeight(500)  # Increased from 400 to 500
         self.logs_text.setReadOnly(True)
         self.logs_text.setPlaceholderText("Server request logs will appear here")
         self.logs_text.setStyleSheet("""
@@ -579,10 +594,10 @@ class OpenAPIMockServerWidget(QWidget):
         """)
         logs_layout.addWidget(self.logs_text)
 
-        layout.addWidget(logs_frame)
+        main_content_layout.addWidget(logs_frame)
 
-        # Add stretch to push everything to the top
-        layout.addStretch()
+        # Add the main content frame to the layout with stretch factor to take up majority of space
+        layout.addWidget(main_content_frame, 1)  # Stretch factor of 1 to expand
 
     def _connect_signals(self):
         """Connect widget signals."""
