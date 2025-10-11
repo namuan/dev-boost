@@ -55,7 +55,6 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -2211,8 +2210,6 @@ class SettingsManager:
         if system == "Darwin":  # macOS
             config_dir = Path.home() / "Library" / "Application Support" / "DevBoost" / "file_optimization"
         elif system == "Windows":
-            import os
-
             appdata = os.environ.get("APPDATA")
             if appdata:
                 config_dir = Path(appdata) / "DevBoost" / "file_optimization"
@@ -2674,25 +2671,16 @@ class FileManager:
 
     def process_input(self, input_data: str) -> list[FileInfo]:
         """
-        Process various input types and return file information.
+        Process a local file path and return file information.
 
         Args:
-            input_data: Can be file path, URL, or base64 encoded data
+            input_data: Local file path string
 
         Returns:
             List of FileInfo objects for processed files
         """
         input_data = input_data.strip()
-
-        # Check if it's a URL
-        if self._is_url(input_data):
-            return self._process_url(input_data)
-
-        # Check if it's base64 data
-        if self._is_base64_image(input_data):
-            return self._process_base64(input_data)
-
-        # Treat as file path
+        # Only treat input as a local file path. URL/Base64 inputs are no longer supported.
         return self._process_file_path(input_data)
 
     def _is_url(self, data: str) -> bool:
@@ -3161,82 +3149,7 @@ class FileOptimizationWidget(QWidget):
 
         left_layout.addWidget(self.drop_area)
 
-        # URL/Base64 input area
-        self.input_frame = QFrame()
-        self.input_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        self.input_frame.setStyleSheet(f"""
-            QFrame {{
-                background-color: {COLORS["bg_primary"]};
-                border: 1px solid {COLORS["border_primary"]};
-                border-radius: 6px;
-            }}
-        """)
-
-        input_layout = QVBoxLayout(self.input_frame)
-        input_layout.setContentsMargins(10, 10, 10, 10)
-        input_layout.setSpacing(8)
-
-        input_label = QLabel("Or paste URL/Base64 data:")
-        input_label.setStyleSheet(f"font-weight: 600; color: {COLORS['text_primary']};")
-        input_layout.addWidget(input_label)
-
-        self.input_text = QTextEdit()
-        self.input_text.setMaximumHeight(80)
-        self.input_text.setPlaceholderText("Paste file URL or base64 encoded data here...")
-        self.input_text.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: {COLORS["bg_secondary"]};
-                border: 1px solid {COLORS["border_secondary"]};
-                border-radius: 4px;
-                padding: 8px;
-                color: {COLORS["text_primary"]};
-                font-family: monospace;
-                font-size: 12px;
-            }}
-            QTextEdit:focus {{
-                border-color: {COLORS["info"]};
-            }}
-        """)
-        input_layout.addWidget(self.input_text)
-
-        input_button_layout = QHBoxLayout()
-        self.process_input_button = QPushButton("Process Input")
-        self.process_input_button.clicked.connect(self.process_text_input)
-        self.process_input_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS["btn_bg"]};
-                border: 1px solid {COLORS["border_primary"]};
-                padding: 6px 12px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {COLORS["btn_hover"]};
-            }}
-        """)
-
-        self.clear_input_button = QPushButton("Clear")
-        self.clear_input_button.clicked.connect(lambda: self.input_text.clear())
-        self.clear_input_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS["bg_secondary"]};
-                border: 1px solid {COLORS["border_secondary"]};
-                padding: 6px 12px;
-                border-radius: 4px;
-                font-size: 12px;
-            }}
-            QPushButton:hover {{
-                background-color: {COLORS["btn_hover"]};
-            }}
-        """)
-
-        input_button_layout.addWidget(self.process_input_button)
-        input_button_layout.addWidget(self.clear_input_button)
-        input_button_layout.addStretch()
-        input_layout.addLayout(input_button_layout)
-
-        left_layout.addWidget(self.input_frame)
+        # Note: URL/Base64 paste input has been removed; only drag-and-drop or Browse are supported.
 
         # File list area (for batch processing)
         self.file_list_frame = QFrame()

@@ -63,22 +63,6 @@ class TestFileManager(unittest.TestCase):
             self.assertEqual(len(result), 1)
             mock_process.assert_called_once_with(test_file)
 
-    def test_process_input_url(self):
-        """Test processing URL input."""
-        test_url = "https://example.com/image.jpg"
-        with patch.object(self.file_manager, "_process_url", return_value=[Mock()]) as mock_process:
-            result = self.file_manager.process_input(test_url)
-            self.assertEqual(len(result), 1)
-            mock_process.assert_called_once_with(test_url)
-
-    def test_process_input_base64(self):
-        """Test processing base64 input."""
-        test_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-        with patch.object(self.file_manager, "_process_base64", return_value=[Mock()]) as mock_process:
-            result = self.file_manager.process_input(test_base64)
-            self.assertEqual(len(result), 1)
-            mock_process.assert_called_once_with(test_base64)
-
     def test_cleanup_temp_files(self):
         """Test cleaning up temporary files."""
         mock_temp_file = Mock()
