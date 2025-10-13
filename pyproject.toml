@@ -36,8 +36,8 @@ Homepage = "https://namuan.github.io/dev-boost/"
 Repository = "https://github.com/namuan/dev-boost"
 Documentation = "https://namuan.github.io/dev-boost/"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest",
     "pre-commit",
     "tox-uv",
