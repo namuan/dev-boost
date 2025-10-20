@@ -3052,6 +3052,13 @@ class FileOptimizationWidget(QWidget):
 
         file_layout.addWidget(file_label)
         file_layout.addWidget(size_label)
+
+        # Remove button per item
+        remove_button = QPushButton("🗑️ Remove")
+        remove_button.setToolTip("Remove this file from the list")
+        remove_button.clicked.connect(lambda _=False, w=file_widget, p=file_info.path: self._on_remove_clicked(w, p))
+        file_layout.addWidget(remove_button)
+
         file_layout.addStretch()
 
         # Style the file widget
@@ -3203,6 +3210,33 @@ class FileOptimizationWidget(QWidget):
         # For now, overwrite the original file
         # In a more advanced implementation, this could be configurable
         return input_path
+
+    def _on_remove_clicked(self, file_widget: QWidget, file_path: Path):
+        """Remove a single file item from the list and state."""
+        # Remove the widget from the layout
+        for i in range(self.file_list_layout.count()):
+            item = self.file_list_layout.itemAt(i)
+            if item and item.widget() is file_widget:
+                self.file_list_layout.takeAt(i)
+                file_widget.deleteLater()
+                break
+
+        # Remove from current_files (first match)
+        for i, fi in enumerate(self.current_files):
+            if fi.path == file_path:
+                del self.current_files[i]
+                break
+
+        # Update controls and status
+        if not self.current_files:
+            self.optimize_button.setEnabled(False)
+            self.clear_button.setEnabled(False)
+            self.file_list_frame.hide()
+            self.update_status("Ready - Drop files or click Browse to get started")
+        else:
+            total_supported = len(self.current_files)
+            file_suffix = "s" if total_supported != 1 else ""
+            self.update_status(f"Ready to optimize {total_supported} file{file_suffix}")
 
     def clear_files(self):
         """Clear all files from the list."""
