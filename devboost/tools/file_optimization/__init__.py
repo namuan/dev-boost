@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSlider,
     QSpinBox,
     QSplitter,
@@ -1782,6 +1783,8 @@ class FileDropArea(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setObjectName("fileDropArea")
         self.setMinimumHeight(200)
         self.setup_ui()
 
@@ -1822,14 +1825,12 @@ class FileDropArea(QWidget):
 
         # Set drop area styling
         self.setStyleSheet(f"""
-            FileDropArea {{
-                background-color: {COLORS["bg_secondary"]};
-                border: 2px dashed {COLORS["border_primary"]};
+            #fileDropArea {{
+                border: 2px solid {COLORS["border_primary"]};
                 border-radius: 8px;
             }}
-            FileDropArea[dragActive="true"] {{
+            #fileDropArea[dragActive="true"] {{
                 border-color: {COLORS["info"]};
-                background-color: {COLORS["bg_tertiary"]};
             }}
         """)
 
@@ -1958,42 +1959,57 @@ class FileOptimizationWidget(QWidget):
         left_layout.setContentsMargins(10, 10, 5, 10)
         left_layout.setSpacing(10)
 
-        # File drop area
+        # File drop area - Fixed at top
         self.drop_area = FileDropArea()
         self.drop_area.handle_files_dropped = self.handle_files_dropped
         self.drop_area.browse_button.clicked.connect(self.browse_files)
 
-        left_layout.addWidget(self.drop_area)
+        # Set fixed size policy for drop area to prevent it from expanding
+        self.drop_area.setMinimumHeight(200)
+        self.drop_area.setMaximumHeight(200)
+        self.drop_area.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+
+        # Add drop area with no stretch factor (0) to keep it fixed at top
+        left_layout.addWidget(self.drop_area, 0)
 
         # Note: URL/Base64 paste input has been removed; only drag-and-drop or Browse are supported.
 
-        # File list area (for batch processing)
+        # File list area (for batch processing) - Takes remaining space
         self.file_list_frame = QFrame()
-        self.file_list_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.file_list_frame.setFrameShape(QFrame.Shape.NoFrame)  # Hide outline
         self.file_list_frame.setStyleSheet(f"""
             QFrame {{
                 background-color: {COLORS["bg_primary"]};
-                border: 1px solid {COLORS["border_primary"]};
+                border: none;
                 border-radius: 6px;
             }}
         """)
-        self.file_list_frame.hide()  # Initially hidden
+
+        # Set expanding size policy for file list to take remaining space
+        self.file_list_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         file_list_layout = QVBoxLayout(self.file_list_frame)
         file_list_layout.setContentsMargins(10, 10, 10, 10)
 
-        self.file_list_label = QLabel("Files to Process:")
-        self.file_list_label.setStyleSheet(f"font-weight: 600; color: {COLORS['text_primary']};")
-        file_list_layout.addWidget(self.file_list_label)
+        # Placeholder for file list items - Use scroll area for large lists
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        # Placeholder for file list items
         self.file_list_container = QWidget()
         self.file_list_layout = QVBoxLayout(self.file_list_container)
         self.file_list_layout.setContentsMargins(0, 0, 0, 0)
         self.file_list_layout.setSpacing(5)
-        file_list_layout.addWidget(self.file_list_container)
+        # Align items to the top by adding stretch at the bottom
+        self.file_list_layout.addStretch()
 
-        left_layout.addWidget(self.file_list_frame)
+        scroll_area.setWidget(self.file_list_container)
+        file_list_layout.addWidget(scroll_area)
+
+        # Add file list frame with stretch factor to take remaining space
+        left_layout.addWidget(self.file_list_frame, 1)
 
         return left_pane
 
@@ -3025,6 +3041,7 @@ class FileOptimizationWidget(QWidget):
         """Add a file to the UI file list."""
         # Create file item widget
         file_widget = QWidget()
+        file_widget.setFixedHeight(50)  # Set consistent height for all file items
         file_layout = QHBoxLayout(file_widget)
         file_layout.setContentsMargins(5, 5, 5, 5)
         file_layout.setSpacing(8)
