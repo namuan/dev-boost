@@ -361,3 +361,66 @@ Export optimization results and integrate with:
 4. **Web Deployment**: Use optimized files for faster loading
 
 This comprehensive guide should help you make the most of the File Optimization Tool's capabilities. For additional help, refer to the external tools setup documentation and the configuration options guide.
+
+## Programmatic API
+
+You can also use the File Optimization engines directly in code.
+
+### Quick wrappers
+
+```python
+from pathlib import Path
+from devboost.tools.file_optimization import (
+    optimize_image,
+    optimize_video,
+    optimize_pdf,
+    OptimizationSettings,
+    QualityPreset,
+)
+
+# Common settings
+settings = OptimizationSettings(quality_preset=QualityPreset.HIGH)
+
+# Optimize an image
+result_img = optimize_image(Path("photo.jpg"), Path("photo_optimized.jpg"), settings)
+print(result_img)
+
+# Optimize a video (MP4)
+result_vid = optimize_video(Path("video.mp4"), Path("video_optimized.mp4"), settings)
+print(result_vid)
+
+# Optimize a PDF
+result_pdf = optimize_pdf(Path("document.pdf"), Path("document_optimized.pdf"), settings)
+print(result_pdf)
+```
+
+The wrappers instantiate the appropriate engine internally and return a result dictionary.
+
+### Using engines directly
+
+```python
+from pathlib import Path
+from devboost.tools.file_optimization import (
+    ImageOptimizationEngine,
+    VideoOptimizationEngine,
+    PDFOptimizationEngine,
+    OptimizationSettings,
+    QualityPreset,
+)
+
+settings = OptimizationSettings(quality_preset=QualityPreset.MEDIUM)
+
+# Images
+img_engine = ImageOptimizationEngine()
+res_img = img_engine.optimize_image(Path("input.png"), Path("output.png"), settings)
+
+# Videos
+vid_engine = VideoOptimizationEngine()
+res_vid = vid_engine.optimize_video(Path("input.mov"), Path("output.mp4"), settings)
+
+# PDFs
+pdf_engine = PDFOptimizationEngine()
+res_pdf = pdf_engine.optimize_pdf(Path("input.pdf"), Path("output.pdf"), settings)
+```
+
+Note: External tools like `ffmpeg`, `gifski`, and `ghostscript` improve results when installed. The engines automatically detect and use available tools.
