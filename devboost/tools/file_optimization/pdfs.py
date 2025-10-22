@@ -211,6 +211,7 @@ class PDFOptimizationEngine:
         """Verify that the given executable is a working Ghostscript installation."""
         try:
             # Verify by checking version/help output; avoid invoking shell aliases by passing list and shell=False
+            # The executable_path is validated before this function is called
             version_proc = subprocess.run(  # noqa: S603
                 [executable_path, "--version"], capture_output=True, text=True, timeout=5, shell=False
             )
@@ -328,7 +329,7 @@ class PDFOptimizationEngine:
             cmd_str = " ".join(cmd)
             self.logger.info("Executing Ghostscript command: %s", cmd_str)
             self.logger.debug("Running ghostscript command: %s", cmd_str)
-            # S603: subprocess call with validated input - cmd is constructed from trusted sources
+            # The command is constructed from trusted sources (validated ghostscript executable)
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, shell=False)  # noqa: S603
 
             if result.returncode != 0:
@@ -361,7 +362,7 @@ class PDFOptimizationEngine:
         cmd = [self._gs_command, "-sDEVICE=bbox", "-dNOPAUSE", "-dBATCH", "-dQUIET", str(pdf_path)]
 
         try:
-            # S603: subprocess call with validated input - cmd is constructed from trusted sources
+            # The command is constructed from trusted sources (validated ghostscript executable)
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, shell=False)  # noqa: S603
 
             info = {"pages": 0, "has_images": False, "has_fonts": False}

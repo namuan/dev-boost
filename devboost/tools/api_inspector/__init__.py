@@ -11,8 +11,8 @@ from .api_inspector import (
 from .api_inspector_ui import APIInspectorDashboard
 
 __all__ = [
-    "APIInspectorServer",
     "APIInspectorDashboard",
+    "APIInspectorServer",
     "DataExporter",
     "HTTPRequestData",
     "RequestStatistics",
