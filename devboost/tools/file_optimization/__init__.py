@@ -1439,7 +1439,6 @@ class FileOptimizationWidget(QWidget):
         if not self.current_files:
             self.optimize_button.setEnabled(False)
             self.clear_button.setEnabled(False)
-            self.file_list_frame.hide()
             self.update_status("Ready - Drop files or click Browse to get started")
         else:
             total_supported = len(self.current_files)
@@ -1459,9 +1458,6 @@ class FileOptimizationWidget(QWidget):
 
         # Cleanup temporary files
         self.file_manager.cleanup_temp_files()
-
-        # Hide file list frame
-        self.file_list_frame.hide()
 
         # Disable action buttons
         self.optimize_button.setEnabled(False)
