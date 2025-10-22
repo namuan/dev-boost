@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 from devboost.config import get_config, set_config
 
+from .process_runner import run_process
+
 if TYPE_CHECKING:
     from . import OptimizationSettings
 
@@ -116,10 +118,8 @@ class PDFOptimizationEngine:
     def _check_ghostscript_in_path(self) -> bool:
         """Check for Ghostscript using PATH-based lookup."""
         try:
-            cmd_check = subprocess.run(  # noqa: S602
-                "command -v gs",  # noqa: S607
-                capture_output=True,
-                text=True,
+            cmd_check = run_process(  # noqa: S604
+                "command -v gs",
                 timeout=5,
                 shell=True,
             )
@@ -133,10 +133,8 @@ class PDFOptimizationEngine:
     def _verify_gs_command(self) -> bool:
         """Verify the 'gs' command works and get version."""
         try:
-            version_proc = subprocess.run(  # noqa: S603
-                ["gs", "--version"],  # noqa: S607
-                capture_output=True,
-                text=True,
+            version_proc = run_process(
+                ["gs", "--version"],
                 timeout=5,
                 shell=False,
             )
@@ -212,10 +210,8 @@ class PDFOptimizationEngine:
         try:
             # Verify by checking version/help output; avoid invoking shell aliases by passing list and shell=False
             # The executable_path is validated before this function is called
-            version_proc = subprocess.run(  # noqa: S603
-                [executable_path, "--version"], capture_output=True, text=True, timeout=5, shell=False
-            )
-            help_proc = subprocess.run([executable_path, "-h"], capture_output=True, text=True, timeout=5, shell=False)  # noqa: S603
+            version_proc = run_process([executable_path, "--version"], timeout=5, shell=False)
+            help_proc = run_process([executable_path, "-h"], timeout=5, shell=False)
 
             if version_proc.returncode == 0 or help_proc.returncode == 0:
                 stdout_text = version_proc.stdout.strip() if version_proc.stdout else ""
@@ -330,7 +326,7 @@ class PDFOptimizationEngine:
             self.logger.info("Executing Ghostscript command: %s", cmd_str)
             self.logger.debug("Running ghostscript command: %s", cmd_str)
             # The command is constructed from trusted sources (validated ghostscript executable)
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=120, shell=False)
 
             if result.returncode != 0:
                 self.logger.error("Ghostscript command failed with return code %d", result.returncode)
@@ -363,7 +359,7 @@ class PDFOptimizationEngine:
 
         try:
             # The command is constructed from trusted sources (validated ghostscript executable)
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=30, shell=False)
 
             info = {"pages": 0, "has_images": False, "has_fonts": False}
 
@@ -387,7 +383,7 @@ class PDFOptimizationEngine:
             ]
 
             try:
-                info_result = subprocess.run(info_cmd, capture_output=True, text=True, timeout=15, shell=False)  # noqa: S603
+                info_result = run_process(info_cmd, timeout=15, shell=False)
                 stdout_text = info_result.stdout.strip() if info_result.stdout else ""
                 if info_result.returncode == 0 and stdout_text.isdigit():
                     info["pages"] = int(stdout_text)

@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .process_runner import run_process
+
 if TYPE_CHECKING:
     from . import OptimizationSettings
 
@@ -36,12 +38,8 @@ class VideoOptimizationEngine:
 
     def _check_command_available(self, command: str) -> bool:
         """Check if a command-line tool is available."""
-        try:
-            # S603: subprocess call with validated input - command is a trusted tool name
-            result = subprocess.run([command, "-version"], capture_output=True, text=True, timeout=5)  # noqa: S603
-            return result.returncode == 0
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
-            return False
+        result = run_process([command, "-version"], timeout=5, shell=False)
+        return result.success
 
     def get_supported_formats(self) -> dict[str, list[str]]:
         """Get supported video formats for optimization."""
@@ -171,10 +169,9 @@ class VideoOptimizationEngine:
 
         try:
             self.logger.debug("Running ffmpeg command: %s", " ".join(cmd))
-            # S603: subprocess call with validated input - cmd is constructed from trusted sources
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=300, shell=False)
 
-            if result.returncode != 0:
+            if not result.success:
                 raise RuntimeError(f"ffmpeg failed: {result.stderr}")
 
             # If we used a temporary file, replace the original
@@ -242,7 +239,7 @@ class VideoOptimizationEngine:
 
             try:
                 # S603: subprocess call with validated input - cmd is constructed from trusted sources
-                result = subprocess.run(extract_cmd, capture_output=True, text=True, timeout=120, shell=False)  # noqa: S603
+                result = run_process(extract_cmd, timeout=120, shell=False)
 
                 if result.returncode != 0:
                     raise RuntimeError(f"Frame extraction failed: {result.stderr}")
@@ -265,7 +262,7 @@ class VideoOptimizationEngine:
                 gifski_cmd.extend([str(f) for f in frame_files])
 
                 # S603: subprocess call with validated input - cmd is constructed from trusted sources
-                result = subprocess.run(gifski_cmd, capture_output=True, text=True, timeout=180, shell=False)  # noqa: S603
+                result = run_process(gifski_cmd, timeout=180, shell=False)
 
                 if result.returncode != 0:
                     raise RuntimeError(f"gifski conversion failed: {result.stderr}")
@@ -324,7 +321,7 @@ class VideoOptimizationEngine:
 
         try:
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=180, shell=False)
 
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg GIF conversion failed: {result.stderr}")
@@ -354,7 +351,7 @@ class VideoOptimizationEngine:
 
         try:
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=30, shell=False)
 
             if result.returncode == 0:
                 info = json.loads(result.stdout)

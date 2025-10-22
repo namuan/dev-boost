@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageFile
 
+from .process_runner import run_process
+
 if TYPE_CHECKING:
     from . import OptimizationSettings
 
@@ -43,7 +45,7 @@ class ImageOptimizationEngine:
         """Check if a command-line tool is available."""
         try:
             # S603: subprocess call with validated input - command is a trusted tool name
-            result = subprocess.run([command, "--version"], capture_output=True, text=True, timeout=5)  # noqa: S603
+            result = run_process([command, "--version"], timeout=5, shell=False)
             return result.returncode == 0
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             return False
@@ -222,7 +224,7 @@ class ImageOptimizationEngine:
 
         try:
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=30, shell=False)
             if result.returncode != 0:
                 # Fallback to PIL if pngquant fails
                 self.logger.warning("pngquant failed, falling back to PIL: %s", result.stderr)
@@ -253,7 +255,7 @@ class ImageOptimizationEngine:
 
         try:
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=30, shell=False)
             if result.returncode != 0:
                 # Fallback to PIL if jpegoptim fails
                 self.logger.warning("jpegoptim failed, falling back to PIL: %s", result.stderr)
@@ -280,7 +282,7 @@ class ImageOptimizationEngine:
 
         try:
             # S603: subprocess call with validated input - cmd is constructed from trusted sources
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, shell=False)  # noqa: S603
+            result = run_process(cmd, timeout=30, shell=False)
             if result.returncode != 0:
                 # Fallback to PIL if gifsicle fails
                 self.logger.warning("gifsicle failed, falling back to PIL: %s", result.stderr)
