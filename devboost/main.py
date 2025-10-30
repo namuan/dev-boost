@@ -277,6 +277,8 @@ class DevDriverWindow(QMainWindow):
             ("🎭", "OpenAPI Mock Server", "openapi mock server api swagger spec endpoint response"),
             ("🗒️", "Block Editor", "block editor scratch notes create delete move fold unfold"),
         ]
+        # Ensure the tools are displayed in alphabetical order by name
+        self.tools.sort(key=lambda t: t[1].lower())
         logger.info("Defined %d tools for the sidebar", len(self.tools))
 
         for icon_text, tool_name, _keywords in self.tools:
