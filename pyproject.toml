@@ -29,6 +29,9 @@ dependencies = [
     "openapi-spec-validator>=0.7.2",
     "unidecode>=1.4.0",
     "pyvips>=3.0.0",
+    "pygments>=2.19.2",
+    "pyqt6-qscintilla>=2.14.1",
+    "defusedxml>=0.7.1",
 ]
 
 [project.urls]

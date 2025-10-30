@@ -24,6 +24,7 @@ from .styles import get_main_app_style
 from .tools import (
     create_api_inspector_widget,
     create_base64_string_encodec_widget,
+    create_blocks_editor_widget,
     create_color_converter_widget,
     create_cron_expression_editor_widget,
     create_file_optimization_widget,
@@ -274,6 +275,7 @@ class DevDriverWindow(QMainWindow):
             ("🤖", "LLM Client", "llm client ai chat openai anthropic google model"),
             ("📦", "Uvx Runner", "uvx tools runner install execute command line utilities"),
             ("🎭", "OpenAPI Mock Server", "openapi mock server api swagger spec endpoint response"),
+            ("🗒️", "Block Editor", "block editor scratch notes create delete move fold unfold"),
         ]
         logger.info("Defined %d tools for the sidebar", len(self.tools))
 
@@ -414,6 +416,8 @@ class DevDriverWindow(QMainWindow):
         self.file_optimization_tool_screen = create_file_optimization_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating OpenAPI Mock Server screen")
         self.openapi_mock_server_screen = create_openapi_mock_server_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating Block Editor screen")
+        self.block_editor_screen = create_blocks_editor_widget(self.style)
 
         self.stacked_widget.addWidget(self.welcome_screen)
         self.stacked_widget.addWidget(self.api_inspector_screen)
@@ -442,6 +446,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.uvx_runner_screen)
         self.stacked_widget.addWidget(self.file_optimization_tool_screen)
         self.stacked_widget.addWidget(self.openapi_mock_server_screen)
+        self.stacked_widget.addWidget(self.block_editor_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -503,6 +508,7 @@ class DevDriverWindow(QMainWindow):
             "Uvx Runner": self.uvx_runner_screen,
             "LLM Client": self.llm_client_screen,
             "OpenAPI Mock Server": self.openapi_mock_server_screen,
+            "Block Editor": self.block_editor_screen,
         }
 
         self._switch_to_tool(tool_name, tool_widgets)
@@ -590,6 +596,7 @@ class DevDriverWindow(QMainWindow):
                 "Uvx Runner": self.uvx_runner_screen,
                 "LLM Client": self.llm_client_screen,
                 "OpenAPI Mock Server": self.openapi_mock_server_screen,
+                "Block Editor": self.block_editor_screen,
             }
 
             widget = tool_widgets.get(last_tool)

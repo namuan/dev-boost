@@ -1,5 +1,6 @@
 from .api_inspector import create_api_inspector_widget
 from .base64_string_encodec import create_base64_string_encodec_widget
+from .block_editor import create_blocks_editor_widget
 from .color_converter import create_color_converter_widget
 from .cron_expression_editor import create_cron_expression_editor_widget
 from .file_optimization import create_file_optimization_widget
@@ -54,4 +55,5 @@ __all__ = [
     "create_uvx_runner_widget",
     "create_xml_formatter_widget",
     "create_yaml_to_json_widget",
+    "create_blocks_editor_widget",
 ]
