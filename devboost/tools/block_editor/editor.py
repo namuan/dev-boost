@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from devboost.styles import get_tool_style
+from devboost.styles import get_layout_margin, get_layout_spacing, get_tool_style
 
 from .storage import Block, BlockStorage
 from .widget import BlockWidget
@@ -39,8 +39,12 @@ class BlocksEditorWidget(QWidget):
             logger.exception("Failed to apply tool style to Block Editor")
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(8)
+        # Harmonize margins and spacing with global layout constants
+        m = get_layout_margin("small")
+        s = get_layout_spacing("medium")
+        logging.debug("BlocksEditorWidget: root margins=%s spacing=%s", m, s)
+        root.setContentsMargins(m, m, m, m)
+        root.setSpacing(s)
 
         # Top actions bar (row 1): Add/Save
         top_actions_bar = QHBoxLayout()
@@ -63,8 +67,10 @@ class BlocksEditorWidget(QWidget):
         self.blocks_container = QWidget()
         self.blocks_layout = QVBoxLayout(self.blocks_container)
         self.blocks_layout.setContentsMargins(0, 0, 0, 0)
-        # Reduce inter-block spacing to align with app theme
-        self.blocks_layout.setSpacing(6)
+        # Inter-block spacing aligned to global 'small' spacing
+        bs = get_layout_spacing("small")
+        logging.debug("BlocksEditorWidget: inter-block spacing=%s", bs)
+        self.blocks_layout.setSpacing(bs)
         self.scroll_area.setWidget(self.blocks_container)
 
         root.addLayout(top_actions_bar)

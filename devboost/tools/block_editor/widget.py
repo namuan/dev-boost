@@ -19,6 +19,8 @@ except Exception:  # pragma: no cover - optional
     QsciLexerJSON = None  # type: ignore[assignment]
     QsciLexerJavaScript = None  # type: ignore[assignment]
 
+from devboost.styles import get_layout_margin, get_layout_spacing
+
 from .formatters import try_auto_format
 from .highlighters import MarkdownHighlighter
 from .storage import Block
@@ -51,9 +53,12 @@ class BlockWidget(QWidget):
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
-        # Reduce internal margins to tighten block appearance per UX feedback
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        # Harmonize margins and spacing with global layout constants
+        m = get_layout_margin("small")
+        s = get_layout_spacing("small")
+        logging.debug("BlockWidget: applying layout margins=%s spacing=%s", m, s)
+        layout.setContentsMargins(m, m, m, m)
+        layout.setSpacing(s)
 
         # Header with language and controls
         header = QHBoxLayout()
@@ -76,7 +81,16 @@ class BlockWidget(QWidget):
         self.format_btn.clicked.connect(self._on_format_clicked)
         header.addWidget(self.format_btn)
         # Per-block management control on the same row (Delete only)
-        self.del_btn = QPushButton("🗑 Delete")
+        # Icon-only delete button for tighter header appearance
+        self.del_btn = QPushButton("🗑")
+        self.del_btn.setObjectName("iconButton")
+        self.del_btn.setToolTip("Delete block")
+        try:
+            # Keep a compact footprint consistent with toolbar/icon sizing
+            self.del_btn.setFixedSize(28, 24)
+        except Exception as exc:
+            # Fallback: continue without fixed sizing
+            logging.debug("BlockWidget: setFixedSize not supported, proceeding without fixed size: %s", exc)
         if self._on_delete:
             self.del_btn.clicked.connect(self._on_delete)
         header.addWidget(self.del_btn)
