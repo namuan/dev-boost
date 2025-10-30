@@ -3,7 +3,7 @@ import re
 from collections.abc import Iterable
 from datetime import datetime
 
-from .scratch_blocks import Block
+from .storage import Block
 
 logger = logging.getLogger(__name__)
 

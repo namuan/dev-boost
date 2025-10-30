@@ -21,7 +21,7 @@ except Exception:  # pragma: no cover - optional
 
 from .formatters import try_auto_format
 from .highlighters import MarkdownHighlighter
-from .scratch_blocks import Block
+from .storage import Block
 
 logger = logging.getLogger(__name__)
 

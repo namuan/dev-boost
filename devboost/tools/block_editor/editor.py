@@ -11,8 +11,8 @@ from PyQt6.QtWidgets import (
 
 from devboost.styles import get_tool_style
 
-from .block_widget import BlockWidget
-from .scratch_blocks import Block, BlockStorage
+from .storage import Block, BlockStorage
+from .widget import BlockWidget
 
 logger = logging.getLogger(__name__)
 
