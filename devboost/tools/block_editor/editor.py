@@ -132,6 +132,11 @@ class BlocksEditorWidget(QWidget):
                 b,
                 on_delete=lambda idx=idx: self._delete_block(idx),
             )
+            # Observe language changes to keep layout fresh and visible
+            try:
+                bw.languageChanged.connect(lambda lang, bw=bw: self._on_block_language_changed(bw, lang))
+            except Exception:
+                logger.exception("Failed to connect languageChanged for block %s", b.id)
             self.block_widgets.append(bw)
             self.blocks_layout.addWidget(bw)
             # Search/replace removed; no focus tracking needed
@@ -204,6 +209,30 @@ class BlocksEditorWidget(QWidget):
             )
         except Exception:
             logger.exception("Failed to copy all blocks to clipboard")
+
+    def _on_block_language_changed(self, bw: BlockWidget, new_language: str) -> None:
+        """React to per-block language changes by nudging layout and logging state."""
+        try:
+            idx = self.blocks_layout.indexOf(bw)
+            count = self.blocks_layout.count()
+            logger.debug(
+                "Container observed language change: blockIdx=%d/%d lang=%s size=%s vis=%s",
+                idx,
+                count,
+                new_language,
+                (bw.width(), bw.height()),
+                bw.isVisible(),
+            )
+            # Nudge layout and scroll area to recompute sizes
+            self.blocks_layout.invalidate()
+            self.blocks_layout.activate()
+            self.blocks_layout.update()
+            bw.show()
+            self.blocks_container.adjustSize()
+            self.blocks_container.updateGeometry()
+            self.scroll_area.updateGeometry()
+        except Exception:
+            logger.exception("Failed to handle block language change in container")
 
 
 def create_blocks_editor_widget(style_func=None) -> QWidget:
