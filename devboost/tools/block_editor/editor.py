@@ -2,9 +2,11 @@ import logging
 import uuid
 
 from PyQt6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -46,7 +48,7 @@ class BlocksEditorWidget(QWidget):
         root.setContentsMargins(m, m, m, m)
         root.setSpacing(s)
 
-        # Top actions bar (row 1): Add/Save
+        # Top actions bar (row 1): Add/Save/Copy All
         top_actions_bar = QHBoxLayout()
         add_btn = QPushButton("+ Add Block")
         add_btn.setToolTip("Create a new empty block")
@@ -54,16 +56,26 @@ class BlocksEditorWidget(QWidget):
         save_btn = QPushButton("💾 Save")
         save_btn.setToolTip("Persist blocks to storage")
         save_btn.clicked.connect(self._save_blocks)
+        copy_btn = QPushButton("Copy All")
+        copy_btn.setToolTip("Copy all non-empty block contents to clipboard")
+        copy_btn.clicked.connect(self._copy_all_blocks)
         top_actions_bar.addWidget(add_btn)
         top_actions_bar.addWidget(save_btn)
+        top_actions_bar.addWidget(copy_btn)
         top_actions_bar.addStretch()
-        logger.info("Top bar initialized: Add/Save only; Search/Replace removed per UX")
+        logger.info("Top bar initialized: Add/Save/Copy All; Search/Replace removed per UX")
 
         # Second row removed entirely per UX
 
         # Scrollable area for blocks
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
+        # Ensure scroll area fills remaining space and maintains consistent size
+        try:
+            self.scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            logger.debug("Scroll area size policy set to Expanding/Expanding")
+        except Exception:
+            logger.exception("Failed to set scroll area size policy")
         self.blocks_container = QWidget()
         self.blocks_layout = QVBoxLayout(self.blocks_container)
         self.blocks_layout.setContentsMargins(0, 0, 0, 0)
@@ -74,7 +86,7 @@ class BlocksEditorWidget(QWidget):
         self.scroll_area.setWidget(self.blocks_container)
 
         root.addLayout(top_actions_bar)
-        root.addWidget(self.scroll_area)
+        root.addWidget(self.scroll_area, 1)
         self.setLayout(root)
 
     def _load_blocks(self) -> None:
@@ -92,10 +104,25 @@ class BlocksEditorWidget(QWidget):
             logger.exception("Failed to load blocks into editor")
 
     def _render_blocks(self) -> None:
-        # Clear existing widgets
-        while self.block_widgets:
-            w = self.block_widgets.pop()
-            w.setParent(None)
+        # Clear existing layout items (widgets AND spacers) to avoid accumulation
+        try:
+            total_items = self.blocks_layout.count()
+            cleared_widgets = 0
+            while self.blocks_layout.count():
+                item = self.blocks_layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.setParent(None)
+                    cleared_widgets += 1
+            self.block_widgets.clear()
+            logger.debug(
+                "Cleared blocks layout items=%d (widgets=%d, spacers=%d)",
+                total_items,
+                cleared_widgets,
+                max(total_items - cleared_widgets, 0),
+            )
+        except Exception:
+            logger.exception("Failed to clear existing block widgets and spacers")
         # Search/replace state removed; nothing to clear
         # Render blocks in order
         ordered = sorted(self.blocks, key=lambda b: b.order)
@@ -153,6 +180,30 @@ class BlocksEditorWidget(QWidget):
             logger.exception("Failed to save blocks from editor")
 
     # Search/Replace functionality removed per UX
+
+    def _copy_all_blocks(self) -> None:
+        try:
+            contents: list[str] = []
+            for idx, bw in enumerate(self.block_widgets):
+                text = bw.get_content()
+                if text and text.strip():
+                    contents.append(text)
+                    logger.debug(
+                        "Collecting block idx=%d id=%s chars=%d",
+                        idx,
+                        getattr(bw.block, "id", "unknown"),
+                        len(text),
+                    )
+
+            combined = "\n\n".join(contents)
+            QApplication.clipboard().setText(combined)
+            logger.info(
+                "Copied %d non-empty blocks to clipboard (chars=%d)",
+                len(contents),
+                len(combined),
+            )
+        except Exception:
+            logger.exception("Failed to copy all blocks to clipboard")
 
 
 def create_blocks_editor_widget(style_func=None) -> QWidget:

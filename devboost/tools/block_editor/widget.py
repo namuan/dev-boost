@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QPushButton,
+    QSizePolicy,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -102,6 +103,8 @@ class BlockWidget(QWidget):
         layout.addLayout(header)
         # Create editor according to language
         self.editor = self._create_editor_for_language(self.language_combo.currentText())
+        # Apply consistent sizing constraints to prevent layout-induced resizing
+        self._apply_editor_sizing(self.editor)
         layout.addWidget(self.editor)
         # Always show blocks; ignore any persisted 'collapsed' flags
         if getattr(self.block, "collapsed", False):
@@ -151,6 +154,8 @@ class BlockWidget(QWidget):
             parent_layout.removeWidget(self.editor)
             self.editor.hide()
         self.editor = self._create_editor_for_language(new_language)
+        # Re-apply sizing constraints on the newly created editor
+        self._apply_editor_sizing(self.editor)
         self.set_content(prior_content)
         if parent_layout:
             parent_layout.addWidget(self.editor)
@@ -162,6 +167,23 @@ class BlockWidget(QWidget):
             logger.exception("Failed to update timestamp on language change for block %s", self.block.id)
         self._apply_lexer(new_language)
         self._update_format_button_enabled()
+
+    def _apply_editor_sizing(self, editor_widget) -> None:
+        """Apply sizing constraints to the editor to keep blocks from resizing when layout changes.
+
+        - Minimum height: 150 px
+        - Horizontal policy: Expanding (fills available width)
+        - Vertical policy: Fixed (prevents auto-resizing when other blocks are added/removed)
+        """
+        try:
+            editor_widget.setMinimumHeight(150)
+            editor_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            logger.debug(
+                "Applied editor sizing for block %s: minHeight=150, sizePolicy=(Expanding, Fixed)",
+                self.block.id,
+            )
+        except Exception:
+            logger.exception("Failed to apply sizing policy to editor for block %s", self.block.id)
 
     def get_content(self) -> str:
         if QsciScintilla and isinstance(self.editor, QsciScintilla):
