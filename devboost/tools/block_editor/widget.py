@@ -1,10 +1,12 @@
 import logging
+import os
 from collections.abc import Callable
 from datetime import datetime
 
 from PyQt6.QtCore import (
     QEasingCurve,
     QEvent,
+    QParallelAnimationGroup,
     QPoint,
     QPropertyAnimation,
     QSize,
@@ -39,6 +41,14 @@ from .highlighters import MarkdownHighlighter
 from .storage import Block
 
 logger = logging.getLogger(__name__)
+
+# Overlay debug toggle: set DEVBOOST_OVERLAY_DEBUG=1/true/yes/on to enable
+OVERLAY_DEBUG = os.getenv("DEVBOOST_OVERLAY_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _overlay_debug(msg: str, *args, **kwargs) -> None:
+    if OVERLAY_DEBUG:
+        logger.debug(msg, *args, **kwargs)
 
 
 LANGUAGE_OPTIONS = [
@@ -75,14 +85,14 @@ class BlockWidget(QWidget):
         # Harmonize margins and spacing with global layout constants
         m = get_layout_margin("small")
         s = get_layout_spacing("small")
-        logging.debug("BlockWidget: applying layout margins=%s spacing=%s", m, s)
+        _overlay_debug("BlockWidget: applying layout margins=%s spacing=%s", m, s)
         layout.setContentsMargins(m, m, m, m)
         layout.setSpacing(s)
 
         # Create editor according to language (no persistent header row)
         initial_language = self.block.language if self.block.language in LANGUAGE_OPTIONS else "plain"
         if initial_language != self.block.language:
-            logger.debug(
+            _overlay_debug(
                 "Normalizing block %s language from %s to %s",
                 self.block.id,
                 self.block.language,
@@ -124,18 +134,19 @@ class BlockWidget(QWidget):
         self.editor.show()
         layout.addWidget(self._editor_host)
 
-        # Install event filter to manage hover/focus overlay visibility and positioning
-        try:
-            self.editor.installEventFilter(self)
-            logger.debug("Installed event filter on editor for block %s", self.block.id)
-        except Exception:
-            logger.exception("Failed to install event filter on editor for block %s", self.block.id)
+        # Install event filter(s) to manage hover/focus overlay visibility and positioning
+        self._install_event_filters_for_editor(self.editor)
 
         # Create hover overlay with icon cluster (language, format, delete)
         self._create_overlay()
+        # If the pointer is already inside the editor/viewport, reveal overlay immediately
+        try:
+            self._maybe_show_overlay_if_hovered()
+        except Exception:
+            logger.exception("Failed to force-show overlay on init for block %s", self.block.id)
         # Always show blocks; ignore any persisted 'collapsed' flags
         if getattr(self.block, "collapsed", False):
-            logger.debug("Ignoring persisted collapsed state for block %s; blocks remain open.", self.block.id)
+            _overlay_debug("Ignoring persisted collapsed state for block %s; blocks remain open.", self.block.id)
             self.block.collapsed = False
         self.setLayout(layout)
         # Ensure the BlockWidget itself participates in vertical growth so it remains visible
@@ -143,7 +154,7 @@ class BlockWidget(QWidget):
             self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
             # Guard against zero-height render glitches by enforcing a reasonable minimum
             self.setMinimumHeight(max(160, self.editor.minimumHeight() + m + s))
-            logger.debug(
+            _overlay_debug(
                 "BlockWidget sizing applied for %s: sizePolicy=(Expanding, MinimumExpanding), minHeight=%d",
                 self.block.id,
                 self.minimumHeight(),
@@ -160,7 +171,7 @@ class BlockWidget(QWidget):
         try:
             if not (QsciScintilla and isinstance(self.editor, QsciScintilla)):
                 # Not a QScintilla editor; nothing to apply
-                logger.debug("Skipping lexer apply: editor is not QsciScintilla for language=%s", language)
+                _overlay_debug("Skipping lexer apply: editor is not QsciScintilla for language=%s", language)
                 return
 
             lexer = None
@@ -191,12 +202,17 @@ class BlockWidget(QWidget):
         prior_content = self.get_content()
         target = self._select_editor_for_language(new_language)
         if target is not self.editor:
+            old_editor = self.editor
             try:
                 self.editor.hide()
             except Exception:
                 logger.exception("Failed to hide previous editor for block %s", self.block.id)
             self.editor = target
             self.editor.show()
+            try:
+                self._animate_editor_switch(old_editor, self.editor)
+            except Exception:
+                logger.exception("Failed to start editor switch animation for block %s", self.block.id)
         # Update content on the active editor
         self.set_content(prior_content)
         # Refresh layout minimally
@@ -212,6 +228,13 @@ class BlockWidget(QWidget):
         self._apply_lexer(new_language)
         # Reattach overlay to the current editor
         self._rebuild_overlay_for_editor()
+        # Reflect language change on the overlay button
+        self._update_language_button_label()
+        # If pointer is already hovering, reveal overlay immediately to avoid "missing" overlay perception
+        try:
+            self._maybe_show_overlay_if_hovered()
+        except Exception:
+            logger.exception("Failed to force-show overlay after language change for block %s", self.block.id)
         # Update format button enablement when overlay is valid
         self._update_format_button_enabled()
         # Notify container for any follow-up layout nudges
@@ -224,7 +247,7 @@ class BlockWidget(QWidget):
         try:
             pw = self.parentWidget()
             gp = pw.parentWidget() if pw is not None else None
-            logger.debug(
+            _overlay_debug(
                 "Parent chain on language change for %s: self=%s pw=%s gp=%s",
                 self.block.id,
                 type(self).__name__,
@@ -242,7 +265,7 @@ class BlockWidget(QWidget):
             # Fully detach and delete the previous editor to avoid layout quirks
             old_editor.setParent(None)
             old_editor.deleteLater()
-            logger.debug("Detached previous editor for block %s", self.block.id)
+            _overlay_debug("Detached previous editor for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to detach previous editor for block %s", self.block.id)
 
@@ -257,7 +280,7 @@ class BlockWidget(QWidget):
                     self.format_btn = None  # type: ignore[assignment]
                 if hasattr(self, "del_btn"):
                     self.del_btn = None  # type: ignore[assignment]
-                logger.debug("Destroyed overlay prior to editor swap for block %s", self.block.id)
+                _overlay_debug("Destroyed overlay prior to editor swap for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to destroy previous overlay for block %s")
 
@@ -292,7 +315,7 @@ class BlockWidget(QWidget):
                 grand.adjustSize()
                 grand.updateGeometry()
                 grand.repaint()
-            logger.debug(
+            _overlay_debug(
                 "Refreshed layout after editor swap for block %s: visible=%s, size=%s",
                 self.block.id,
                 self.isVisible(),
@@ -309,26 +332,27 @@ class BlockWidget(QWidget):
             idx = cont_layout.indexOf(self) if cont_layout is not None else -1
             count = cont_layout.count() if cont_layout is not None else -1
             editor_parent = self.editor.parentWidget() if hasattr(self, "editor") else None
-            logger.info(
-                "[%s] block=%s self(vis=%s hidden=%s size=%s min=%s idx=%s/%s) editor(size=%s min=%s vis=%s parent=%s)",
-                tag,
-                self.block.id,
-                self.isVisible(),
-                self.isHidden(),
-                (self.width(), self.height()),
-                (self.minimumWidth(), self.minimumHeight()),
-                idx,
-                count,
-                (self.editor.width(), self.editor.height()) if hasattr(self, "editor") else None,
-                (
-                    getattr(self.editor, "minimumWidth", lambda: None)(),
-                    getattr(self.editor, "minimumHeight", lambda: None)(),
+            if OVERLAY_DEBUG:
+                logger.info(
+                    "[%s] block=%s self(vis=%s hidden=%s size=%s min=%s idx=%s/%s) editor(size=%s min=%s vis=%s parent=%s)",
+                    tag,
+                    self.block.id,
+                    self.isVisible(),
+                    self.isHidden(),
+                    (self.width(), self.height()),
+                    (self.minimumWidth(), self.minimumHeight()),
+                    idx,
+                    count,
+                    (self.editor.width(), self.editor.height()) if hasattr(self, "editor") else None,
+                    (
+                        getattr(self.editor, "minimumWidth", lambda: None)(),
+                        getattr(self.editor, "minimumHeight", lambda: None)(),
+                    )
+                    if hasattr(self, "editor")
+                    else None,
+                    getattr(self.editor, "isVisible", lambda: None)() if hasattr(self, "editor") else None,
+                    type(editor_parent).__name__ if editor_parent is not None else None,
                 )
-                if hasattr(self, "editor")
-                else None,
-                getattr(self.editor, "isVisible", lambda: None)() if hasattr(self, "editor") else None,
-                type(editor_parent).__name__ if editor_parent is not None else None,
-            )
         except Exception:
             logger.exception("Failed to snapshot state for block %s", self.block.id)
 
@@ -369,6 +393,107 @@ class BlockWidget(QWidget):
             return self._code_editor
         return self._text_editor
 
+    def _ensure_opacity_effect(self, widget) -> QGraphicsOpacityEffect:
+        try:
+            effect = widget.graphicsEffect()
+            if not isinstance(effect, QGraphicsOpacityEffect):
+                effect = QGraphicsOpacityEffect(widget)
+                widget.setGraphicsEffect(effect)
+            try:
+                effect.setOpacity(1.0)
+            except Exception:
+                _overlay_debug("Opacity effect lacks setOpacity; continuing")
+            return effect  # type: ignore[return-value]
+        except Exception:
+            logger.exception("Failed to ensure opacity effect; creating new")
+            effect = QGraphicsOpacityEffect(widget)
+            widget.setGraphicsEffect(effect)
+            try:
+                effect.setOpacity(1.0)
+            except Exception:
+                _overlay_debug("Opacity effect lacks setOpacity; continuing")
+            return effect
+
+    def _animate_editor_switch(self, from_widget, to_widget) -> None:
+        """Crossfade between editors for a smoother UX."""
+        try:
+            if from_widget is to_widget:
+                _overlay_debug("Editor switch skipped: target equals current for block %s", self.block.id)
+                return
+            # Hide overlay during transition to avoid flicker
+            try:
+                if hasattr(self, "_overlay_hide_timer"):
+                    self._overlay_hide_timer.stop()
+                if hasattr(self, "overlay"):
+                    self._hide_overlay()
+            except Exception:
+                logger.exception("Failed to hide overlay before animation for block %s", self.block.id)
+
+            from_eff = self._ensure_opacity_effect(from_widget)
+            to_eff = self._ensure_opacity_effect(to_widget)
+            # Prepare target editor visibility
+            try:
+                to_widget.show()
+            except Exception:
+                logger.exception("Failed to show target editor for block %s", self.block.id)
+            try:
+                to_eff.setOpacity(0.0)
+                from_eff.setOpacity(1.0)
+            except Exception:
+                _overlay_debug("Opacity effect missing setOpacity; animation may be noop")
+
+            fade_out = QPropertyAnimation(from_eff, b"opacity", self)
+            fade_out.setDuration(160)
+            fade_out.setStartValue(1.0)
+            fade_out.setEndValue(0.0)
+            fade_out.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+            fade_in = QPropertyAnimation(to_eff, b"opacity", self)
+            fade_in.setDuration(160)
+            fade_in.setStartValue(0.0)
+            fade_in.setEndValue(1.0)
+            fade_in.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+            group = QParallelAnimationGroup(self)
+            group.addAnimation(fade_out)
+            group.addAnimation(fade_in)
+
+            def _on_finished() -> None:
+                try:
+                    # Finalize visibility
+                    from_widget.hide()
+                    try:
+                        from_eff.setOpacity(1.0)
+                        to_eff.setOpacity(1.0)
+                    except Exception:
+                        _overlay_debug("Opacity effect lacks setOpacity during finalize; continuing")
+                    # Reattach and position overlay to new editor
+                    self._rebuild_overlay_for_editor()
+                    self._position_overlay()
+                    # Minor layout nudge after switch
+                    self._refresh_layout_cascade(self.layout())
+                    _overlay_debug(
+                        "Completed editor crossfade for block %s (from=%s to=%s)",
+                        self.block.id,
+                        type(from_widget).__name__,
+                        type(to_widget).__name__,
+                    )
+                except Exception:
+                    logger.exception("Failed finishing editor switch for block %s", self.block.id)
+
+            group.finished.connect(_on_finished)
+            # Keep reference so GC doesn't stop animations
+            self._editor_switch_group = group
+            _overlay_debug(
+                "Starting editor crossfade for block %s (from=%s to=%s)",
+                self.block.id,
+                type(from_widget).__name__,
+                type(to_widget).__name__,
+            )
+            group.start()
+        except Exception:
+            logger.exception("Failed to animate editor switch for block %s", self.block.id)
+
     def get_content(self) -> str:
         if QsciScintilla and isinstance(self.editor, QsciScintilla):
             return self.editor.text()
@@ -380,65 +505,91 @@ class BlockWidget(QWidget):
         else:
             self.editor.setPlainText(content)  # type: ignore[attr-defined]
 
-    def _create_editor_for_language(self, language: str):
-        """Create an editor widget appropriate for the selected language."""
-        lang = language.lower()
-        # Prefer QScintilla for code-like languages
-        if QsciScintilla and lang in {"python", "json", "javascript", "js"}:
-            logger.debug("Creating QsciScintilla editor for language=%s, block=%s", lang, self.block.id)
-            editor = QsciScintilla()
-            # Some QScintilla builds on PyQt6 may not expose certain convenience APIs.
-            # Guard these calls to avoid AttributeError across environments.
+    def _create_qsci_editor(self, lang: str):
+        """Create and configure a QsciScintilla editor for code-like languages."""
+        _overlay_debug("Creating QsciScintilla editor for language=%s, block=%s", lang, self.block.id)
+        editor = QsciScintilla()
+        try:
+            # Basic flags
+            if hasattr(editor, "setUtf8"):
+                editor.setUtf8(True)
+            if hasattr(editor, "setAutoIndent"):
+                editor.setAutoIndent(True)
+            # Show whitespace and enable word wrap via SendScintilla
             try:
-                if hasattr(editor, "setUtf8"):
-                    editor.setUtf8(True)
-                if hasattr(editor, "setAutoIndent"):
-                    editor.setAutoIndent(True)
-            except Exception:
-                logger.exception("Failed to set basic QsciScintilla flags for language=%s", lang)
-            # Configure visible whitespace and word wrap using SendScintilla to avoid API differences
-            try:
-                # 1 = SCWS_VISIBLEALWAYS
                 editor.SendScintilla(editor.SCI_SETVIEWWS, 1)  # type: ignore[attr-defined]
-                # 1 = SC_WRAP_WORD
                 editor.SendScintilla(editor.SCI_SETWRAPMODE, 1)  # type: ignore[attr-defined]
             except Exception:
-                logger.exception("Failed to configure whitespace/wrap via SendScintilla for language=%s", lang)
-            # Apply lexer directly to the new editor instance
+                logger.exception("Failed SendScintilla config for language=%s", lang)
+            # Apply lexer
+            lexer = None
+            if lang == "python" and QsciLexerPython:
+                lexer = QsciLexerPython()
+            elif lang == "json" and QsciLexerJSON:
+                lexer = QsciLexerJSON()
+            elif lang in ("javascript", "js") and QsciLexerJavaScript:
+                lexer = QsciLexerJavaScript()
             try:
-                lexer = None
-                if lang == "python" and QsciLexerPython:
-                    lexer = QsciLexerPython()
-                elif lang == "json" and QsciLexerJSON:
-                    lexer = QsciLexerJSON()
-                elif lang in ("javascript", "js") and QsciLexerJavaScript:
-                    lexer = QsciLexerJavaScript()
                 editor.setLexer(lexer)
             except Exception:
-                logger.exception("Failed to set lexer on new QsciScintilla editor for language=%s", lang)
+                logger.exception("Failed to set lexer on Qsci editor for language=%s", lang)
+            # Content and hover
             editor.setText(self.block.content)
-            # Ensure hover events are emitted for overlay visibility
             try:
                 editor.setMouseTracking(True)
             except Exception:
-                logger.exception("Failed to enable mouse tracking on QsciScintilla editor for block %s", self.block.id)
-            return editor
-
-        # Fallback to QTextEdit; attach lightweight Markdown highlighter when needed
-        text_edit = QTextEdit()
-        text_edit.setAcceptRichText(False)
-        text_edit.setPlainText(self.block.content)
-        # Ensure hover events are emitted for overlay visibility
-        try:
-            text_edit.setMouseTracking(True)
-        except Exception:
-            logger.exception("Failed to enable mouse tracking on QTextEdit for block %s", self.block.id)
-        if lang == "markdown":
+                logger.exception("Failed to enable mouse tracking on Qsci editor for block %s", self.block.id)
             try:
-                MarkdownHighlighter(text_edit.document())
+                editor.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
             except Exception:
-                logger.exception("Failed to initialize Markdown highlighter")
+                logger.exception("Failed to enable WA_Hover on Qsci editor for block %s", self.block.id)
+        except Exception:
+            logger.exception("Failed to configure QsciScintilla editor for language=%s", lang)
+        return editor
+
+    def _create_text_editor(self, lang: str):
+        """Create and configure a QTextEdit editor for plain/markdown/xml/json fallback."""
+        _overlay_debug("Creating QTextEdit editor for language=%s, block=%s", lang, self.block.id)
+        text_edit = QTextEdit()
+        try:
+            text_edit.setAcceptRichText(False)
+            text_edit.setPlainText(self.block.content)
+            # Hover/mouse tracking
+            try:
+                text_edit.setMouseTracking(True)
+                text_edit.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+            except Exception:
+                logger.exception("Failed to enable tracking/hover on QTextEdit for block %s", self.block.id)
+            # For QAbstractScrollArea-based widgets, mouse events are on the viewport
+            try:
+                if hasattr(text_edit, "viewport") and callable(text_edit.viewport):
+                    vp = text_edit.viewport()
+                    if vp is not None:
+                        vp.setMouseTracking(True)
+                        try:
+                            vp.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+                        except Exception:
+                            logger.exception(
+                                "Failed to enable WA_Hover on QTextEdit viewport for block %s", self.block.id
+                            )
+            except Exception:
+                logger.exception("Failed to enable mouse tracking on QTextEdit viewport for block %s", self.block.id)
+            # Lightweight markdown highlighter
+            if lang == "markdown":
+                try:
+                    MarkdownHighlighter(text_edit.document())
+                except Exception:
+                    logger.exception("Failed to initialize Markdown highlighter")
+        except Exception:
+            logger.exception("Failed to configure QTextEdit for language=%s", lang)
         return text_edit
+
+    def _create_editor_for_language(self, language: str):
+        """Create an editor widget appropriate for the selected language."""
+        lang = language.lower()
+        if QsciScintilla and lang in {"python", "json", "javascript", "js"}:
+            return self._create_qsci_editor(lang)
+        return self._create_text_editor(lang)
 
     # Folding capability removed; blocks remain open in the UI
 
@@ -450,7 +601,8 @@ class BlockWidget(QWidget):
         Overlay fades in on hover/focus and fades out otherwise.
         """
         try:
-            self.overlay = QWidget(self.editor)
+            parent = self._overlay_parent_widget()
+            self.overlay = QWidget(parent)
             self.overlay.setObjectName("blockOverlay")
             self.overlay.setStyleSheet(
                 "#blockOverlay {"
@@ -470,19 +622,20 @@ class BlockWidget(QWidget):
             hl.setContentsMargins(6, 4, 6, 4)
             hl.setSpacing(2)
 
-            # Language button opens a popover menu with options
+            # Language button opens a popover menu with options and shows current language
             self.lang_btn = QToolButton(self.overlay)
             try:
                 lang_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
+                # Keep icon optional; show text prominently
                 self.lang_btn.setIcon(lang_icon)
             except Exception:
                 logger.exception("Failed to set language icon; falling back to text")
             self.lang_btn.setText("Lang")
             self.lang_btn.setIconSize(QSize(16, 16))
-            self.lang_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-            if self.lang_btn.icon().isNull():
-                self.lang_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            self.lang_btn.setToolTip("Set language")
+            # Prefer text to make current language visible
+            self.lang_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+            self._update_language_button_label()
+            self.lang_btn.setToolTip(f"Language: {self.block.language}")
             self.lang_btn.setFixedSize(26, 24)
             self.lang_btn.clicked.connect(self._open_language_menu)
             hl.addWidget(self.lang_btn)
@@ -552,9 +705,87 @@ class BlockWidget(QWidget):
                 self.overlay.resize(90, 28)
             self._position_overlay()
             self.overlay.raise_()
-            logger.info("Created hover overlay for block %s", self.block.id)
+            try:
+                self.overlay.setVisible(True)
+            except Exception:
+                _overlay_debug("Failed to explicitly show overlay; relying on parent visibility")
+            self._log_overlay_state("created")
+            _overlay_debug("Created hover overlay for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to create hover overlay for block %s", self.block.id)
+
+    def _overlay_parent_widget(self):
+        try:
+            # Prefer the viewport for scroll-area based editors like QTextEdit
+            if hasattr(self.editor, "viewport") and callable(self.editor.viewport):
+                vp = self.editor.viewport()
+                if vp is not None:
+                    _overlay_debug("Using viewport as overlay parent for block %s", self.block.id)
+                    return vp
+        except Exception:
+            logger.exception("Failed to get viewport; falling back to editor for block %s", self.block.id)
+        return self.editor
+
+    def _install_event_filters_for_editor(self, editor) -> None:
+        """Install event filters on the active editor and its viewport (if any).
+
+        This ensures we receive hover/mouse events even for scroll-area based widgets
+        like QTextEdit whose events are emitted on the viewport.
+        """
+        try:
+            try:
+                # Ensure editor itself emits hover/mouse move events
+                try:
+                    editor.setMouseTracking(True)
+                except Exception:
+                    _overlay_debug("Failed to enable mouseTracking on editor for block %s", self.block.id)
+                try:
+                    editor.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+                except Exception:
+                    _overlay_debug("Failed to enable WA_Hover on editor for block %s", self.block.id)
+                editor.installEventFilter(self)
+                _overlay_debug("Installed event filter on editor for block %s", self.block.id)
+            except Exception:
+                logger.exception("Failed to install event filter on editor for block %s", self.block.id)
+            # Also listen to viewport events if present
+            try:
+                if hasattr(editor, "viewport") and callable(editor.viewport):
+                    vp = editor.viewport()
+                    if vp is not None:
+                        try:
+                            vp.setMouseTracking(True)
+                        except Exception:
+                            _overlay_debug("Failed to enable mouseTracking on viewport for block %s", self.block.id)
+                        try:
+                            vp.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+                        except Exception:
+                            _overlay_debug("Failed to enable WA_Hover on viewport for block %s", self.block.id)
+                        vp.installEventFilter(self)
+                        _overlay_debug("Installed event filter on editor viewport for block %s", self.block.id)
+            except Exception:
+                logger.exception("Failed to install event filter on editor viewport for block %s", self.block.id)
+        except Exception:
+            logger.exception("Unexpected error installing event filters for block %s", self.block.id)
+
+    def _update_language_button_label(self) -> None:
+        """Update the language button text to reflect the current language."""
+        try:
+            lang = (self.block.language or "plain").lower()
+            label_map = {
+                "plain": "Plain",
+                "markdown": "MD",
+                "json": "JSON",
+                "xml": "XML",
+                "python": "Py",
+                "javascript": "JS",
+            }
+            display = label_map.get(lang, lang.title())
+            if hasattr(self, "lang_btn") and self.lang_btn is not None:
+                self.lang_btn.setText(display)
+                self.lang_btn.setToolTip(f"Language: {lang}")
+            _overlay_debug("Language button label set to '%s' for block %s", display, self.block.id)
+        except Exception:
+            logger.exception("Failed to update language button label for block %s", self.block.id)
 
     def _open_language_menu(self) -> None:
         try:
@@ -567,7 +798,7 @@ class BlockWidget(QWidget):
             # Position the menu just below the language button
             pos_below_btn = self.lang_btn.mapToGlobal(QPoint(0, self.lang_btn.height()))
             menu.exec(pos_below_btn)
-            logger.debug("Language menu opened for block %s", self.block.id)
+            _overlay_debug("Language menu opened for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to open language menu for block %s", self.block.id)
 
@@ -577,10 +808,14 @@ class BlockWidget(QWidget):
                 return
             # Anchor 6px from top-right inside editor
             ow = self.overlay.width()
-            ox = max(self.editor.width() - ow - 6, 2)
+            # Base width from overlay parent (viewport/editor) to ensure correct positioning
+            parent_widget = self.overlay.parentWidget() if hasattr(self, "overlay") else None
+            base_width = parent_widget.width() if parent_widget is not None else self.editor.width()
+            ox = max(base_width - ow - 6, 2)
             oy = 6
             self.overlay.move(ox, oy)
-            logger.debug("Overlay positioned for block %s at (%d,%d)", self.block.id, ox, oy)
+            self._log_overlay_state("positioned")
+            _overlay_debug("Overlay positioned for block %s at (%d,%d)", self.block.id, ox, oy)
         except Exception:
             logger.exception("Failed to position overlay for block %s", self.block.id)
 
@@ -592,7 +827,18 @@ class BlockWidget(QWidget):
             self._overlay_anim.setStartValue(self._overlay_effect.opacity())
             self._overlay_anim.setEndValue(1.0)
             self._overlay_anim.start()
-            logger.debug("Overlay shown for block %s", self.block.id)
+            try:
+                self.overlay.setVisible(True)
+                self.overlay.raise_()
+            except Exception:
+                _overlay_debug("Overlay show/raise failed softly for block %s", self.block.id)
+            try:
+                # Log when animation finishes to confirm final opacity state
+                self._overlay_anim.finished.connect(lambda: self._log_overlay_state("anim-finished-show"))
+            except Exception:
+                _overlay_debug("Failed to connect finished signal for overlay anim show on block %s", self.block.id)
+            self._log_overlay_state("show")
+            _overlay_debug("Overlay shown for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to show overlay for block %s", self.block.id)
 
@@ -600,41 +846,82 @@ class BlockWidget(QWidget):
         try:
             # Keep overlay if mouse is still hovering over it
             if hasattr(self, "overlay") and self.overlay.underMouse():
-                logger.debug("Overlay hide canceled due to hover for block %s", self.block.id)
+                _overlay_debug("Overlay hide canceled due to hover for block %s", self.block.id)
                 return
             self._overlay_anim.stop()
             self._overlay_anim.setStartValue(self._overlay_effect.opacity())
             self._overlay_anim.setEndValue(0.0)
             self._overlay_anim.start()
-            logger.debug("Overlay hidden for block %s", self.block.id)
+            try:
+                self._overlay_anim.finished.connect(lambda: self._log_overlay_state("anim-finished-hide"))
+            except Exception:
+                _overlay_debug("Failed to connect finished signal for overlay anim hide on block %s", self.block.id)
+            self._log_overlay_state("hide")
+            _overlay_debug("Overlay hidden for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to hide overlay for block %s", self.block.id)
 
     def _rebuild_overlay_for_editor(self) -> None:
         """Reattach overlay to the current editor (after language change)."""
         try:
+            # Recreate overlay to avoid stale parenting/filters during editor swap
             if hasattr(self, "overlay") and self.overlay is not None:
                 try:
-                    self.overlay.setParent(self.editor)
-                    self.overlay.raise_()
-                    self._position_overlay()
-                    logger.debug("Reattached overlay to new editor for block %s", self.block.id)
-                except RuntimeError:
-                    # Underlying C++ QWidget was already deleted; recreate overlay
-                    logger.warning("Overlay pointer invalid; recreating for block %s", self.block.id)
+                    self.overlay.setParent(None)
+                    self.overlay.deleteLater()
+                except Exception:
+                    logger.debug("Overlay deletion failed; continuing with recreation for block %s", self.block.id)
+                finally:
                     self.overlay = None
-                    self._create_overlay()
+            self._create_overlay()
+            # Ensure event filters are installed on the active editor and viewport
+            self._install_event_filters_for_editor(self.editor)
+            self._log_overlay_state("recreated")
+            logger.debug("Recreated overlay for current editor on block %s", self.block.id)
+            # Proactively reveal overlay briefly after language change for user feedback
+            try:
+                self._show_overlay()
+            except Exception:
+                logger.debug("Soft failure in proactive overlay show post language change for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to reattach overlay for block %s", self.block.id)
 
     def eventFilter(self, obj, event):  # type: ignore[override]
         try:
-            if obj is self.editor:
+            # Consider both the editor and its viewport as sources of hover/mouse events
+            is_editor = obj is self.editor
+            is_viewport = False
+            try:
+                if hasattr(self.editor, "viewport") and callable(self.editor.viewport):
+                    is_viewport = obj is self.editor.viewport()
+            except Exception:
+                # If viewport access fails, keep is_viewport as False
+                logger.debug("Viewport check failed for block %s", self.block.id)
+
+            if is_editor or is_viewport:
                 et = event.type()
-                if et in (QEvent.Type.Enter, QEvent.Type.FocusIn, QEvent.Type.MouseMove):
+                if et in (
+                    QEvent.Type.Enter,
+                    QEvent.Type.FocusIn,
+                    QEvent.Type.MouseMove,
+                    QEvent.Type.HoverEnter,
+                    QEvent.Type.HoverMove,
+                ):
+                    logger.debug(
+                        "Overlay trigger(show) from %s event=%s for block %s",
+                        "viewport" if is_viewport else "editor",
+                        et.name if hasattr(et, "name") else int(et),
+                        self.block.id,
+                    )
                     self._show_overlay()
                     return False
-                if et in (QEvent.Type.Leave, QEvent.Type.FocusOut):
+                if et in (QEvent.Type.Leave, QEvent.Type.FocusOut, QEvent.Type.HoverLeave):
+                    logger.debug(
+                        "Overlay trigger(hide) from %s event=%s for block %s",
+                        "viewport" if is_viewport else "editor",
+                        et.name if hasattr(et, "name") else int(et),
+                        self.block.id,
+                    )
                     self._overlay_hide_timer.start()
                     return False
                 if et == QEvent.Type.Resize:
@@ -642,50 +929,105 @@ class BlockWidget(QWidget):
                     return False
             elif hasattr(self, "overlay") and obj is self.overlay:
                 et = event.type()
-                if et in (QEvent.Type.Enter, QEvent.Type.MouseMove):
+                if et in (QEvent.Type.Enter, QEvent.Type.MouseMove, QEvent.Type.HoverEnter, QEvent.Type.HoverMove):
                     self._show_overlay()
                     return False
-                if et == QEvent.Type.Leave:
+                if et in (QEvent.Type.Leave, QEvent.Type.HoverLeave):
                     self._overlay_hide_timer.start()
                     return False
         except Exception:
             logger.exception("eventFilter error in block %s", self.block.id)
         return super().eventFilter(obj, event)
 
+    def _maybe_show_overlay_if_hovered(self) -> None:
+        """Show overlay immediately if mouse is already hovering over active editor/viewport/overlay."""
+        try:
+            vp = None
+            try:
+                if hasattr(self.editor, "viewport") and callable(self.editor.viewport):
+                    vp = self.editor.viewport()
+            except Exception:
+                vp = None
+            if (
+                (hasattr(self, "overlay") and self.overlay is not None and self.overlay.underMouse())
+                or (self.editor is not None and self.editor.underMouse())
+                or (vp is not None and vp.underMouse())
+            ):
+                self._show_overlay()
+                self._log_overlay_state("force-show-hovered")
+                logger.debug("Overlay force-shown due to hover state for block %s", self.block.id)
+        except Exception:
+            logger.exception("Failed hover check for overlay on block %s", self.block.id)
+
+    def _log_overlay_state(self, tag: str) -> None:
+        """Log overlay diagnostic state to validate visibility and positioning assumptions."""
+        try:
+            exists = hasattr(self, "overlay") and self.overlay is not None
+            if not exists:
+                _overlay_debug("[%s] overlay missing for block %s", tag, self.block.id)
+                return
+            parent = self.overlay.parentWidget()
+            eff = getattr(self, "_overlay_effect", None)
+            opacity = None
+            try:
+                if eff is not None:
+                    opacity = eff.opacity()
+            except Exception:
+                opacity = None
+            if OVERLAY_DEBUG:
+                logger.info(
+                    "[%s] overlay state: block=%s pos=(%d,%d) size=(%d,%d) parent=%s psize=(%d,%d) opacity=%s",
+                    tag,
+                    self.block.id,
+                    self.overlay.x(),
+                    self.overlay.y(),
+                    self.overlay.width(),
+                    self.overlay.height(),
+                    type(parent).__name__ if parent is not None else None,
+                    parent.width() if parent is not None else -1,
+                    parent.height() if parent is not None else -1,
+                    opacity,
+                )
+        except Exception:
+            logger.exception("[%s] overlay state logging failed for block %s", tag, self.block.id)
+
     # --- Visibility diagnostics on the BlockWidget itself ---
     def showEvent(self, event):  # type: ignore[override]
         try:
-            logger.info(
-                "Block %s showEvent: size=%s min=%s visible=%s",
-                self.block.id,
-                (self.width(), self.height()),
-                (self.minimumWidth(), self.minimumHeight()),
-                self.isVisible(),
-            )
+            if OVERLAY_DEBUG:
+                logger.info(
+                    "Block %s showEvent: size=%s min=%s visible=%s",
+                    self.block.id,
+                    (self.width(), self.height()),
+                    (self.minimumWidth(), self.minimumHeight()),
+                    self.isVisible(),
+                )
         except Exception:
             logger.exception("Error logging showEvent for block %s", self.block.id)
         super().showEvent(event)
 
     def hideEvent(self, event):  # type: ignore[override]
         try:
-            logger.info(
-                "Block %s hideEvent: size=%s min=%s hidden=%s",
-                self.block.id,
-                (self.width(), self.height()),
-                (self.minimumWidth(), self.minimumHeight()),
-                self.isHidden(),
-            )
+            if OVERLAY_DEBUG:
+                logger.info(
+                    "Block %s hideEvent: size=%s min=%s hidden=%s",
+                    self.block.id,
+                    (self.width(), self.height()),
+                    (self.minimumWidth(), self.minimumHeight()),
+                    self.isHidden(),
+                )
         except Exception:
             logger.exception("Error logging hideEvent for block %s", self.block.id)
         super().hideEvent(event)
 
     def resizeEvent(self, event):  # type: ignore[override]
         try:
-            logger.info(
-                "Block %s resizeEvent: newSize=%s",
-                self.block.id,
-                (event.size().width(), event.size().height()),
-            )
+            if OVERLAY_DEBUG:
+                logger.info(
+                    "Block %s resizeEvent: newSize=%s",
+                    self.block.id,
+                    (event.size().width(), event.size().height()),
+                )
         except Exception:
             logger.exception("Error logging resizeEvent for block %s", self.block.id)
         super().resizeEvent(event)
