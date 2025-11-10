@@ -126,11 +126,12 @@ class BlocksEditorWidget(QWidget):
         # Search/replace state removed; nothing to clear
         # Render blocks in order
         ordered = sorted(self.blocks, key=lambda b: b.order)
-        for idx, b in enumerate(ordered):
+        for b in ordered:
             # Provide callback so controls live in the block header row (Delete only)
             bw = BlockWidget(
                 b,
-                on_delete=lambda idx=idx: self._delete_block(idx),
+                # Bind delete to a slot that ignores signal args and deletes by id
+                on_delete=self._make_delete_handler(b.id),
             )
             # Observe language changes to keep layout fresh and visible
             try:
@@ -163,15 +164,50 @@ class BlocksEditorWidget(QWidget):
     def _delete_block(self, index: int) -> None:
         try:
             if 0 <= index < len(self.blocks):
-                b = self.blocks.pop(index)
-                logger.info("Deleted block id=%s at index=%d", b.id, index)
-                # Reassign order sequentially
-                for i, blk in enumerate(self.blocks):
-                    blk.order = i
-                self._save_blocks()
-                self._render_blocks()
+                # Map index from sorted view to actual block id to avoid off-by-one errors
+                ordered = sorted(self.blocks, key=lambda b: b.order)
+                target = ordered[index]
+                logger.debug(
+                    "Resolving deletion: requested index=%d -> block id=%s (order=%d)",
+                    index,
+                    target.id,
+                    target.order,
+                )
+                # Delegate to id-based deletion
+                self._delete_block_by_id(target.id)
         except Exception:
             logger.exception("Failed to delete block at index=%d", index)
+
+    def _make_delete_handler(self, block_id: str):
+        """Return a callable slot that ignores any signal args and deletes by id."""
+
+        def _slot(*_args, **_kwargs):
+            try:
+                self._delete_block_by_id(block_id)
+            except Exception:
+                logger.exception("Delete slot failed for block id=%s", block_id)
+
+        return _slot
+
+    def _delete_block_by_id(self, block_id: str) -> None:
+        """Delete a block by its id, then reorder and refresh UI."""
+        try:
+            before_count = len(self.blocks)
+            # Use storage helper to delete by id for clarity
+            self.blocks = self.storage.delete_block(self.blocks, block_id)
+            after_count = len(self.blocks)
+            logger.info(
+                "Deleted block id=%s (before=%d, after=%d)",
+                block_id,
+                before_count,
+                after_count,
+            )
+            # Reassign sequential order using storage helper and keep internal list consistent
+            self.blocks = self.storage.reorder(self.blocks)
+            self._save_blocks()
+            self._render_blocks()
+        except Exception:
+            logger.exception("Failed to delete block id=%s", block_id)
 
     # Move Up/Down controls removed per UX; drag-and-drop reordering can be considered later.
 
