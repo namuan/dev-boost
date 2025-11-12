@@ -8,6 +8,7 @@ from .file_rename import create_file_rename_widget
 from .graphql_client import create_graphql_client_widget
 from .http_client import create_http_client_widget
 from .ip_subnet_calculator import create_ip_subnet_calculator_widget
+from .json_diff import create_json_diff_widget
 from .json_format_validate import create_json_formatter_widget
 from .jwt_debugger import create_jwt_debugger_widget
 from .llm_client import create_llm_client_widget
@@ -56,4 +57,5 @@ __all__ = [
     "create_xml_formatter_widget",
     "create_yaml_to_json_widget",
     "create_blocks_editor_widget",
+    "create_json_diff_widget",
 ]

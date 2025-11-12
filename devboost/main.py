@@ -31,6 +31,7 @@ from .tools import (
     create_graphql_client_widget,
     create_http_client_widget,
     create_ip_subnet_calculator_widget,
+    create_json_diff_widget,
     create_json_formatter_widget,
     create_jwt_debugger_widget,
     create_llm_client_widget,
@@ -252,6 +253,7 @@ class DevDriverWindow(QMainWindow):
             ("🔍", "API Inspector", "api inspector http request capture monitor debug network traffic"),
             ("🕒", "Unix Time Converter", "timestamp epoch time date convert unix"),
             ("{}", "JSON Format/Validate", "json format validate pretty print beautify"),
+            ("🧾", "JSON Diff", "json compare diff difference highlight"),
             ("64", "Base64 String Encode/Decode", "base64 encode decode string text"),
             ("✴️", "JWT Debugger", "jwt token debug decode verify json web token"),
             ("✳️", "RegExp Tester", "regex regexp regular expression test match pattern"),
@@ -372,6 +374,8 @@ class DevDriverWindow(QMainWindow):
         self.unix_time_converter_screen = create_unix_time_converter_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating JSON Format/Validate screen")
         self.json_format_validate_screen = create_json_formatter_widget(self.style, self.scratch_pad_widget)
+        logger.info("Creating JSON Diff screen")
+        self.json_diff_screen = create_json_diff_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating Base64 String Encode/Decode screen")
         self.base64_string_encodec_screen = create_base64_string_encodec_widget(self.style, self.scratch_pad_widget)
         logger.info("Creating JWT Debugger screen")
@@ -425,6 +429,7 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget.addWidget(self.api_inspector_screen)
         self.stacked_widget.addWidget(self.unix_time_converter_screen)
         self.stacked_widget.addWidget(self.json_format_validate_screen)
+        self.stacked_widget.addWidget(self.json_diff_screen)
         self.stacked_widget.addWidget(self.base64_string_encodec_screen)
         self.stacked_widget.addWidget(self.jwt_debugger_screen)
         self.stacked_widget.addWidget(self.regexp_tester_screen)
@@ -487,6 +492,7 @@ class DevDriverWindow(QMainWindow):
             "API Inspector": self.api_inspector_screen,
             "Unix Time Converter": self.unix_time_converter_screen,
             "JSON Format/Validate": self.json_format_validate_screen,
+            "JSON Diff": self.json_diff_screen,
             "Base64 String Encode/Decode": self.base64_string_encodec_screen,
             "JWT Debugger": self.jwt_debugger_screen,
             "RegExp Tester": self.regexp_tester_screen,
@@ -575,6 +581,7 @@ class DevDriverWindow(QMainWindow):
                 "API Inspector": self.api_inspector_screen,
                 "Unix Time Converter": self.unix_time_converter_screen,
                 "JSON Format/Validate": self.json_format_validate_screen,
+                "JSON Diff": self.json_diff_screen,
                 "Base64 String Encode/Decode": self.base64_string_encodec_screen,
                 "JWT Debugger": self.jwt_debugger_screen,
                 "RegExp Tester": self.regexp_tester_screen,
