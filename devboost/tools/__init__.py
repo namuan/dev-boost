@@ -31,6 +31,7 @@ from .yaml_to_json import create_yaml_to_json_widget
 __all__ = [
     "create_api_inspector_widget",
     "create_base64_string_encodec_widget",
+    "create_blocks_editor_widget",
     "create_color_converter_widget",
     "create_cron_expression_editor_widget",
     "create_file_optimization_widget",
@@ -38,6 +39,7 @@ __all__ = [
     "create_graphql_client_widget",
     "create_http_client_widget",
     "create_ip_subnet_calculator_widget",
+    "create_json_diff_widget",
     "create_json_formatter_widget",
     "create_jwt_debugger_widget",
     "create_llm_client_widget",
@@ -56,6 +58,4 @@ __all__ = [
     "create_uvx_runner_widget",
     "create_xml_formatter_widget",
     "create_yaml_to_json_widget",
-    "create_blocks_editor_widget",
-    "create_json_diff_widget",
 ]

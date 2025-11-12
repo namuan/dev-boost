@@ -8,8 +8,8 @@ from .json_diff import (
 from .json_diff_ui import JSONDiffDashboard
 
 __all__ = [
-    "JSONDiffDashboard",
     "DiffEntry",
+    "JSONDiffDashboard",
     "JsonDiffEngine",
     "create_json_diff_widget",
 ]
