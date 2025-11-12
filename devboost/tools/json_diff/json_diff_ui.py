@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class JSONDiffDashboard(QWidget):
-    def __init__(self, scratch_pad_widget=None):
+    def __init__(self, scratch_pad_widget):
         super().__init__()
         self.scratch_pad_widget = scratch_pad_widget
         self.engine = JsonDiffEngine()
@@ -39,27 +39,26 @@ class JSONDiffDashboard(QWidget):
 
     def _setup_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(10, 10, 10, 10)
-        root.setSpacing(10)
+        # Match JSON Formatter: remove outer padding/spacing so top bar sits flush on the main background
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
+        # Top bar container to keep controls together without extra grey band
         top_bar = QHBoxLayout()
+        top_bar.setContentsMargins(10, 5, 5, 5)
+        top_bar.setSpacing(8)
+
         self.compare_btn = QPushButton("Compare")
         self.compare_btn.clicked.connect(self._run_compare)
         self.swap_btn = QPushButton("Swap A/B")
         self.swap_btn.clicked.connect(self._swap_inputs)
-        self.save_btn = QPushButton("Save Report")
-        self.save_btn.clicked.connect(self._save_report)
-        self.send_to_scratch_btn = None
-        if self.scratch_pad_widget:
-            self.send_to_scratch_btn = QPushButton("Send to Scratch Pad")
-            self.send_to_scratch_btn.clicked.connect(self._send_to_scratch_pad)
+        self.send_to_scratch_btn = QPushButton("Send to Scratch Pad")
+        self.send_to_scratch_btn.clicked.connect(self._send_to_scratch_pad)
         top_bar.addStretch()
         top_bar.addWidget(self.compare_btn)
         top_bar.addWidget(self.swap_btn)
-        if self.send_to_scratch_btn:
-            top_bar.addWidget(self.send_to_scratch_btn)
-        else:
-            top_bar.addWidget(self.save_btn)
+        top_bar.addWidget(self.send_to_scratch_btn)
+
         root.addLayout(top_bar)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -220,27 +219,8 @@ class JSONDiffDashboard(QWidget):
         for i in range(4):
             item.setForeground(i, brush)
 
-    def _save_report(self) -> None:
-        try:
-            if not self._diffs:
-                QMessageBox.information(self, "No Differences", "No differences to save.")
-                return
-            fname, _ = QFileDialog.getSaveFileName(
-                self, "Save Diff Report", "json_diff_report.txt", "Text Files (*.txt)"
-            )
-            if not fname:
-                return
-            Path(fname).write_text(self.text.toPlainText(), encoding="utf-8")
-            logger.info("Saved diff report to %s", fname)
-            QMessageBox.information(self, "Saved", f"Diff report saved to {fname}")
-        except Exception:
-            logger.exception("Failed to save diff report")
-            QMessageBox.warning(self, "Error", "Failed to save diff report.")
-
     def _send_to_scratch_pad(self) -> None:
         try:
-            if not self.scratch_pad_widget:
-                return
             content = self.text.toPlainText()
             if not content:
                 QMessageBox.information(self, "No Report", "Generate a diff report first.")
