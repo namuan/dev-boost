@@ -199,6 +199,7 @@ def create_json_formatter_widget(style_func, scratch_pad=None):
 
     # Input Text Area
     input_text_edit = QTextEdit()
+    input_text_edit.setAcceptRichText(False)
     left_layout.addWidget(input_text_edit)
     splitter.addWidget(left_pane)
 
@@ -234,10 +235,12 @@ def create_json_formatter_widget(style_func, scratch_pad=None):
 
     # Output Text Area
     output_text_edit = QTextEdit()
+    output_text_edit.setAcceptRichText(False)
     right_layout.addWidget(output_text_edit)
     splitter.addWidget(right_pane)
 
     splitter.setSizes([300, 300])
+    logger.info("Configured JSON Formatter inputs to accept plain-text pasting")
 
     # --- Bottom Bar ---
     bottom_bar = QFrame()
