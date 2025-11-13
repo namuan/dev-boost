@@ -180,6 +180,7 @@ def create_json_diff_widget(style_func=None, scratch_pad_widget=None) -> QWidget
 
     left_edit = QTextEdit()
     left_edit.setFont(QFont("Courier", 11))
+    left_edit.setAcceptRichText(False)
     left_layout.addWidget(left_edit)
 
     splitter.addWidget(left_pane)
@@ -201,12 +202,15 @@ def create_json_diff_widget(style_func=None, scratch_pad_widget=None) -> QWidget
 
     right_edit = QTextEdit()
     right_edit.setFont(QFont("Courier", 11))
+    right_edit.setAcceptRichText(False)
     right_layout.addWidget(right_edit)
 
     splitter.addWidget(right_pane)
 
     splitter.setSizes([400, 400])
     root_layout.addWidget(splitter, 1)
+
+    logger.info("Configured JSON Diff inputs to accept plain-text pasting")
 
     # --- Diff views (Tree + Text) ---
     # Use a QTabWidget for tree/text diff views (mirroring formatter pattern)
