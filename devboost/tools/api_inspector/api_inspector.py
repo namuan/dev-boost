@@ -10,10 +10,26 @@ from socketserver import ThreadingMixIn
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
     QWidget,
 )
+
+from devboost.styles import get_tool_style
 
 # Logger for debugging
 logger = logging.getLogger(__name__)
@@ -393,12 +409,281 @@ class DataExporter:
 
 
 def create_api_inspector_widget(style=None, scratch_pad_widget=None) -> QWidget:
-    """Create and return the API Inspector widget."""
-    from .api_inspector_ui import APIInspectorDashboard
-
-    # Create storage and server
+    """
+    Create and return the API Inspector widget using a factory pattern (no QWidget subclass),
+    similar to how it's done in the json_diff tool.
+    """
+    # Core engine components
     storage = RequestStorage()
     server = APIInspectorServer(storage=storage)
 
-    # Create and return dashboard
-    return APIInspectorDashboard(server, storage, scratch_pad_widget)
+    # Root widget and base layout
+    root = QWidget()
+    root.setStyleSheet(get_tool_style())
+    layout = QVBoxLayout(root)
+    layout.setContentsMargins(10, 10, 10, 10)
+    layout.setSpacing(10)
+
+    # ----------------- Server controls -----------------
+    server_frame = QFrame()
+    server_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+    server_bar = QHBoxLayout(server_frame)
+
+    status_label = QLabel("Server Status: Stopped")
+    status_label.setStyleSheet("font-weight: bold; color: #e74c3c;")
+    server_bar.addWidget(status_label)
+
+    server_bar.addWidget(QLabel("Port:"))
+    port_input = QLineEdit("9010")
+    port_input.setMaximumWidth(80)
+    server_bar.addWidget(port_input)
+
+    toggle_btn = QPushButton("Start Server")
+    clear_btn = QPushButton("Clear")
+    refresh_btn = QPushButton("Refresh")
+    server_bar.addStretch()
+    server_bar.addWidget(toggle_btn)
+    server_bar.addWidget(clear_btn)
+    server_bar.addWidget(refresh_btn)
+
+    layout.addWidget(server_frame)
+
+    # ----------------- Statistics -----------------
+    stats_frame = QFrame()
+    stats_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+    stats_bar = QHBoxLayout(stats_frame)
+    total_label = QLabel("Total Requests: 0")
+    avg_size_label = QLabel("Avg Body Size: 0 B")
+    methods_label = QLabel("Methods: {}")
+    stats_bar.addWidget(total_label)
+    stats_bar.addWidget(avg_size_label)
+    stats_bar.addWidget(methods_label)
+    stats_bar.addStretch()
+    layout.addWidget(stats_frame)
+
+    # ----------------- Filters -----------------
+    filters_frame = QFrame()
+    filters_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+    filters_bar = QHBoxLayout(filters_frame)
+    filters_bar.addWidget(QLabel("Method:"))
+    method_input = QLineEdit()
+    method_input.setPlaceholderText("GET/POST/... (optional)")
+    method_input.setMaximumWidth(120)
+    filters_bar.addWidget(method_input)
+    filters_bar.addWidget(QLabel("URL contains:"))
+    url_pattern_input = QLineEdit()
+    url_pattern_input.setPlaceholderText("pattern (optional)")
+    filters_bar.addWidget(url_pattern_input)
+    apply_filters_btn = QPushButton("Apply Filters")
+    filters_bar.addStretch()
+    filters_bar.addWidget(apply_filters_btn)
+    layout.addWidget(filters_frame)
+
+    # ----------------- Main Splitter -----------------
+    splitter = QSplitter(Qt.Orientation.Horizontal)
+
+    # Request list (left)
+    request_table = QTableWidget()
+    request_table.setColumnCount(6)
+    request_table.setHorizontalHeaderLabels(["Time", "Method", "URL", "IP", "Length", "Agent"])
+    request_table.horizontalHeader().setStretchLastSection(True)
+    request_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+    request_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+    splitter.addWidget(request_table)
+
+    # Request details (right)
+    right_panel = QTabWidget()
+    headers_view = QTextEdit()
+    headers_view.setReadOnly(True)
+    headers_view.setFont(QFont("Courier", 11))
+    query_view = QTextEdit()
+    query_view.setReadOnly(True)
+    query_view.setFont(QFont("Courier", 11))
+    body_view = QTextEdit()
+    body_view.setReadOnly(True)
+    body_view.setFont(QFont("Courier", 11))
+    right_panel.addTab(headers_view, "Headers")
+    right_panel.addTab(query_view, "Query Params")
+    right_panel.addTab(body_view, "Body")
+    splitter.addWidget(right_panel)
+    splitter.setSizes([500, 600])
+    layout.addWidget(splitter, 1)
+
+    # ----------------- Export & Scratch -----------------
+    export_frame = QFrame()
+    export_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+    export_bar = QHBoxLayout(export_frame)
+    export_json_btn = QPushButton("Export JSON…")
+    export_csv_btn = QPushButton("Export CSV…")
+    send_to_scratch_btn = QPushButton("Send to Scratch Pad")
+    export_bar.addStretch()
+    export_bar.addWidget(send_to_scratch_btn)
+    export_bar.addWidget(export_json_btn)
+    export_bar.addWidget(export_csv_btn)
+    layout.addWidget(export_frame)
+
+    # ----------------- Internal state -----------------
+    current_filters: dict[str, Any] = {}
+    selected_request: HTTPRequestData | None = None
+
+    # ----------------- Helper functions -----------------
+    def _collect_filters() -> dict[str, Any]:
+        f: dict[str, Any] = {}
+        m = method_input.text().strip()
+        if m:
+            f["method"] = m
+        p = url_pattern_input.text().strip()
+        if p:
+            f["url_pattern"] = p
+        return f
+
+    def _refresh_statistics() -> None:
+        stats = storage.get_statistics()
+        total_label.setText(f"Total Requests: {stats.total_requests}")
+        avg_size_label.setText(f"Avg Body Size: {int(stats.average_body_size)} B")
+        methods_label.setText(f"Methods: {stats.method_breakdown}")
+
+    def _refresh_table() -> None:
+        reqs = storage.get_requests(current_filters or None)
+        request_table.setRowCount(len(reqs))
+        for row, r in enumerate(reqs):
+            request_table.setItem(row, 0, QTableWidgetItem(r.timestamp.strftime("%H:%M:%S")))
+            request_table.setItem(row, 1, QTableWidgetItem(r.method))
+            request_table.setItem(row, 2, QTableWidgetItem(r.url))
+            request_table.setItem(row, 3, QTableWidgetItem(r.client_ip))
+            request_table.setItem(row, 4, QTableWidgetItem(str(r.content_length)))
+            request_table.setItem(row, 5, QTableWidgetItem(r.user_agent))
+
+    def _clear_details() -> None:
+        headers_view.clear()
+        query_view.clear()
+        body_view.clear()
+
+    def _display_request(r: HTTPRequestData) -> None:
+        headers_view.setPlainText(json.dumps(r.headers, indent=2))
+        query_view.setPlainText(json.dumps(r.query_params, indent=2))
+        body_view.setPlainText(r.body)
+
+    # ----------------- Slots & wiring -----------------
+    def on_toggle_server():
+        nonlocal current_filters
+        try:
+            port = int(port_input.text().strip() or "9010")
+            server.port = port
+        except ValueError:
+            QMessageBox.warning(root, "Invalid Port", "Please enter a valid port number.")
+            return
+
+        if server.is_running():
+            server.stop_server()
+        else:
+            if not server.start_server():
+                QMessageBox.critical(root, "Server Error", "Failed to start the API Inspector server.")
+
+    def on_clear():
+        storage.clear_requests()
+        _refresh_statistics()
+        _refresh_table()
+        _clear_details()
+
+    def on_apply_filters():
+        nonlocal current_filters
+        current_filters = _collect_filters()
+        _refresh_table()
+
+    def on_export(fmt: str):
+        exporter = DataExporter(storage)
+        if fmt == "json":
+            data = exporter.export_json(current_filters or None)
+            filter_name = "json"
+        else:
+            data = exporter.export_csv(current_filters or None)
+            filter_name = "csv"
+        file_path, _ = QFileDialog.getSaveFileName(
+            root,
+            "Save export",
+            f"api_inspector_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{filter_name}",
+            f"*.{filter_name}",
+        )
+        if file_path:
+            ok = exporter.save_export(data, file_path)
+            if not ok:
+                QMessageBox.critical(root, "Save Error", "Failed to save the export file.")
+
+    def on_send_to_scratch():
+        if not scratch_pad_widget:
+            QMessageBox.information(root, "Scratch Pad", "Scratch Pad is not available.")
+            return
+        if selected_request is None:
+            QMessageBox.information(root, "Scratch Pad", "Select a request to send.")
+            return
+        r = selected_request
+        content = json.dumps(
+            {
+                "timestamp": r.timestamp.isoformat(),
+                "method": r.method,
+                "url": r.url,
+                "headers": r.headers,
+                "query_params": r.query_params,
+                "body": r.body,
+                "client_ip": r.client_ip,
+            },
+            indent=2,
+        )
+        # Assumes scratch pad follows `ScratchPadWidget` API
+        if hasattr(scratch_pad_widget, "set_content") and callable(scratch_pad_widget.set_content):
+            scratch_pad_widget.set_content(content)
+
+    def on_table_selection_change():
+        nonlocal selected_request
+        row = request_table.currentRow()
+        if row < 0:
+            selected_request = None
+            _clear_details()
+            return
+        reqs = storage.get_requests(current_filters or None)
+        if 0 <= row < len(reqs):
+            selected_request = reqs[row]
+            _display_request(selected_request)
+        else:
+            selected_request = None
+            _clear_details()
+
+    # Wire buttons
+    toggle_btn.clicked.connect(on_toggle_server)
+    clear_btn.clicked.connect(on_clear)
+    refresh_btn.clicked.connect(lambda: (_refresh_statistics(), _refresh_table()))
+    apply_filters_btn.clicked.connect(on_apply_filters)
+    export_json_btn.clicked.connect(lambda: on_export("json"))
+    export_csv_btn.clicked.connect(lambda: on_export("csv"))
+    send_to_scratch_btn.clicked.connect(on_send_to_scratch)
+    request_table.itemSelectionChanged.connect(on_table_selection_change)
+
+    # Server signals
+    def _on_server_started(port: int):
+        status_label.setText(f"Server Status: Running on port {port}")
+        status_label.setStyleSheet("font-weight: bold; color: #2ecc71;")
+
+    def _on_server_stopped():
+        status_label.setText("Server Status: Stopped")
+        status_label.setStyleSheet("font-weight: bold; color: #e74c3c;")
+
+    def _on_server_error(msg: str):
+        QMessageBox.critical(root, "Server Error", msg)
+
+    server.server_started.connect(_on_server_started)
+    server.server_stopped.connect(_on_server_stopped)
+    server.server_error.connect(_on_server_error)
+
+    # Refresh timer
+    timer = QTimer(root)
+    timer.setInterval(1000)
+    timer.timeout.connect(lambda: (_refresh_statistics(), _refresh_table()))
+    timer.start()
+
+    # Initial refresh
+    _refresh_statistics()
+    _refresh_table()
+    _clear_details()
+
+    return root
