@@ -663,10 +663,22 @@ def create_api_inspector_widget(style=None, scratch_pad_widget=None) -> QWidget:
     def _on_server_started(port: int):
         status_label.setText(f"Server Status: Running on port {port}")
         status_label.setStyleSheet("font-weight: bold; color: #2ecc71;")
+        # Update toggle button to reflect current action (stop when running)
+        try:
+            toggle_btn.setText("Stop Server")
+            toggle_btn.setToolTip("Click to stop the server")
+        except Exception:
+            logger.exception("Failed to update toggle button text on server start")
 
     def _on_server_stopped():
         status_label.setText("Server Status: Stopped")
         status_label.setStyleSheet("font-weight: bold; color: #e74c3c;")
+        # Update toggle button to reflect current action (start when stopped)
+        try:
+            toggle_btn.setText("Start Server")
+            toggle_btn.setToolTip("Click to start the server")
+        except Exception:
+            logger.exception("Failed to update toggle button text on server stop")
 
     def _on_server_error(msg: str):
         QMessageBox.critical(root, "Server Error", msg)
