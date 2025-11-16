@@ -8,10 +8,8 @@ from .api_inspector import (
     RequestStorage,
     create_api_inspector_widget,
 )
-from .api_inspector_ui import APIInspectorDashboard
 
 __all__ = [
-    "APIInspectorDashboard",
     "APIInspectorServer",
     "DataExporter",
     "HTTPRequestData",
