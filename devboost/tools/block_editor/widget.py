@@ -58,6 +58,7 @@ LANGUAGE_OPTIONS = [
     "xml",
     "python",
     "javascript",
+    "calc",
 ]
 
 
@@ -136,6 +137,10 @@ class BlockWidget(QWidget):
 
         # Install event filter(s) to manage hover/focus overlay visibility and positioning
         self._install_event_filters_for_editor(self.editor)
+        try:
+            self._calc_updating = False
+        except Exception:
+            self._calc_updating = False
 
         # Create hover overlay with icon cluster (language, format, delete)
         self._create_overlay()
@@ -162,6 +167,7 @@ class BlockWidget(QWidget):
         except Exception:
             logger.exception("Failed to apply BlockWidget sizing for block %s", self.block.id)
         self._update_format_button_enabled()
+        self._attach_calc_behavior_if_needed()
 
     def _apply_lexer(self, language: str) -> None:
         """Apply QScintilla lexer based on selected language to the current editor.
@@ -237,6 +243,7 @@ class BlockWidget(QWidget):
             logger.exception("Failed to force-show overlay after language change for block %s", self.block.id)
         # Update format button enablement when overlay is valid
         self._update_format_button_enabled()
+        self._attach_calc_behavior_if_needed()
         # Notify container for any follow-up layout nudges
         try:
             self.languageChanged.emit(new_language)
@@ -580,6 +587,11 @@ class BlockWidget(QWidget):
                     MarkdownHighlighter(text_edit.document())
                 except Exception:
                     logger.exception("Failed to initialize Markdown highlighter")
+            if lang == "calc":
+                try:
+                    text_edit.textChanged.connect(self._on_text_changed_calc)
+                except Exception:
+                    logger.exception("Failed to connect calc textChanged handler for block %s", self.block.id)
         except Exception:
             logger.exception("Failed to configure QTextEdit for language=%s", lang)
         return text_edit
@@ -778,6 +790,7 @@ class BlockWidget(QWidget):
                 "xml": "XML",
                 "python": "Py",
                 "javascript": "JS",
+                "calc": "Calc",
             }
             display = label_map.get(lang, lang.title())
             if hasattr(self, "lang_btn") and self.lang_btn is not None:
@@ -1036,7 +1049,7 @@ class BlockWidget(QWidget):
         """Enable format button only for supported languages (json/xml)."""
         try:
             current_lang = (self.block.language or "").lower()
-            enabled = current_lang in {"json", "xml"}
+            enabled = current_lang in {"json", "xml", "calc"}
             if hasattr(self, "format_btn"):
                 self.format_btn.setEnabled(enabled)
             logger.debug(
@@ -1066,7 +1079,48 @@ class BlockWidget(QWidget):
         except Exception:
             logger.exception("Unexpected error during auto-format for block %s", self.block.id)
 
-    # Multi-cursor functionality removed per UX feedback
+    def _attach_calc_behavior_if_needed(self) -> None:
+        try:
+            lang = (self.block.language or "").lower()
+            if lang == "calc" and hasattr(self, "editor"):
+                try:
+                    if hasattr(self.editor, "textChanged"):
+                        self.editor.textChanged.connect(self._on_text_changed_calc)
+                        logger.info("Calc auto-eval connected for block %s", self.block.id)
+                except Exception:
+                    logger.exception("Failed to attach calc behavior for block %s", self.block.id)
+        except Exception:
+            logger.exception("Unexpected error attaching calc behavior for block %s", self.block.id)
+
+    def _on_text_changed_calc(self) -> None:
+        try:
+            if getattr(self, "_calc_updating", False):
+                return
+            lang = (self.block.language or "").lower()
+            if lang != "calc":
+                return
+            content = self.get_content()
+            lines = content.splitlines()
+            if not any((l.strip().endswith("=") or ("→" in l)) for l in lines):
+                return
+            formatted, err = try_auto_format("calc", content)
+            if err or formatted is None:
+                if err:
+                    logger.warning("Calc auto-eval failed for block %s: %s", self.block.id, err)
+                return
+            if formatted.strip() == content.strip():
+                return
+            self._calc_updating = True
+            self.set_content(formatted)
+            self.block.content = formatted
+            logger.info("Calc auto-eval applied for block %s", self.block.id)
+        except Exception:
+            logger.exception("Calc auto-eval error for block %s", self.block.id)
+        finally:
+            try:
+                self._calc_updating = False
+            except Exception:
+                self._calc_updating = False
 
 
 def create_block_widget(block: Block) -> QWidget:
