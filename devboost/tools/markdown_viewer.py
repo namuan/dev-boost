@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 import sys
 import tempfile
 import webbrowser
@@ -20,6 +21,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from weasyprint import CSS, HTML
 
 from devboost.styles import get_tool_style
 
@@ -122,6 +124,7 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
     output_header_layout = QHBoxLayout()
     output_header_layout.setSpacing(8)
 
+    export_pdf_button = QPushButton("Export PDF")
     open_browser_button = QPushButton("Open in Browser")
 
     # Add "Send to Scratch Pad" button if scratch_pad is provided
@@ -131,6 +134,7 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
         output_header_layout.addWidget(send_to_scratch_pad_button)
 
     output_header_layout.addStretch()
+    output_header_layout.addWidget(export_pdf_button)
     output_header_layout.addWidget(open_browser_button)
 
     output_layout.addLayout(output_header_layout)
@@ -187,6 +191,92 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
         input_text_edit.clear()
         output_view.clear()
 
+    def on_export_pdf_clicked():
+        """Export markdown to PDF and open in Preview."""
+        try:
+            md_text = input_text_edit.toPlainText()
+            if not md_text.strip():
+                QMessageBox.warning(widget, "Warning", "No markdown content to export.")
+                return
+
+            # Convert markdown to HTML
+            html_text = markdown.markdown(
+                md_text,
+                extensions=["markdown.extensions.fenced_code", "markdown.extensions.tables"],
+                output_format="html5",
+            )
+
+            # CSS styling for the PDF
+            pdf_css = CSS(
+                string="""
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    line-height: 1.6;
+                    padding: 2rem;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                h1, h2, h3 {
+                    margin-top: 1.5rem;
+                    font-weight: bold;
+                }
+                code {
+                    background: #f0f0f0;
+                    padding: 2px 4px;
+                    border-radius: 4px;
+                    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+                }
+                pre code {
+                    background: #f0f0f0;
+                    padding: 1rem;
+                    display: block;
+                    border-radius: 6px;
+                    overflow-x: auto;
+                }
+                blockquote {
+                    border-left: 4px solid #ddd;
+                    margin: 1rem 0;
+                    padding-left: 1rem;
+                    color: #666;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin: 1rem 0;
+                }
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f5f5f5;
+                }
+            """
+            )
+
+            # Wrap HTML in a proper document structure
+            full_html = f"""<!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"></head>
+            <body>{html_text}</body>
+            </html>"""
+
+            # Create temporary PDF file
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                pdf_path = f.name
+
+            # Generate PDF
+            HTML(string=full_html).write_pdf(pdf_path, stylesheets=[pdf_css])
+            logger.info("Generated PDF: %s", pdf_path)
+
+            # ruff: noqa: S603,S607
+            subprocess.run(["open", pdf_path], check=True)
+
+        except Exception as e:
+            logger.exception("Error exporting PDF", exc_info=e)
+            QMessageBox.critical(widget, "Error", f"Could not export PDF:\n{e}")
+
     def on_open_browser_clicked():
         def save_and_open(html):
             try:
@@ -231,6 +321,7 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
     clipboard_button.clicked.connect(on_clipboard_clicked)
     sample_button.clicked.connect(on_sample_clicked)
     clear_button.clicked.connect(on_clear_clicked)
+    export_pdf_button.clicked.connect(on_export_pdf_clicked)
     open_browser_button.clicked.connect(on_open_browser_clicked)
 
     input_text_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

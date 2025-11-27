@@ -32,6 +32,7 @@ dependencies = [
     "pygments>=2.19.2",
     "pyqt6-qscintilla>=2.14.1",
     "defusedxml>=0.7.1",
+    "weasyprint>=66.0",
 ]
 
 [project.urls]
