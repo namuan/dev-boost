@@ -1,14 +1,14 @@
 import logging
 import os
-import subprocess
 import sys
 import tempfile
 import webbrowser
 from pathlib import Path
 
 import markdown
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import QMarginsF, Qt, QTimer
+from PyQt6.QtGui import QAction, QPageLayout, QPageSize, QTextDocument
+from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -206,72 +206,97 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
                 output_format="html5",
             )
 
-            # CSS styling for the PDF
-            pdf_css = CSS(
-                string="""
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    line-height: 1.6;
-                    padding: 2rem;
-                    max-width: 800px;
-                    margin: 0 auto;
-                }
-                h1, h2, h3 {
-                    margin-top: 1.5rem;
-                    font-weight: bold;
-                }
-                code {
-                    background: #f0f0f0;
-                    padding: 2px 4px;
-                    border-radius: 4px;
-                    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-                }
-                pre code {
-                    background: #f0f0f0;
-                    padding: 1rem;
-                    display: block;
-                    border-radius: 6px;
-                    overflow-x: auto;
-                }
-                blockquote {
-                    border-left: 4px solid #ddd;
-                    margin: 1rem 0;
-                    padding-left: 1rem;
-                    color: #666;
-                }
-                table {
-                    border-collapse: collapse;
-                    width: 100%;
-                    margin: 1rem 0;
-                }
-                th, td {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                    text-align: left;
-                }
-                th {
-                    background-color: #f5f5f5;
-                }
-            """
-            )
+            def export_pdf_via_qt(html: str):
+                doc = QTextDocument()
+                qt_pdf_css = """
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; }
+                h1, h2, h3 { margin-top: 18px; font-weight: bold; }
+                code { background: #f0f0f0; padding: 2px 4px; border-radius: 4px; font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
+                pre { background: #f0f0f0; padding: 12px; border-radius: 6px; }
+                pre code { font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
+                blockquote { border-left: 4px solid #ddd; margin: 12px 0; padding-left: 12px; color: #666; }
+                table { border: 1px solid #ddd; border-spacing: 0; width: 100%; margin: 12px 0; }
+                th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+                th { background-color: #f5f5f5; }
+                """
+                full_html = f"""<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>{qt_pdf_css}</style></head><body>{html}</body></html>"""
+                doc.setHtml(full_html)
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                    pdf_path_local = f.name
+                printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+                printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+                printer.setOutputFileName(pdf_path_local)
+                printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+                printer.setPageMargins(QMarginsF(15, 15, 15, 15), QPageLayout.Unit.Millimeter)
+                doc.print(printer)
+                logger.info("Generated PDF via Qt: %s", pdf_path_local)
+                webbrowser.open("file://" + os.path.realpath(pdf_path_local))
 
-            # Wrap HTML in a proper document structure
-            full_html = f"""<!DOCTYPE html>
-            <html>
-            <head><meta charset="utf-8"></head>
-            <body>{html_text}</body>
-            </html>"""
+            is_packaged = getattr(sys, "frozen", False)
 
-            # Create temporary PDF file
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-                pdf_path = f.name
+            if is_packaged:
+                export_pdf_via_qt(html_text)
+            else:
+                pdf_css = CSS(
+                    string="""
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.6;
+                        padding: 2rem;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    h1, h2, h3 {
+                        margin-top: 1.5rem;
+                        font-weight: bold;
+                    }
+                    code {
+                        background: #f0f0f0;
+                        padding: 2px 4px;
+                        border-radius: 4px;
+                        font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+                    }
+                    pre code {
+                        background: #f0f0f0;
+                        padding: 1rem;
+                        display: block;
+                        border-radius: 6px;
+                        overflow-x: auto;
+                    }
+                    blockquote {
+                        border-left: 4px solid #ddd;
+                        margin: 1rem 0;
+                        padding-left: 1rem;
+                        color: #666;
+                    }
+                    table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin: 1rem 0;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                        text-align: left;
+                    }
+                    th {
+                        background-color: #f5f5f5;
+                    }
+                """
+                )
 
-            # Generate PDF
-            HTML(string=full_html).write_pdf(pdf_path, stylesheets=[pdf_css])
-            logger.info("Generated PDF: %s", pdf_path)
+                full_html = f"""<!DOCTYPE html>
+                <html>
+                <head><meta charset=\"utf-8\"></head>
+                <body>{html_text}</body>
+                </html>"""
 
-            # ruff: noqa: S603,S607
-            subprocess.run(["open", pdf_path], check=True)
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                    pdf_path = f.name
+
+                HTML(string=full_html).write_pdf(pdf_path, stylesheets=[pdf_css])
+                logger.info("Generated PDF: %s", pdf_path)
+                webbrowser.open("file://" + os.path.realpath(pdf_path))
 
         except Exception as e:
             logger.exception("Error exporting PDF", exc_info=e)

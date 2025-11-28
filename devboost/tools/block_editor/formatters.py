@@ -104,7 +104,7 @@ def _format_value(v: CalcValue) -> str:
     if v.kind == "percent":
         return f"{_fmt_num(v.amount * 100)}%"
     if v.kind == "duration":
-        total = int(round(v.amount))
+        total = round(v.amount)
         h = total // 60
         m = total % 60
         if h > 0:
@@ -115,7 +115,7 @@ def _format_value(v: CalcValue) -> str:
 
 def _fmt_num(n: float) -> str:
     if abs(n - round(n)) < 1e-9:
-        return str(int(round(n)))
+        return str(round(n))
     return f"{n:.4f}".rstrip("0").rstrip(".")
 
 

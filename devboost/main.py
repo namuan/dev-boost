@@ -18,39 +18,9 @@ from PyQt6.QtWidgets import (
 )
 
 from devboost.config import get_config, set_config
-from devboost.tools.file_rename import create_file_rename_widget
 
 from .styles import get_main_app_style
-from .tools import (
-    create_api_inspector_widget,
-    create_base64_string_encodec_widget,
-    create_blocks_editor_widget,
-    create_color_converter_widget,
-    create_cron_expression_editor_widget,
-    create_file_optimization_widget,
-    create_graphql_client_widget,
-    create_http_client_widget,
-    create_ip_subnet_calculator_widget,
-    create_json_diff_widget,
-    create_json_formatter_widget,
-    create_jwt_debugger_widget,
-    create_llm_client_widget,
-    create_lorem_ipsum_tool_widget,
-    create_markdown_preview_widget,
-    create_openapi_mock_server_widget,
-    create_random_string_tool_widget,
-    create_regexp_tester_widget,
-    create_scratch_pad_widget,
-    create_string_case_converter_widget,
-    create_timezone_converter_widget,
-    create_unit_converter_widget,
-    create_unix_time_converter_widget,
-    create_url_codec_widget,
-    create_uuid_ulid_tool_widget,
-    create_uvx_runner_widget,
-    create_xml_formatter_widget,
-    create_yaml_to_json_widget,
-)
+from .tools.lazy_loader import create_tool_widget
 from .tools_search import NavigableToolsList, ToolsSearch
 
 # Configure logging
@@ -71,8 +41,11 @@ class DevDriverWindow(QMainWindow):
         self.setMinimumSize(950, 600)
         logger.info("Window properties set: title='Dev Boost', geometry=(100,100,1200,800), min_size=(950,600)")
 
-        # Create scratch pad widget
-        self.scratch_pad_widget = create_scratch_pad_widget(self.style)
+        # Cache for lazily loaded tool widgets
+        self._tool_widget_cache: dict[str, QWidget] = {}
+
+        # Create scratch pad widget (needed for dock, load lazily but early)
+        self.scratch_pad_widget = create_tool_widget("Scratch Pad", self.style, None)
         self.scratch_pad_dock = QDockWidget("Scratch Pad", self)
         self.scratch_pad_dock.setWidget(self.scratch_pad_widget)
         self.scratch_pad_dock.setFeatures(
@@ -366,94 +339,10 @@ class DevDriverWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         logger.info("Stacked widget created for tool views")
 
+        # Only create the welcome screen eagerly - all tool widgets are loaded lazily
         logger.info("Creating welcome screen")
         self.welcome_screen = self._create_welcome_screen()
-        logger.info("Creating API Inspector screen")
-        self.api_inspector_screen = create_api_inspector_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Unix Time Converter screen")
-        self.unix_time_converter_screen = create_unix_time_converter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating JSON Format/Validate screen")
-        self.json_format_validate_screen = create_json_formatter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating JSON Diff screen")
-        self.json_diff_screen = create_json_diff_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Base64 String Encode/Decode screen")
-        self.base64_string_encodec_screen = create_base64_string_encodec_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating JWT Debugger screen")
-        self.jwt_debugger_screen = create_jwt_debugger_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating RegExp Tester screen")
-        self.regexp_tester_screen = create_regexp_tester_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating URL Encode Decode screen")
-        self.url_codec_screen = create_url_codec_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating UUID/ULID Generate/Decode screen")
-        self.uuid_ulid_generator_screen = create_uuid_ulid_tool_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating XML Beautifier screen")
-        self.xml_formatter_screen = create_xml_formatter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating YAML to JSON screen")
-        self.yaml_to_json_screen = create_yaml_to_json_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating String Case Converter screen")
-        self.string_case_converter_screen = create_string_case_converter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Color Converter screen")
-        self.color_converter_screen = create_color_converter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Cron Expression Editor screen")
-        self.cron_expression_editor_screen = create_cron_expression_editor_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Lorem Ipsum Generator screen")
-        self.lorem_ipsum_generator_screen = create_lorem_ipsum_tool_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Markdown Viewer screen")
-        self.markdown_viewer_screen = create_markdown_preview_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Random String Generator screen")
-        self.random_string_generator_screen = create_random_string_tool_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating TimeZone Converter screen")
-        self.timezone_converter_screen = create_timezone_converter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Unit Converter screen")
-        self.unit_converter_screen = create_unit_converter_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating File Rename Tool screen")
-        self.file_rename_tool_screen = create_file_rename_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating IP Subnet Calculator screen")
-        self.ip_subnet_calculator_screen = create_ip_subnet_calculator_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating HTTP Client screen")
-        self.http_client_screen = create_http_client_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating GraphQL Client screen")
-        self.graphql_client_screen = create_graphql_client_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Uvx Runner screen")
-        self.uvx_runner_screen = create_uvx_runner_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating LLM Client screen")
-        self.llm_client_screen = create_llm_client_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating File Optimization Tool screen")
-        self.file_optimization_tool_screen = create_file_optimization_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating OpenAPI Mock Server screen")
-        self.openapi_mock_server_screen = create_openapi_mock_server_widget(self.style, self.scratch_pad_widget)
-        logger.info("Creating Block Editor screen")
-        self.block_editor_screen = create_blocks_editor_widget(self.style)
-
         self.stacked_widget.addWidget(self.welcome_screen)
-        self.stacked_widget.addWidget(self.api_inspector_screen)
-        self.stacked_widget.addWidget(self.unix_time_converter_screen)
-        self.stacked_widget.addWidget(self.json_format_validate_screen)
-        self.stacked_widget.addWidget(self.json_diff_screen)
-        self.stacked_widget.addWidget(self.base64_string_encodec_screen)
-        self.stacked_widget.addWidget(self.jwt_debugger_screen)
-        self.stacked_widget.addWidget(self.regexp_tester_screen)
-        self.stacked_widget.addWidget(self.url_codec_screen)
-        self.stacked_widget.addWidget(self.uuid_ulid_generator_screen)
-        self.stacked_widget.addWidget(self.xml_formatter_screen)
-        self.stacked_widget.addWidget(self.yaml_to_json_screen)
-        self.stacked_widget.addWidget(self.string_case_converter_screen)
-        self.stacked_widget.addWidget(self.color_converter_screen)
-        self.stacked_widget.addWidget(self.cron_expression_editor_screen)
-        self.stacked_widget.addWidget(self.lorem_ipsum_generator_screen)
-        self.stacked_widget.addWidget(self.markdown_viewer_screen)
-        self.stacked_widget.addWidget(self.random_string_generator_screen)
-        self.stacked_widget.addWidget(self.timezone_converter_screen)
-        self.stacked_widget.addWidget(self.unit_converter_screen)
-        self.stacked_widget.addWidget(self.file_rename_tool_screen)
-        self.stacked_widget.addWidget(self.ip_subnet_calculator_screen)
-        self.stacked_widget.addWidget(self.http_client_screen)
-        self.stacked_widget.addWidget(self.graphql_client_screen)
-        self.stacked_widget.addWidget(self.llm_client_screen)
-        self.stacked_widget.addWidget(self.uvx_runner_screen)
-        self.stacked_widget.addWidget(self.file_optimization_tool_screen)
-        self.stacked_widget.addWidget(self.openapi_mock_server_screen)
-        self.stacked_widget.addWidget(self.block_editor_screen)
 
         main_content_layout.addWidget(self.top_bar)
         main_content_layout.addWidget(self.stacked_widget)
@@ -487,43 +376,32 @@ class DevDriverWindow(QMainWindow):
         tool_name = item.data(Qt.ItemDataRole.UserRole)
         logger.info("Tool selected: %s", tool_name)
 
-        # Map tool names to their corresponding widgets
-        tool_widgets = {
-            "API Inspector": self.api_inspector_screen,
-            "Unix Time Converter": self.unix_time_converter_screen,
-            "JSON Format/Validate": self.json_format_validate_screen,
-            "JSON Diff": self.json_diff_screen,
-            "Base64 String Encode/Decode": self.base64_string_encodec_screen,
-            "JWT Debugger": self.jwt_debugger_screen,
-            "RegExp Tester": self.regexp_tester_screen,
-            "URL Encode/Decode": self.url_codec_screen,
-            "UUID/ULID Generate/Decode": self.uuid_ulid_generator_screen,
-            "XML Beautifier": self.xml_formatter_screen,
-            "YAML to JSON": self.yaml_to_json_screen,
-            "String Case Converter": self.string_case_converter_screen,
-            "Color Converter": self.color_converter_screen,
-            "Cron Expression Editor": self.cron_expression_editor_screen,
-            "Lorem Ipsum Generator": self.lorem_ipsum_generator_screen,
-            "Markdown Viewer": self.markdown_viewer_screen,
-            "Random String Generator": self.random_string_generator_screen,
-            "TimeZone Converter": self.timezone_converter_screen,
-            "Unit Converter": self.unit_converter_screen,
-            "File Rename Tool": self.file_rename_tool_screen,
-            "File Optimization Tool": self.file_optimization_tool_screen,
-            "IP Subnet Calculator": self.ip_subnet_calculator_screen,
-            "HTTP Client": self.http_client_screen,
-            "GraphQL Client": self.graphql_client_screen,
-            "Uvx Runner": self.uvx_runner_screen,
-            "LLM Client": self.llm_client_screen,
-            "OpenAPI Mock Server": self.openapi_mock_server_screen,
-            "Block Editor": self.block_editor_screen,
-        }
+        self._switch_to_tool(tool_name)
 
-        self._switch_to_tool(tool_name, tool_widgets)
+    def _get_or_create_tool_widget(self, tool_name: str) -> QWidget | None:
+        """Get a tool widget from cache or create it lazily."""
+        # Check cache first
+        if tool_name in self._tool_widget_cache:
+            logger.debug("Using cached widget for %s", tool_name)
+            return self._tool_widget_cache[tool_name]
 
-    def _switch_to_tool(self, tool_name: str, tool_widgets: dict):
-        """Switch to the selected tool widget."""
-        widget = tool_widgets.get(tool_name)
+        # Create widget lazily
+        logger.info("Creating widget lazily for %s", tool_name)
+        widget = create_tool_widget(tool_name, self.style, self.scratch_pad_widget)
+
+        if widget:
+            # Add to stacked widget and cache
+            self.stacked_widget.addWidget(widget)
+            self._tool_widget_cache[tool_name] = widget
+            logger.info("Widget created and cached for %s", tool_name)
+        else:
+            logger.warning("Failed to create widget for %s", tool_name)
+
+        return widget
+
+    def _switch_to_tool(self, tool_name: str):
+        """Switch to the selected tool widget, loading it lazily if needed."""
+        widget = self._get_or_create_tool_widget(tool_name)
 
         if widget:
             self.top_bar_title.setText(tool_name)
@@ -576,39 +454,9 @@ class DevDriverWindow(QMainWindow):
         logger.info("Loading last opened tool from config: '%s'", last_tool)
 
         if last_tool:
-            # Map tool names to their corresponding widgets
-            tool_widgets = {
-                "API Inspector": self.api_inspector_screen,
-                "Unix Time Converter": self.unix_time_converter_screen,
-                "JSON Format/Validate": self.json_format_validate_screen,
-                "JSON Diff": self.json_diff_screen,
-                "Base64 String Encode/Decode": self.base64_string_encodec_screen,
-                "JWT Debugger": self.jwt_debugger_screen,
-                "RegExp Tester": self.regexp_tester_screen,
-                "URL Encode/Decode": self.url_codec_screen,
-                "UUID/ULID Generate/Decode": self.uuid_ulid_generator_screen,
-                "XML Beautifier": self.xml_formatter_screen,
-                "YAML to JSON": self.yaml_to_json_screen,
-                "String Case Converter": self.string_case_converter_screen,
-                "Color Converter": self.color_converter_screen,
-                "Cron Expression Editor": self.cron_expression_editor_screen,
-                "Lorem Ipsum Generator": self.lorem_ipsum_generator_screen,
-                "Markdown Viewer": self.markdown_viewer_screen,
-                "Random String Generator": self.random_string_generator_screen,
-                "TimeZone Converter": self.timezone_converter_screen,
-                "Unit Converter": self.unit_converter_screen,
-                "File Rename Tool": self.file_rename_tool_screen,
-                "File Optimization Tool": self.file_optimization_tool_screen,
-                "IP Subnet Calculator": self.ip_subnet_calculator_screen,
-                "HTTP Client": self.http_client_screen,
-                "GraphQL Client": self.graphql_client_screen,
-                "Uvx Runner": self.uvx_runner_screen,
-                "LLM Client": self.llm_client_screen,
-                "OpenAPI Mock Server": self.openapi_mock_server_screen,
-                "Block Editor": self.block_editor_screen,
-            }
+            # Try to load the widget lazily
+            widget = self._get_or_create_tool_widget(last_tool)
 
-            widget = tool_widgets.get(last_tool)
             if widget:
                 self.top_bar_title.setText(last_tool)
                 self.stacked_widget.setCurrentWidget(widget)
@@ -622,7 +470,7 @@ class DevDriverWindow(QMainWindow):
 
                 logger.info("Successfully loaded last opened tool: %s", last_tool)
             else:
-                logger.info("Last opened tool '%s' not found, showing welcome screen", last_tool)
+                logger.info("Last opened tool '%s' could not be loaded, showing welcome screen", last_tool)
                 self._show_welcome_screen()
         else:
             logger.info("No last opened tool found, showing welcome screen")
