@@ -1110,9 +1110,32 @@ class BlockWidget(QWidget):
                 return
             if formatted.strip() == content.strip():
                 return
+            # Capture cursor position before update
+            original_pos = 0
+            should_restore_cursor = False
+            if hasattr(self.editor, "textCursor"):
+                try:
+                    cursor = self.editor.textCursor()
+                    original_pos = cursor.position()
+                    should_restore_cursor = True
+                except Exception:
+                    logger.debug("Failed to capture cursor position for block %s", self.block.id)
+
             self._calc_updating = True
             self.set_content(formatted)
             self.block.content = formatted
+
+            # Restore cursor position
+            if should_restore_cursor and hasattr(self.editor, "textCursor"):
+                try:
+                    new_cursor = self.editor.textCursor()
+                    diff = len(formatted) - len(content)
+                    new_pos = max(0, min(original_pos + diff, len(formatted)))
+                    new_cursor.setPosition(new_pos)
+                    self.editor.setTextCursor(new_cursor)
+                except Exception:
+                    logger.warning("Failed to restore cursor for block %s", self.block.id)
+
             logger.info("Calc auto-eval applied for block %s", self.block.id)
         except Exception:
             logger.exception("Calc auto-eval error for block %s", self.block.id)
