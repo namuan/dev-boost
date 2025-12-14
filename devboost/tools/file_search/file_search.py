@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 from PyQt6.QtCore import QRegularExpression, Qt
-from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
+from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -136,6 +136,46 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
         n = len(match_cursors)
         target = n - 1 if current_idx < 0 else (current_idx - 1 + n) % n
         _goto_match(target)
+
+    def _goto_next_global() -> None:
+        nonlocal current_idx
+        if match_cursors:
+            if current_idx < 0:
+                _goto_match(0)
+                return
+            if current_idx + 1 < len(match_cursors):
+                _goto_match(current_idx + 1)
+                return
+        row = files_list.currentRow()
+        if row < 0:
+            row = 0
+        nfiles = files_list.count()
+        if nfiles == 0:
+            return
+        for step in range(1, nfiles + 1):
+            next_index = (row + step) % nfiles
+            files_list.setCurrentRow(next_index)
+            if match_cursors:
+                _goto_match(0)
+                return
+
+    def _goto_prev_global() -> None:
+        nonlocal current_idx
+        if match_cursors and current_idx > 0:
+            _goto_match(current_idx - 1)
+            return
+        row = files_list.currentRow()
+        if row < 0:
+            row = 0
+        nfiles = files_list.count()
+        if nfiles == 0:
+            return
+        for step in range(1, nfiles + 1):
+            prev_index = (row - step + nfiles) % nfiles
+            files_list.setCurrentRow(prev_index)
+            if match_cursors:
+                _goto_match(len(match_cursors) - 1)
+                return
 
     def _highlight_search_items() -> None:
         nonlocal current_idx, match_cursors
@@ -311,5 +351,9 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     next_btn.clicked.connect(_next_match)
     prev_btn.clicked.connect(_prev_match)
     files_list.currentItemChanged.connect(lambda current, prev: _on_selection_changed())
+    widget._fs_next_sc = QShortcut(QKeySequence("F2"), widget)
+    widget._fs_prev_sc = QShortcut(QKeySequence("Shift+F2"), widget)
+    widget._fs_next_sc.activated.connect(_goto_next_global)
+    widget._fs_prev_sc.activated.connect(_goto_prev_global)
 
     return widget
