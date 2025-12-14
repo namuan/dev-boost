@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSplitter,
     QStyle,
@@ -318,7 +319,16 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             paths = [line.strip() for line in result.stdout.splitlines() if line.strip()]
             files_list.clear()
             for p in paths:
-                files_list.addItem(p)
+                path_obj = Path(p)
+                full_path = path_obj if path_obj.is_absolute() else (search_root / p)
+                name = path_obj.name
+                parent = path_obj.parent.name
+                display = f"/.../{parent}/{name}" if parent else f"/.../{name}"
+                item = QListWidgetItem(display)
+                item.setToolTip(str(full_path))
+                item.setData(Qt.ItemDataRole.UserRole, str(full_path))
+                files_list.addItem(item)
+                logger.debug("Added search result item display=%r path=%s", display, str(full_path))
             logger.info("ripgrep matches=%d", len(paths))
             set_config("file_search.last_base_dir", str(search_root))
             if rg_edit.text().strip():
@@ -375,7 +385,9 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     def _on_selection_changed() -> None:
         item = files_list.currentItem()
         if item:
-            _load_file(item.text())
+            value = item.data(Qt.ItemDataRole.UserRole)
+            path_str = value if isinstance(value, str) and value else item.text()
+            _load_file(path_str)
 
     browse_btn.clicked.connect(_choose_dir)
     choose_rg_btn.clicked.connect(_choose_rg)
