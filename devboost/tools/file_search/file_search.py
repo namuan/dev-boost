@@ -31,9 +31,15 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     root_layout.setContentsMargins(0, 0, 0, 0)
     root_layout.setSpacing(0)
 
-    top_bar = QHBoxLayout()
-    top_bar.setContentsMargins(10, 8, 10, 8)
-    top_bar.setSpacing(8)
+    top_panel = QVBoxLayout()
+    top_panel.setContentsMargins(0, 0, 0, 0)
+    top_panel.setSpacing(0)
+    search_row = QHBoxLayout()
+    search_row.setContentsMargins(10, 8, 10, 8)
+    search_row.setSpacing(8)
+    options_row = QHBoxLayout()
+    options_row.setContentsMargins(10, 0, 10, 8)
+    options_row.setSpacing(8)
 
     last_dir = get_config("file_search.last_base_dir", str(Path.cwd()))
     dir_edit = QLineEdit(last_dir)
@@ -47,14 +53,15 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     search_edit.setPlaceholderText("Search files (ripgrep)")
     search_btn = QPushButton("Search")
 
-    top_bar.addWidget(dir_edit, 1)
-    top_bar.addWidget(browse_btn)
-    top_bar.addWidget(rg_edit, 1)
-    top_bar.addWidget(choose_rg_btn)
-    top_bar.addWidget(search_edit, 1)
-    top_bar.addWidget(search_btn)
+    search_row.addWidget(search_edit, 1)
+    search_row.addWidget(search_btn)
+    options_row.addWidget(dir_edit, 1)
+    options_row.addWidget(browse_btn)
+    options_row.addWidget(choose_rg_btn)
 
-    root_layout.addLayout(top_bar, 1)
+    top_panel.addLayout(search_row, 0)
+    top_panel.addLayout(options_row, 0)
+    root_layout.addLayout(top_panel, 1)
 
     splitter = QSplitter(Qt.Orientation.Horizontal)
 
@@ -68,6 +75,26 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     splitter.setSizes([500, 500])
 
     root_layout.addWidget(splitter, 9)
+
+    def _update_rg_status() -> None:
+        explicit_rg = rg_edit.text().strip()
+        which_rg = shutil.which("rg")
+        rg_bin = explicit_rg or which_rg
+        if rg_bin and explicit_rg:
+            choose_rg_btn.setText("rg ✓")
+            choose_rg_btn.setStyleSheet(get_status_style("success"))
+            logger.info("ripgrep status: explicit path set")
+        elif rg_bin and not explicit_rg:
+            choose_rg_btn.setText("rg ✓")
+            choose_rg_btn.setStyleSheet(get_status_style("info"))
+            logger.info("ripgrep status: found via PATH")
+        else:
+            choose_rg_btn.setText("rg ✕")
+            choose_rg_btn.setStyleSheet(get_status_style("warning"))
+            logger.warning("ripgrep status: not set")
+        rg_edit.setVisible(False)
+
+    _update_rg_status()
 
     def _run_search() -> None:
         query = search_edit.text().strip()
@@ -151,6 +178,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             rg_edit.setText(selected)
             set_config("file_search.ripgrep_path", selected)
             logger.info("ripgrep path set: %s", selected)
+            _update_rg_status()
 
     def _on_selection_changed() -> None:
         item = files_list.currentItem()
