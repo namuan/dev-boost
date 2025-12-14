@@ -6,6 +6,7 @@ from pathlib import Path
 from PyQt6.QtCore import QRegularExpression, Qt
 from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -13,13 +14,14 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QPushButton,
     QSplitter,
+    QStyle,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 from devboost.config import get_config, set_config
-from devboost.styles import get_status_style, get_tool_style
+from devboost.styles import get_dialog_style, get_status_style, get_tool_style
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +55,13 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     search_edit = QLineEdit()
     search_edit.setPlaceholderText("Search files (ripgrep)")
     search_btn = QPushButton("Search")
+    cheat_sheet_btn = QPushButton("Cheat Sheet")
+    if style_func:
+        cheat_sheet_btn.setIcon(style_func().standardIcon(QStyle.StandardPixmap.SP_DialogHelpButton))
 
     search_row.addWidget(search_edit, 1)
     search_row.addWidget(search_btn)
+    search_row.addWidget(cheat_sheet_btn)
     options_row.addWidget(dir_edit, 1)
     options_row.addWidget(browse_btn)
     options_row.addWidget(choose_rg_btn)
@@ -253,6 +259,14 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
 
     _update_rg_status()
 
+    def _open_rg_cheat_sheet() -> None:
+        try:
+            dialog = RipgrepCheatSheetDialog(widget)
+            logger.info("Opening ripgrep cheat sheet dialog")
+            dialog.exec()
+        except Exception:
+            logger.exception("Failed to open ripgrep cheat sheet dialog")
+
     def _run_search() -> None:
         query = search_edit.text().strip()
         if not query:
@@ -355,5 +369,63 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     widget._fs_prev_sc = QShortcut(QKeySequence("Shift+F2"), widget)
     widget._fs_next_sc.activated.connect(_goto_next_global)
     widget._fs_prev_sc.activated.connect(_goto_prev_global)
+    cheat_sheet_btn.clicked.connect(_open_rg_cheat_sheet)
 
     return widget
+
+
+class RipgrepCheatSheetDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Ripgrep Cheat Sheet")
+        self.setModal(True)
+        self.setFixedSize(700, 560)
+        self.setStyleSheet(get_dialog_style())
+        layout = QVBoxLayout(self)
+        text = QTextEdit()
+        text.setReadOnly(True)
+        text.setPlainText(_rg_cheat_sheet_text())
+        layout.addWidget(text)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+
+
+def _rg_cheat_sheet_text() -> str:
+    return (
+        "RIPGREP CHEAT SHEET\n\n"
+        "=== PATTERNS (Rust regex) ===\n"
+        ".          Any char except newline\n"
+        "\\d         Digit\n"
+        "\\w         Word char\n"
+        "\\s         Whitespace\n"
+        "^          Start of line\n"
+        "$          End of line\n"
+        "\\b         Word boundary\n"
+        "\\B         Non-word boundary\n"
+        "* + ? {n} {n,} {n,m} Quantifiers\n"
+        "(...)      Capturing group\n"
+        "(?:...)    Non-capturing group\n\n"
+        "=== INLINE FLAGS ===\n"
+        "(?i)       Case insensitive\n"
+        "(?-i)      Turn off case-insensitive\n"
+        "(?m)       Multiline (^/$ match lines)\n"
+        "(?s)       Dot matches newline\n"
+        "(?x)       Ignore whitespace and allow comments\n\n"
+        "=== SMART CASE ===\n"
+        "--smart-case: lowercase pattern → case-insensitive; contains uppercase → case-sensitive\n\n"
+        "=== COMMON CLI FLAGS ===\n"
+        "-n         Show line numbers\n"
+        "-l         Print only file paths with matches\n"
+        "-F         Fixed-string search (no regex)\n"
+        "-P         Use PCRE2 engine (enables look-around, backreferences)\n"
+        "--color never  Disable colored output\n\n"
+        "=== EXAMPLES ===\n"
+        "foo|bar                 Either 'foo' or 'bar'\n"
+        "\\bTODO\\b               Word 'TODO'\n"
+        "(?i)error               Case-insensitive 'error'\n"
+        "(?m)^class\\s+\\w+       Class declarations at line start\n"
+        "(?s)BEGIN.*END          Span across lines\n"
+        "[A-Za-z_][A-Za-z0-9_]*  Identifier\n\n"
+        "Tip: In this tool, patterns use ripgrep regex semantics with smart-case.\n"
+    )
