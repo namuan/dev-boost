@@ -98,6 +98,7 @@ class ConfigManager:
             "file_search": {
                 "ripgrep_path": "",
                 "last_base_dir": str(Path.cwd()),
+                "file_globs": "",
             },
             "global": {"theme": "default", "last_used_tool": ""},
         }

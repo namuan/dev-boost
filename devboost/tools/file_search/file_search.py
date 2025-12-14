@@ -52,6 +52,9 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     rg_edit = QLineEdit(rg_path)
     rg_edit.setPlaceholderText("ripgrep path (rg)")
     choose_rg_btn = QPushButton("Choose rg")
+    patterns_text = get_config("file_search.file_globs", "")
+    patterns_edit = QLineEdit(patterns_text)
+    patterns_edit.setPlaceholderText("File patterns (*.pdf *.zip *.py)")
     search_edit = QLineEdit()
     search_edit.setPlaceholderText("Search files (ripgrep)")
     search_btn = QPushButton("Search")
@@ -64,6 +67,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     search_row.addWidget(cheat_sheet_btn)
     options_row.addWidget(dir_edit, 1)
     options_row.addWidget(browse_btn)
+    options_row.addWidget(patterns_edit, 1)
     options_row.addWidget(choose_rg_btn)
 
     top_panel.addLayout(search_row, 0)
@@ -297,9 +301,16 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
                 "-l",
                 "--color",
                 "never",
-                query,
-                str(search_root),
             ]
+            globs_raw = patterns_edit.text().strip()
+            globs: list[str] = globs_raw.split() if globs_raw else []
+            need_text = any((".pdf" in g.lower()) or (".zip" in g.lower()) for g in globs)
+            if need_text:
+                cmd.append("--text")
+            for g in globs:
+                cmd.extend(["--glob", g])
+            cmd.append(query)
+            cmd.append(str(search_root))
             logger.info("Running ripgrep: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, check=False)
             if result.returncode not in (0, 1):
@@ -312,6 +323,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             set_config("file_search.last_base_dir", str(search_root))
             if rg_edit.text().strip():
                 set_config("file_search.ripgrep_path", rg_edit.text().strip())
+            set_config("file_search.file_globs", globs_raw)
             if paths:
                 files_list.setCurrentRow(0)
                 content_view.setStyleSheet(get_status_style("info"))
@@ -325,11 +337,19 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
 
     def _load_file(path_str: str) -> None:
         try:
-            content = Path(path_str).read_text(encoding="utf-8", errors="replace")
-            content_view.setPlainText(content)
-            content_view.setStyleSheet("")
-            logger.info("Loaded file: %s", path_str)
-            _highlight_search_items()
+            suffix = Path(path_str).suffix.lower()
+            if suffix in {".pdf", ".zip"}:
+                content_view.setPlainText("Binary file preview not supported for PDF/ZIP.")
+                content_view.setStyleSheet(get_status_style("warning"))
+                logger.info("Binary preview skipped: %s", path_str)
+                match_cursors.clear()
+                _update_nav_state()
+            else:
+                content = Path(path_str).read_text(encoding="utf-8", errors="replace")
+                content_view.setPlainText(content)
+                content_view.setStyleSheet("")
+                logger.info("Loaded file: %s", path_str)
+                _highlight_search_items()
         except Exception:
             logger.exception("Failed to read file: %s", path_str)
             content_view.setPlainText(f"Failed to read file:\n{path_str}")
