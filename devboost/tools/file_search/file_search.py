@@ -3,8 +3,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QRegularExpression, Qt
+from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -75,6 +75,38 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     splitter.setSizes([500, 500])
 
     root_layout.addWidget(splitter, 9)
+
+    def _highlight_search_items() -> None:
+        query = search_edit.text().strip()
+        if not query:
+            content_view.setExtraSelections([])
+            return
+        doc = content_view.document()
+        if doc.isEmpty():
+            content_view.setExtraSelections([])
+            return
+        case_sensitive = any(ch.isupper() for ch in query)
+        rx = QRegularExpression(query)
+        if not case_sensitive:
+            rx.setPatternOptions(QRegularExpression.PatternOption.CaseInsensitiveOption)
+        selections = []
+        fmt = QTextCharFormat()
+        fmt.setBackground(QColor(255, 235, 59))
+        cursor = QTextCursor(doc)
+        cursor.setPosition(0)
+        count = 0
+        while True:
+            found = doc.find(rx, cursor)
+            if found.isNull():
+                break
+            sel = QTextEdit.ExtraSelection()
+            sel.cursor = found
+            sel.format = fmt
+            selections.append(sel)
+            cursor.setPosition(found.selectionEnd())
+            count += 1
+        content_view.setExtraSelections(selections)
+        logger.info("Highlight applied: query=%r matches=%d", query, count)
 
     def _update_rg_status() -> None:
         explicit_rg = rg_edit.text().strip()
@@ -158,6 +190,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             content_view.setPlainText(content)
             content_view.setStyleSheet("")
             logger.info("Loaded file: %s", path_str)
+            _highlight_search_items()
         except Exception:
             logger.exception("Failed to read file: %s", path_str)
             content_view.setPlainText(f"Failed to read file:\n{path_str}")
@@ -189,6 +222,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     choose_rg_btn.clicked.connect(_choose_rg)
     search_btn.clicked.connect(_run_search)
     search_edit.returnPressed.connect(_run_search)
+    search_edit.textChanged.connect(_highlight_search_items)
     files_list.currentItemChanged.connect(lambda current, prev: _on_selection_changed())
 
     return widget

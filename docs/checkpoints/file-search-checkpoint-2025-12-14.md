@@ -2,64 +2,57 @@
 
 ## Summary
 
-- Added a new tool UI to search local files using `ripgrep (rg)` with:
-  - Top search area at 10% height; bottom 90% split into two columns.
-  - Left column shows matching file paths; right column shows selected file content.
-- Registered and packaged the tool for lazy loading and PyInstaller.
-- Renamed the tool from “Ripgrep Search” to “File Search” and updated all references.
-- Improved sidebar selection visibility and integrated persistent configuration for:
-  - `ripgrep` binary path
-  - Last selected base directory
+- File Search integrates `ripgrep (rg)` with a two-row top panel:
+  - First row: full-width search input with `Search` button.
+  - Second row: base directory with `Browse`, compact `rg` status on the button.
+- Main view: left shows matching file paths; right shows selected file content.
+- Tool is lazily loaded, packaged via PyInstaller, and listed in the sidebar.
+- Configuration persists `ripgrep` path and last base directory; sidebar selection styling improved.
 
 ## Key Integrations
 
-- Registry
-  - `devboost/tools/lazy_loader.py:36` maps `"File Search"` to `("devboost.tools.file_search", "create_file_search_widget")`
-- Build Hidden Import
-  - `main.spec:29` includes `'devboost.tools.file_search'` for dynamic import packaging
-- Sidebar Entry
-  - `devboost/main.py:233` shows `"File Search"` in the navigable tool list
-- Package Export
-  - `devboost/tools/file_search/__init__.py:1` exports `create_file_search_widget`
+- Registry: `devboost/tools/lazy_loader.py:36` maps `"File Search"` to `("devboost.tools.file_search", "create_file_search_widget")`
+- Build Hidden Import: `main.spec:29` includes `'devboost.tools.file_search'`
+- Sidebar Entry: `devboost/main.py:233` lists `"File Search"`
+- Package Export: `devboost/tools/file_search/__init__.py:1` exports `create_file_search_widget`
 
 ## Implementation Highlights
 
 - Factory and UI
-  - `devboost/tools/file_search/file_search.py:20` defines `create_file_search_widget(style_func=None, scratch_pad_widget=None)`
-  - Top bar inputs:
-    - Base directory field and `Browse` button `devboost/tools/file_search/file_search.py:33`–`devboost/tools/file_search/file_search.py:41`
-    - Ripgrep path field and `Choose rg` button `devboost/tools/file_search/file_search.py:33`–`devboost/tools/file_search/file_search.py:41`
-    - Query field and `Search` button `devboost/tools/file_search/file_search.py:38`–`devboost/tools/file_search/file_search.py:41`
-  - Splitter columns with file list and content view `devboost/tools/file_search/file_search.py:46`–`devboost/tools/file_search/file_search.py:63`
+  - `devboost/tools/file_search/file_search.py:27` defines `create_file_search_widget(style_func=None, scratch_pad_widget=None)`
+  - Two-row top panel and controls:
+    - Layout creation `devboost/tools/file_search/file_search.py:35`–`devboost/tools/file_search/file_search.py:43`
+    - Search row `devboost/tools/file_search/file_search.py:56`–`devboost/tools/file_search/file_search.py:57`
+    - Options row (base dir + button) `devboost/tools/file_search/file_search.py:60`–`devboost/tools/file_search/file_search.py:64`
+    - `rg` path hidden; status shown on button `devboost/tools/file_search/file_search.py:80`–`devboost/tools/file_search/file_search.py:95`
+  - Splitter with file list and content view `devboost/tools/file_search/file_search.py:69`–`devboost/tools/file_search/file_search.py:78`
 - Search Execution
-  - Validates base directory and resolves `rg` path (explicit or via `PATH`) `devboost/tools/file_search/file_search.py:70`–`devboost/tools/file_search/file_search.py:90`
-  - Runs `rg --smart-case --no-messages -n -l --color never <query> <dir>` `devboost/tools/file_search/file_search.py:90`
-  - Populates file list and loads content on selection `devboost/tools/file_search/file_search.py:92`–`devboost/tools/file_search/file_search.py:118`
+  - Validates base directory and resolves `rg` path (explicit or via `PATH`) `devboost/tools/file_search/file_search.py:102`–`devboost/tools/file_search/file_search.py:121`
+  - Runs `rg --smart-case --no-messages -n -l --color never <query> <dir>` `devboost/tools/file_search/file_search.py:121`–`devboost/tools/file_search/file_search.py:135`
+  - Populates file list and loads content on selection `devboost/tools/file_search/file_search.py:137`–`devboost/tools/file_search/file_search.py:153`
 
 ## Configuration Persistence
 
-- Defaults
-  - `devboost/config.py:96`–`devboost/config.py:99` adds:
-    - `file_search.ripgrep_path` (default: `""`)
-    - `file_search.last_base_dir` (default: `Path.cwd()`)
+- Defaults in `devboost/config.py:96`–`devboost/config.py:99`:
+  - `file_search.ripgrep_path` (default: `""`)
+  - `file_search.last_base_dir` (default: `Path.cwd()`)
 - Read and Write
-  - Load defaults into UI `devboost/tools/file_search/file_search.py:24`–`devboost/tools/file_search/file_search.py:31`
+  - Load defaults into UI `devboost/tools/file_search/file_search.py:44`–`devboost/tools/file_search/file_search.py:53`
   - Persist changes on actions:
-    - Base directory updates `devboost/tools/file_search/file_search.py:98`–`devboost/tools/file_search/file_search.py:100`, `devboost/tools/file_search/file_search.py:113`–`devboost/tools/file_search/file_search.py:116`
-    - Ripgrep path updates `devboost/tools/file_search/file_search.py:100`–`devboost/tools/file_search/file_search.py:102`, `devboost/tools/file_search/file_search.py:116`–`devboost/tools/file_search/file_search.py:119`
+    - Base directory updates `devboost/tools/file_search/file_search.py:144`–`devboost/tools/file_search/file_search.py:146`
+    - Ripgrep path updates and status refresh `devboost/tools/file_search/file_search.py:174`–`devboost/tools/file_search/file_search.py:181`
 
-## Styling Fix
+## Styling
 
-- Improved selected item readability in sidebar:
-  - `devboost/styles.py:476`–`devboost/styles.py:499`
-  - `devboost/styles.py:500`–`devboost/styles.py:513`
+- Status styles via `get_status_style('success'|'info'|'warning')` `devboost/styles.py:543`
+- Sidebar readability improvements `devboost/styles.py:476`–`devboost/styles.py:513`
 
 ## Verification
 
 - `make check` passes (tests, lint, format, xenon).
-- `make run` loads “File Search”; lazy loader imports succeed; sidebar shows tool; logs confirm widget creation and caching.
+- `make run` loads “File Search”; lazy loader imports succeed; logs confirm widget creation and `rg` status detection.
 
 ## Notes
 
-- If `ripgrep` is not found, the UI prompts to set the binary path or install (`brew install ripgrep`).
-- The tool integrates with app styling and logging conventions; uses lazy loading for fast startup.
+- If `ripgrep` is not found, the content area shows instructions to set the binary path or install (`brew install ripgrep`).
+- The `rg` button indicates status compactly (`rg ✓` or `rg ✕`) and opens a selector to change the binary; the explicit path is hidden by default.
