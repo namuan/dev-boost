@@ -26,6 +26,7 @@ hidden_tool_imports = [
     'devboost.tools.openapi_mock_server',
     'devboost.tools.random_string_generator',
     'devboost.tools.regex_tester',
+    'devboost.tools.ripgrep_search',
     'devboost.tools.scratch_pad',
     'devboost.tools.string_case_converter',
     'devboost.tools.timezone_converter',
