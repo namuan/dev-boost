@@ -95,6 +95,10 @@ class ConfigManager:
             "file_optimization": {
                 "ghostscript_path": "",  # Empty string means auto-detect
             },
+            "file_search": {
+                "ripgrep_path": "",
+                "last_base_dir": str(Path.cwd()),
+            },
             "global": {"theme": "default", "last_used_tool": ""},
         }
 

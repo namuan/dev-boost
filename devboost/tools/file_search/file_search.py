@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from devboost.config import get_config, set_config
 from devboost.styles import get_status_style, get_tool_style
 
 logger = logging.getLogger(__name__)
@@ -34,15 +35,22 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     top_bar.setContentsMargins(10, 8, 10, 8)
     top_bar.setSpacing(8)
 
-    dir_edit = QLineEdit(str(Path.cwd()))
+    last_dir = get_config("file_search.last_base_dir", str(Path.cwd()))
+    dir_edit = QLineEdit(last_dir)
     dir_edit.setPlaceholderText("Base directory")
     browse_btn = QPushButton("Browse")
+    rg_path = get_config("file_search.ripgrep_path", "")
+    rg_edit = QLineEdit(rg_path)
+    rg_edit.setPlaceholderText("ripgrep path (rg)")
+    choose_rg_btn = QPushButton("Choose rg")
     search_edit = QLineEdit()
     search_edit.setPlaceholderText("Search files (ripgrep)")
     search_btn = QPushButton("Search")
 
     top_bar.addWidget(dir_edit, 1)
     top_bar.addWidget(browse_btn)
+    top_bar.addWidget(rg_edit, 1)
+    top_bar.addWidget(choose_rg_btn)
     top_bar.addWidget(search_edit, 1)
     top_bar.addWidget(search_btn)
 
@@ -75,15 +83,16 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             content_view.setStyleSheet(get_status_style("error"))
             logger.warning("Invalid base directory: %s", search_root)
             return
-        if shutil.which("rg") is None:
-            msg = "ripgrep (rg) not found. Install via Homebrew: brew install ripgrep"
+        rg_bin = rg_edit.text().strip() or shutil.which("rg")
+        if rg_bin is None or not Path(rg_bin).exists():
+            msg = "ripgrep (rg) not found. Set path above or install: brew install ripgrep"
             content_view.setPlainText(msg)
             content_view.setStyleSheet(get_status_style("error"))
-            logger.warning("ripgrep CLI not found on PATH")
+            logger.warning("ripgrep CLI not found or invalid path: %s", rg_edit.text().strip())
             return
         try:
             cmd = [
-                "rg",
+                rg_bin,
                 "--smart-case",
                 "--no-messages",
                 "-n",
@@ -102,6 +111,9 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             for p in paths:
                 files_list.addItem(p)
             logger.info("ripgrep matches=%d", len(paths))
+            set_config("file_search.last_base_dir", str(search_root))
+            if rg_edit.text().strip():
+                set_config("file_search.ripgrep_path", rg_edit.text().strip())
             if paths:
                 files_list.setCurrentRow(0)
                 content_view.setStyleSheet(get_status_style("info"))
@@ -130,6 +142,15 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
         if selected:
             dir_edit.setText(selected)
             logger.info("Base directory set: %s", selected)
+            set_config("file_search.last_base_dir", selected)
+
+    def _choose_rg() -> None:
+        start_path = rg_edit.text().strip() or "/opt/homebrew/bin"
+        selected, _ = QFileDialog.getOpenFileName(widget, "Select ripgrep (rg) binary", start_path)
+        if selected:
+            rg_edit.setText(selected)
+            set_config("file_search.ripgrep_path", selected)
+            logger.info("ripgrep path set: %s", selected)
 
     def _on_selection_changed() -> None:
         item = files_list.currentItem()
@@ -137,6 +158,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             _load_file(item.text())
 
     browse_btn.clicked.connect(_choose_dir)
+    choose_rg_btn.clicked.connect(_choose_rg)
     search_btn.clicked.connect(_run_search)
     search_edit.returnPressed.connect(_run_search)
     files_list.currentItemChanged.connect(lambda current, prev: _on_selection_changed())
