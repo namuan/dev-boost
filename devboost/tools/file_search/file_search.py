@@ -8,6 +8,7 @@ from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QListWidget,
     QPushButton,
@@ -70,24 +71,99 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     content_view.setReadOnly(True)
     content_view.setFont(QFont("Courier", 11))
 
+    content_panel = QWidget()
+    content_layout = QVBoxLayout(content_panel)
+    content_layout.setContentsMargins(0, 0, 0, 0)
+    content_layout.setSpacing(0)
+    content_layout.addWidget(content_view)
+
     splitter.addWidget(files_list)
-    splitter.addWidget(content_view)
+    splitter.addWidget(content_panel)
     splitter.setSizes([500, 500])
 
     root_layout.addWidget(splitter, 9)
 
+    match_cursors: list[QTextCursor] = []
+    current_idx: int = -1
+    count_label = QLabel("0/0")
+    prev_btn = QPushButton("<")
+    next_btn = QPushButton(">")
+    count_label.setStyleSheet(get_status_style("info"))
+    prev_btn.setEnabled(False)
+    next_btn.setEnabled(False)
+    nav_row = QHBoxLayout()
+    nav_row.setContentsMargins(10, 4, 10, 8)
+    nav_row.setSpacing(8)
+    nav_row.addStretch(1)
+    nav_row.addWidget(prev_btn)
+    nav_row.addWidget(next_btn)
+    nav_row.addWidget(count_label)
+    content_layout.addLayout(nav_row)
+
+    def _update_nav_state() -> None:
+        has = bool(match_cursors)
+        prev_btn.setEnabled(has)
+        next_btn.setEnabled(has)
+        total = len(match_cursors)
+        current = current_idx + 1 if current_idx >= 0 else 0
+        count_label.setText(f"{current}/{total}")
+
+    def _goto_match(index: int) -> None:
+        nonlocal current_idx
+        if not match_cursors:
+            current_idx = -1
+            _update_nav_state()
+            return
+        n = len(match_cursors)
+        current_idx = max(0, min(index, n - 1))
+        cur = match_cursors[current_idx]
+        content_view.setTextCursor(cur)
+        content_view.ensureCursorVisible()
+        _update_nav_state()
+
+    def _next_match() -> None:
+        if not match_cursors:
+            _update_nav_state()
+            return
+        n = len(match_cursors)
+        target = 0 if current_idx < 0 else (current_idx + 1) % n
+        _goto_match(target)
+
+    def _prev_match() -> None:
+        if not match_cursors:
+            _update_nav_state()
+            return
+        n = len(match_cursors)
+        target = n - 1 if current_idx < 0 else (current_idx - 1 + n) % n
+        _goto_match(target)
+
     def _highlight_search_items() -> None:
+        nonlocal current_idx, match_cursors
         query = search_edit.text().strip()
         if not query:
             content_view.setExtraSelections([])
+            match_cursors.clear()
+            current_idx = -1
+            _update_nav_state()
             return
         doc = content_view.document()
         if doc.isEmpty():
             content_view.setExtraSelections([])
+            match_cursors.clear()
+            current_idx = -1
+            _update_nav_state()
             return
         case_sensitive = any(ch.isupper() for ch in query)
         rx = QRegularExpression(query)
-        if not case_sensitive:
+        if not rx.isValid():
+            logger.warning("Invalid regex for highlighting: %r error=%s", query, rx.errorString())
+            content_view.setExtraSelections([])
+            match_cursors.clear()
+            current_idx = -1
+            _update_nav_state()
+            return
+        has_inline_case_flag = "(?i)" in query or "(?-i)" in query
+        if not case_sensitive and not has_inline_case_flag:
             rx.setPatternOptions(QRegularExpression.PatternOption.CaseInsensitiveOption)
         selections = []
         fmt = QTextCharFormat()
@@ -95,6 +171,7 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
         cursor = QTextCursor(doc)
         cursor.setPosition(0)
         count = 0
+        match_cursors.clear()
         while True:
             found = doc.find(rx, cursor)
             if found.isNull():
@@ -103,9 +180,17 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             sel.cursor = found
             sel.format = fmt
             selections.append(sel)
+            match_cursors.append(QTextCursor(found))
             cursor.setPosition(found.selectionEnd())
             count += 1
         content_view.setExtraSelections(selections)
+        if match_cursors:
+            current_idx = 0
+            content_view.setTextCursor(match_cursors[0])
+            content_view.ensureCursorVisible()
+        else:
+            current_idx = -1
+        _update_nav_state()
         logger.info("Highlight applied: query=%r matches=%d", query, count)
 
     def _update_rg_status() -> None:
@@ -223,6 +308,8 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
     search_btn.clicked.connect(_run_search)
     search_edit.returnPressed.connect(_run_search)
     search_edit.textChanged.connect(_highlight_search_items)
+    next_btn.clicked.connect(_next_match)
+    prev_btn.clicked.connect(_prev_match)
     files_list.currentItemChanged.connect(lambda current, prev: _on_selection_changed())
 
     return widget
