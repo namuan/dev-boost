@@ -33,7 +33,7 @@ TOOL_REGISTRY: dict[str, tuple[str, str]] = {
     "OpenAPI Mock Server": ("devboost.tools.openapi_mock_server", "create_openapi_mock_server_widget"),
     "Random String Generator": ("devboost.tools.random_string_generator", "create_random_string_tool_widget"),
     "RegExp Tester": ("devboost.tools.regex_tester", "create_regexp_tester_widget"),
-    "Ripgrep Search": ("devboost.tools.ripgrep_search", "create_ripgrep_search_widget"),
+    "File Search": ("devboost.tools.file_search", "create_file_search_widget"),
     "Scratch Pad": ("devboost.tools.scratch_pad", "create_scratch_pad_widget"),
     "String Case Converter": ("devboost.tools.string_case_converter", "create_case_converter_widget"),
     "TimeZone Converter": ("devboost.tools.timezone_converter", "create_timezone_converter_widget"),

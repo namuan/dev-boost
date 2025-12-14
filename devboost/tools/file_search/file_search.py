@@ -6,6 +6,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLineEdit,
     QListWidget,
@@ -21,7 +22,7 @@ from devboost.styles import get_status_style, get_tool_style
 logger = logging.getLogger(__name__)
 
 
-def create_ripgrep_search_widget(style_func=None, scratch_pad_widget=None) -> QWidget:
+def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidget:
     widget = QWidget()
     widget.setStyleSheet(get_tool_style())
 
@@ -33,10 +34,15 @@ def create_ripgrep_search_widget(style_func=None, scratch_pad_widget=None) -> QW
     top_bar.setContentsMargins(10, 8, 10, 8)
     top_bar.setSpacing(8)
 
+    dir_edit = QLineEdit(str(Path.cwd()))
+    dir_edit.setPlaceholderText("Base directory")
+    browse_btn = QPushButton("Browse")
     search_edit = QLineEdit()
-    search_edit.setPlaceholderText("Search query (ripgrep)")
+    search_edit.setPlaceholderText("Search files (ripgrep)")
     search_btn = QPushButton("Search")
 
+    top_bar.addWidget(dir_edit, 1)
+    top_bar.addWidget(browse_btn)
     top_bar.addWidget(search_edit, 1)
     top_bar.addWidget(search_btn)
 
@@ -55,14 +61,19 @@ def create_ripgrep_search_widget(style_func=None, scratch_pad_widget=None) -> QW
 
     root_layout.addWidget(splitter, 9)
 
-    search_root = Path.cwd()
-
     def _run_search() -> None:
         query = search_edit.text().strip()
         if not query:
             content_view.setPlainText("Enter a search query above.")
             content_view.setStyleSheet(get_status_style("warning"))
             logger.warning("No search query provided")
+            return
+        chosen = dir_edit.text().strip()
+        search_root = Path(chosen) if chosen else Path.cwd()
+        if not search_root.exists() or not search_root.is_dir():
+            content_view.setPlainText(f"Invalid base directory:\n{search_root}")
+            content_view.setStyleSheet(get_status_style("error"))
+            logger.warning("Invalid base directory: %s", search_root)
             return
         if shutil.which("rg") is None:
             msg = "ripgrep (rg) not found. Install via Homebrew: brew install ripgrep"
@@ -113,11 +124,19 @@ def create_ripgrep_search_widget(style_func=None, scratch_pad_widget=None) -> QW
             content_view.setPlainText(f"Failed to read file:\n{path_str}")
             content_view.setStyleSheet(get_status_style("error"))
 
+    def _choose_dir() -> None:
+        start_dir = dir_edit.text().strip() or str(Path.cwd())
+        selected = QFileDialog.getExistingDirectory(widget, "Select Base Directory", start_dir)
+        if selected:
+            dir_edit.setText(selected)
+            logger.info("Base directory set: %s", selected)
+
     def _on_selection_changed() -> None:
         item = files_list.currentItem()
         if item:
             _load_file(item.text())
 
+    browse_btn.clicked.connect(_choose_dir)
     search_btn.clicked.connect(_run_search)
     search_edit.returnPressed.connect(_run_search)
     files_list.currentItemChanged.connect(lambda current, prev: _on_selection_changed())

@@ -230,7 +230,7 @@ class DevDriverWindow(QMainWindow):
             ("64", "Base64 String Encode/Decode", "base64 encode decode string text"),
             ("✴️", "JWT Debugger", "jwt token debug decode verify json web token"),
             ("✳️", "RegExp Tester", "regex regexp regular expression test match pattern"),
-            ("🔎", "Ripgrep Search", "ripgrep search files grep rg local project"),
+            ("🔎", "File Search", "file search ripgrep grep rg local project"),
             ("%", "URL Encode/Decode", "url encode decode percent encoding uri"),
             ("🆔", "UUID/ULID Generate/Decode", "uuid ulid generate decode identifier unique"),
             ("📄", "XML Beautifier", "xml format beautify pretty print"),

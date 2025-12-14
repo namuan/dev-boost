@@ -477,7 +477,8 @@ QListWidget {{
     background-color: transparent;
     border: none;
     outline: none;
-    selection-background-color: transparent;
+    selection-background-color: #e6f0ff;
+    selection-color: {COLORS["text_primary"]};
 }}
 
 QListWidget::item {{
@@ -493,12 +494,18 @@ QListWidget::item:hover {{
 }}
 
 QListWidget::item:selected {{
-    background-color: {COLORS["bg_primary"]};
+    background-color: #e6f0ff;
     border: 1px solid {COLORS["border_secondary"]};
 }}
 
 QListWidget::item:selected:hover {{
-    background-color: {COLORS["bg_primary"]};
+    background-color: #d0e1ff;
+}}
+QListWidget::item:selected QLabel#toolText {{
+    color: {COLORS["text_primary"]};
+}}
+QListWidget::item:selected QLabel#toolIcon {{
+    color: {COLORS["text_primary"]};
 }}
 
 QLabel#toolIcon {{
