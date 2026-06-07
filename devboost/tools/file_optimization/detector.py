@@ -51,6 +51,13 @@ class FileTypeDetector:
             "video/x-matroska",
             "video/webm",
             "video/x-msvideo",
+            "video/x-flv",
+            "video/x-ms-wmv",
+            "video/x-m4v",
+            "video/3gpp",
+            "video/x-ms-asf",
+            "application/vnd.rn-realmedia",
+            "application/vnd.rn-realmedia-vbr",
         ],
         "pdf": ["application/pdf"],
     }
@@ -73,6 +80,14 @@ class FileTypeDetector:
         ".avi",
         ".mkv",
         ".webm",
+        ".flv",
+        ".wmv",
+        ".m4v",
+        ".3gp",
+        ".asf",
+        ".rm",
+        ".rmvb",
+        ".vob",
         # PDFs
         ".pdf",
     }
