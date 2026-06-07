@@ -1,5 +1,8 @@
 import logging
+import logging.handlers
+import os
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
@@ -24,10 +27,17 @@ from .tools.lazy_loader import create_tool_widget
 from .tools_search import NavigableToolsList, ToolsSearch
 
 # Configure logging
+_log_dir = Path.home() / "Library" / "Logs" / "DevBoost"
+_log_dir.mkdir(parents=True, exist_ok=True)
+_log_file = _log_dir / "devboost.log"
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.handlers.RotatingFileHandler(str(_log_file), maxBytes=5 * 1024 * 1024, backupCount=3),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -484,7 +494,29 @@ class DevDriverWindow(QMainWindow):
         self.tool_list.clearSelection()
 
 
+def _ensure_path_includes_homebrew():
+    """Ensure PATH includes common Homebrew locations for external tools like ffmpeg."""
+    import platform
+
+    _brew_dirs = []
+    if platform.system() == "Darwin":
+        _brew_dirs = [
+            "/opt/homebrew/bin",
+            "/opt/homebrew/sbin",
+            "/usr/local/bin",
+            "/usr/local/sbin",
+        ]
+
+    _brewed_path = os.environ.get("PATH", "")
+    _parts = _brewed_path.split(os.pathsep)
+    for _d in _brew_dirs:
+        if _d not in _parts and Path(_d).is_dir():
+            _parts.insert(0, _d)
+    os.environ["PATH"] = os.pathsep.join(_parts)
+
+
 def main():
+    _ensure_path_includes_homebrew()
     logger.info("Starting DevDriver application")
     app = QApplication(sys.argv)
     logger.info("QApplication created")

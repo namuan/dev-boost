@@ -106,7 +106,7 @@ class FileManager:
     def _process_file_path(self, file_path: str) -> list[FileInfo]:
         """Process a file path input."""
         try:
-            path = Path(file_path).resolve()
+            path = Path(file_path).expanduser().resolve()
             if path.exists() and path.is_file():
                 file_info = FileTypeDetector.detect_file_type(path)
                 return [file_info]
@@ -354,7 +354,21 @@ class FileManager:
                 ".webp",
                 ".bmp",
             ],
-            "videos": [".mov", ".mp4", ".avi", ".mkv", ".webm"],
+            "videos": [
+                ".mov",
+                ".mp4",
+                ".avi",
+                ".mkv",
+                ".webm",
+                ".flv",
+                ".wmv",
+                ".m4v",
+                ".3gp",
+                ".asf",
+                ".rm",
+                ".rmvb",
+                ".vob",
+            ],
             "pdfs": [".pdf"],
         }
 
