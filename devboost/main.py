@@ -384,10 +384,15 @@ class DevDriverWindow(QMainWindow):
 
     def _on_tool_selected(self, item):
         """Handle tool selection from the sidebar."""
-        tool_name = item.data(Qt.ItemDataRole.UserRole)
-        logger.info("Tool selected: %s", tool_name)
+        try:
+            tool_name = item.data(Qt.ItemDataRole.UserRole)
+            logger.info("Tool selected: %s", tool_name)
 
-        self._switch_to_tool(tool_name)
+            self._switch_to_tool(tool_name)
+        except Exception:
+            logger.exception("Exception in tool selection handler for item: %s", item.text() if item else "None")
+            # Prevent the exception from propagating into the PyQt6 C++ slot dispatch,
+            # which would call qFatal() / abort() and crash the application.
 
     def _get_or_create_tool_widget(self, tool_name: str) -> QWidget | None:
         """Get a tool widget from cache or create it lazily."""
@@ -515,9 +520,28 @@ def _ensure_path_includes_homebrew():
     os.environ["PATH"] = os.pathsep.join(_parts)
 
 
+def _qt_exception_hook(exc_type, exc_value, exc_tb):
+    """Global exception hook to prevent PyQt6 from calling abort() on unhandled exceptions.
+
+    PyQt6 calls qFatal() when an unhandled Python exception occurs inside a Qt slot.
+    This hook intercepts those exceptions, logs them, and prevents the crash.
+    """
+    import traceback
+
+    logger.critical(
+        "Unhandled exception in Qt slot:\n%s",
+        "".join(traceback.format_exception(exc_type, exc_value, exc_tb)),
+    )
+
+
 def main():
     _ensure_path_includes_homebrew()
     logger.info("Starting DevDriver application")
+
+    # Install global exception hook for Qt slots
+    sys.excepthook = _qt_exception_hook
+    logger.info("Installed global Qt exception hook")
+
     app = QApplication(sys.argv)
     logger.info("QApplication created")
 

@@ -529,24 +529,28 @@ def create_uvx_runner_widget(style_func, scratch_pad=None):
 
     # Handle selection from suggestions
     def on_suggestion_selected():
-        logger.debug("on_suggestion_selected called")
-        selected_items = tool_suggestions.selectedItems()
-        if selected_items:
-            selected_item = selected_items[0]
-            tool_name = selected_item.data(Qt.ItemDataRole.UserRole)
-            display_text = selected_item.text()
-            logger.debug("Selected tool: name='%s', display='%s'", tool_name, display_text)
-            if tool_name:  # Make sure it's not the "no results" item
-                tool_input.setText(display_text)
-                current_selected_tool["name"] = tool_name
-                current_selected_tool["display"] = display_text
-                tool_suggestions.setVisible(False)
-                tool_input.setFocus()  # Return focus to input field
-                logger.debug("Tool selection completed and suggestions hidden")
+        try:
+            logger.debug("on_suggestion_selected called")
+            selected_items = tool_suggestions.selectedItems()
+            if selected_items:
+                selected_item = selected_items[0]
+                tool_name = selected_item.data(Qt.ItemDataRole.UserRole)
+                display_text = selected_item.text()
+                logger.debug("Selected tool: name='%s', display='%s'", tool_name, display_text)
+                if tool_name:  # Make sure it's not the "no results" item
+                    tool_input.setText(display_text)
+                    current_selected_tool["name"] = tool_name
+                    current_selected_tool["display"] = display_text
+                    tool_suggestions.setVisible(False)
+                    tool_input.setFocus()  # Return focus to input field
+                    logger.debug("Tool selection completed and suggestions hidden")
+                else:
+                    logger.debug("Selected item was 'no results' item, not setting tool")
             else:
-                logger.debug("Selected item was 'no results' item, not setting tool")
-        else:
-            logger.debug("No selected items found")
+                logger.debug("No selected items found")
+        except Exception:
+            logger.exception("Exception in uvx suggestion selection handler")
+            # Prevent exception from propagating into PyQt6 slot dispatch
 
     # Handle keyboard navigation in suggestions
     def on_tool_input_key_press(event):

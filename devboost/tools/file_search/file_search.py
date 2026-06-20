@@ -383,11 +383,15 @@ def create_file_search_widget(style_func=None, scratch_pad_widget=None) -> QWidg
             _update_rg_status()
 
     def _on_selection_changed() -> None:
-        item = files_list.currentItem()
-        if item:
-            value = item.data(Qt.ItemDataRole.UserRole)
-            path_str = value if isinstance(value, str) and value else item.text()
-            _load_file(path_str)
+        try:
+            item = files_list.currentItem()
+            if item:
+                value = item.data(Qt.ItemDataRole.UserRole)
+                path_str = value if isinstance(value, str) and value else item.text()
+                _load_file(path_str)
+        except Exception:
+            logger.exception("Exception in file search selection handler")
+            # Prevent exception from propagating into PyQt6 slot dispatch
 
     browse_btn.clicked.connect(_choose_dir)
     choose_rg_btn.clicked.connect(_choose_rg)

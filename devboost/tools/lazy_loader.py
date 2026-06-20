@@ -87,7 +87,7 @@ def get_tool_factory(tool_name: str) -> Callable | None:
         _factory_cache[tool_name] = factory
         return factory
 
-    except (ImportError, AttributeError):
+    except Exception:
         elapsed = (time.perf_counter() - start_time) * 1000
         # logging.exception automatically includes the exception info; don't add
         # the exception object to the formatted message to satisfy linting rules
@@ -107,11 +107,11 @@ def create_tool_widget(tool_name: str, style_func: Any = None, scratch_pad: Any 
     Returns:
         The created widget, or None if creation failed.
     """
-    factory = get_tool_factory(tool_name)
-    if factory is None:
-        return None
-
     try:
+        factory = get_tool_factory(tool_name)
+        if factory is None:
+            return None
+
         # Some widgets don't take scratch_pad argument
         if tool_name in ("Block Editor", "Scratch Pad"):
             return factory(style_func)

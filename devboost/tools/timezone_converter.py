@@ -1094,24 +1094,28 @@ class TimeZoneConverterUI:
 
     def _on_city_suggestion_selected(self):
         """Handle selection from city suggestions list."""
-        city_suggestions = self.results_widgets["city_suggestions"]
-        add_city_input = self.results_widgets["add_city_input"]
+        try:
+            city_suggestions = self.results_widgets["city_suggestions"]
+            add_city_input = self.results_widgets["add_city_input"]
 
-        selected_items = city_suggestions.selectedItems()
-        if selected_items:
-            selected_item = selected_items[0]
-            city_data = selected_item.data(Qt.ItemDataRole.UserRole)
-            display_text = selected_item.text()
+            selected_items = city_suggestions.selectedItems()
+            if selected_items:
+                selected_item = selected_items[0]
+                city_data = selected_item.data(Qt.ItemDataRole.UserRole)
+                display_text = selected_item.text()
 
-            if city_data:  # Make sure it's not the "no results" item
-                add_city_input.setText(display_text)
-                self.current_selected_city = {"name": city_data["name"], "display": display_text}
-                city_suggestions.setVisible(False)
-                add_city_input.setFocus()
-                # Automatically add the selected city
-                self._add_selected_city(city_data)
-                add_city_input.clear()
-                logger.debug("City selected and added: %s", city_data["name"])
+                if city_data:  # Make sure it's not the "no results" item
+                    add_city_input.setText(display_text)
+                    self.current_selected_city = {"name": city_data["name"], "display": display_text}
+                    city_suggestions.setVisible(False)
+                    add_city_input.setFocus()
+                    # Automatically add the selected city
+                    self._add_selected_city(city_data)
+                    add_city_input.clear()
+                    logger.debug("City selected and added: %s", city_data["name"])
+        except Exception:
+            logger.exception("Exception in city suggestion selection handler")
+            # Prevent exception from propagating into PyQt6 slot dispatch
 
     def _handle_input_key_press(self, event):
         """Handle keyboard events for city input navigation."""

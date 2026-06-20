@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from weasyprint import CSS, HTML
 
 from devboost.styles import get_tool_style
 
@@ -237,6 +236,15 @@ def create_markdown_preview_widget(style_func=None, scratch_pad=None):
             if is_packaged:
                 export_pdf_via_qt(html_text)
             else:
+                # Lazily import weasyprint — it requires system libraries
+                # (libgobject-2.0-0) that may not be installed on macOS.
+                try:
+                    from weasyprint import CSS, HTML
+                except OSError as _weasy_err:
+                    logger.warning("weasyprint not available, falling back to Qt PDF export: %s", _weasy_err)
+                    export_pdf_via_qt(html_text)
+                    return
+
                 pdf_css = CSS(
                     string="""
                     body {
